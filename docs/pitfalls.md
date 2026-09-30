@@ -75,7 +75,7 @@ The isolate helper was written with the actual U+2068 and U+2069 characters. The
 invisible: a reviewer sees an empty template literal, an editor can drop them without a
 trace, and GitHub flags the file — the same characters are how "Trojan Source" hides code.
 
-**Rule:** write them as `⁨` escapes. `tests/test_source_hygiene.py` scans every source
+**Rule:** write them as `\u2068` escapes. `tests/test_source_hygiene.py` scans every source
 file and fails on any such character; it was proven by putting one back.
 
 ## 2026-09-30 — The tests depended on the seeded menu's English names
@@ -85,3 +85,13 @@ Renaming the seeded services to Hebrew would have broken 23 references to "Hairc
 change without touching a test.
 
 **Rule:** a test that needs seeded data reads it from the seed, never repeats it.
+
+## 2026-09-30 — A red test run was committed and pushed
+
+The commit was chained as `pytest -q | tail -1 && git commit`. A pipeline's exit status is
+its last command's, so `tail` succeeded, `&&` saw success, and a run with one failing test
+was committed and pushed. The failure itself was the source-hygiene guard catching a hidden
+direction character in this very file.
+
+**Rule:** gate a commit on the test command's own exit code, never on a pipeline's:
+`pytest -q > out.txt; code=$?` — then commit only if `code` is 0.
