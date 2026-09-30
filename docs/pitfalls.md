@@ -34,3 +34,16 @@ twice; and 09:00 local is 06:00 UTC in summer but 07:00 in winter.
 **Rule:** a day is turned into the UTC instants of its local opening and closing, through
 `zoneinfo`, and slots are stepped in UTC between them. `tests/test_scheduling.py` checks
 both transition days; a fixed-offset mutant fails five of its tests.
+
+## 2026-09-30 — The overlap rule lived in two places
+
+The listing decided overlap with `Interval.overlaps`; the booking decided it with a SQL
+predicate in `busy()`. Both said "strictly overlapping", so both were right — until one
+changes. An outside suite broke only the Python side and watched the listing stop offering
+the slot right after a booking, while the booking would still have accepted it. The rule
+this repository's CLAUDE.md names first — availability and booking must never compute their
+rules separately — was broken by its own author.
+
+**Rule:** SQL fetches candidates, `Interval.overlaps` decides. `busy()` now returns bookings
+touching the window as well, and every caller asks `clashes()`. A rule that must agree in
+two places lives in one.

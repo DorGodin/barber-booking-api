@@ -54,14 +54,25 @@ def is_off(session: Session, barber_id: str, day: date) -> bool:
 def busy(
     session: Session, window: Interval, *, barber_id: str | None = None, customer_id: str | None = None
 ) -> list[Interval]:
+    """Confirmed bookings near the window - touching it included.
+
+    This is a candidate fetch, not the overlap rule. The rule is
+    Interval.overlaps, and every caller decides with it: the listing and the
+    booking once decided overlap separately, one in SQL and one in Python, and a
+    change to one would have left the other offering what it refused.
+    """
     query = select(Booking).where(
-        Booking.status == "confirmed", Booking.start_utc < window.end, Booking.end_utc > window.start
+        Booking.status == "confirmed", Booking.start_utc <= window.end, Booking.end_utc >= window.start
     )
     if barber_id is not None:
         query = query.where(Booking.barber_id == barber_id)
     if customer_id is not None:
         query = query.where(Booking.customer_id == customer_id)
     return [Interval(b.start_utc, b.end_utc) for b in session.scalars(query)]
+
+
+def clashes(wanted: Interval, candidates: list[Interval]) -> bool:
+    return any(wanted.overlaps(other) for other in candidates)
 
 
 def day_window(session: Session, config: Settings, barber_id: str, day: date) -> Interval | None:

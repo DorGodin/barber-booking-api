@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Header, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.booking_rules import active_service_or_error, barber_or_404, busy, check_bookable
+from app.booking_rules import active_service_or_error, barber_or_404, busy, check_bookable, clashes
 from app.config import Settings
 from app.db import write_lock
 from app.deps import current_user, db, require, settings
@@ -72,9 +72,9 @@ def create_booking(
         service = active_service_or_error(session, body.service_id)
         wanted = check_bookable(session, config, body.barber_id, service, start, now)
 
-        if busy(session, wanted, barber_id=body.barber_id):
+        if clashes(wanted, busy(session, wanted, barber_id=body.barber_id)):
             raise DomainError(409, "slot_taken", "that time is no longer available")
-        if busy(session, wanted, customer_id=user.id):
+        if clashes(wanted, busy(session, wanted, customer_id=user.id)):
             raise DomainError(409, "customer_overlap", "you already have a booking at that time")
 
         booking = Booking(
