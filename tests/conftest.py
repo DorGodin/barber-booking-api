@@ -44,6 +44,14 @@ def login(client: TestClient, username: str, password: str) -> dict:
 
 
 @pytest.fixture
+def passwords() -> dict[str, str]:
+    """The seed passwords, through a fixture and never through an import:
+    `from tests.conftest import PASSWORDS` loads this file a second time under a
+    second module name, and the random passwords above come out different."""
+    return PASSWORDS
+
+
+@pytest.fixture
 def owner(client):
     return login(client, "owner", PASSWORDS["owner"])
 

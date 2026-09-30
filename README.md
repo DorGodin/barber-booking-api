@@ -23,13 +23,23 @@ Open **http://127.0.0.1:8100** for the booking page, in Hebrew, right to left �
 seeded customer, pick a barber, a service and a day, and book. The API's interactive docs are at
 http://127.0.0.1:8100/docs.
 
-The first start creates three accounts, with the passwords from `.env`:
+The shop is open **Sunday to Thursday, 10:00 to 19:00**. The first start seeds it, with the
+passwords from `.env`:
 
-| Username | Role | Can |
+| Username | Who | Works |
 |---|---|---|
-| `owner` | owner — בעל המספרה | everything: services, barbers, hours, time off, cancel any booking |
-| `barber` | barber | see the bookings on their own schedule |
-| `customer` | customer | book, see and cancel their own bookings |
+| `owner` | בעל המספרה | everything: services, barbers, hours, time off, cancel any booking |
+| `barber` | אבי | every day the shop is open |
+| `barber.yossi` | יוסי | Sunday, Tuesday, Thursday |
+| `barber.moran` | מורן | Monday, Wednesday |
+| `barber.ron` | רון | Sunday, Monday, Tuesday |
+| `customer` | דנה | a customer with nothing booked |
+| `yael` | יעל | a customer who already holds a haircut every two hours with each barber for the next working days |
+
+So every day has a different line-up, and each barber's day shows free and taken times
+alternating. The barbers share the barber password and the customers the customer one: sign
+in as דנה in one window and יעל in another, choose the same time in both, and press Book in
+each — one gets the green popup, the other the red "השעה כבר תפוסה".
 
 Anyone can sign up as another customer with `POST /customers`.
 
@@ -135,9 +145,13 @@ make run
 פותחים את **http://127.0.0.1:8100** כדי להגיע למסך ההזמנה — מתחברים כלקוח, בוחרים ספר, שירות
 ויום, ומזמינים. התיעוד האינטראקטיבי של ה-API נמצא ב-http://127.0.0.1:8100/docs.
 
-בהפעלה הראשונה נוצרים שלושה משתמשים, עם הסיסמאות מ-`.env`: `owner` (בעלים — הכל), `barber`
-(ספר — רואה את התורים שלו) ו-`customer` (לקוח — מזמין, רואה ומבטל את התורים שלו). כל אחד יכול
-להירשם כלקוח נוסף דרך `POST /customers`.
+המספרה פתוחה **בימים א׳–ה׳, 10:00–19:00**. בהפעלה הראשונה נוצרים: בעל המספרה (`owner`); ארבעה
+ספרים — אבי (`barber`, כל יום), יוסי (`barber.yossi`, א׳ ג׳ ה׳), מורן (`barber.moran`, ב׳ ד׳) ורון
+(`barber.ron`, א׳ ב׳ ג׳); ושתי לקוחות — דנה (`customer`) ויעל (`yael`), שכבר מחזיקה תספורת כל שעתיים
+אצל כל ספר בימי העבודה הקרובים. כך בכל יום יש הרכב ספרים אחר, ובכל יום רואים שעות פנויות ותפוסות
+לסירוגין. אפשר להתחבר כדנה בחלון אחד וכיעל בחלון אחר, לבחור את אותה שעה בשניהם וללחוץ "קביעת התור"
+בכל אחד — אחד יקבל חלון ירוק, והשני חלון אדום "השעה כבר תפוסה". כל אחד יכול להירשם כלקוח נוסף דרך
+`POST /customers`.
 
 ### החוקים
 

@@ -77,3 +77,15 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **Prices and dates go through `Intl` with `he-IL`**, whatever the browser's own language.
 - The seeded menu and accounts are Hebrew. Tests read the names from `app/seed.py`, so a
   rename there never breaks them.
+
+### The seed and the popup
+
+- **The seed obeys every rule the product enforces.** It builds bookings with the same
+  scheduling functions the product uses, inside the shop's hours, in the future, and never
+  with one customer in two chairs. `tests/test_seed.py` checks each of those.
+- **Tests read seeded data from `app/seed.py`**, never repeat it, and take the seed
+  passwords from the `passwords` fixture - importing them from `tests.conftest` runs that
+  file a second time and the random passwords come out different.
+- **The booking outcome is a `<dialog>` opened with `showModal()`**: focus goes to it,
+  Escape closes it, the page behind it is inert. `show()` is not modal and is not
+  acceptable here.

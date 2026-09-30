@@ -43,6 +43,13 @@
   .auth { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
   @media (max-width: 760px) { .auth { grid-template-columns: 1fr; } }
   [data-testid="message"] { min-height:24px; margin:16px 0 0; font-weight:600; }
+  dialog { border:0; border-radius:14px; padding:0; width:min(420px, 92vw); box-shadow:0 18px 50px #0004; }
+  dialog::backdrop { background:#1f293399; }
+  dialog .band { padding:18px 22px; color:#fff; font-size:18px; font-weight:700; }
+  dialog[data-kind="ok"] .band { background:var(--ok); }
+  dialog[data-kind="error"] .band { background:var(--bad); }
+  dialog .body { padding:18px 22px; line-height:1.6; }
+  dialog .actions { padding:0 22px 20px; text-align:left; }
   [data-testid="message"][data-kind="ok"] { color:var(--ok); }
   [data-testid="message"][data-kind="error"], .error { color:var(--bad); }
 </style>
@@ -99,6 +106,14 @@
     </div>
     <p data-testid="message" role="status" aria-live="polite"></p>
   </section>
+
+  <!-- The outcome of a booking, success or refusal, in a real modal dialog:
+       it takes the focus, Escape closes it, and a screen reader announces it. -->
+  <dialog data-testid="popup" aria-labelledby="popup-title" aria-describedby="popup-text">
+    <div class="band" id="popup-title" data-testid="popup-title"></div>
+    <p class="body" id="popup-text" data-testid="popup-text"></p>
+    <div class="actions"><button data-testid="popup-close" type="button" autofocus>סגירה</button></div>
+  </dialog>
 </main>
 
 <script>
@@ -168,6 +183,14 @@ function explain(resp, context = {}) {
   if (code && FRIENDLY[code]) return FRIENDLY[code](context);
   if (resp.status === 422 && context.invalid) return context.invalid;
   return `משהו השתבש (${resp.status}). כדאי לנסות שוב.`;
+}
+
+function popup(title, text, kind) {
+  const dialog = $("popup");
+  dialog.dataset.kind = kind;
+  $("popup-title").textContent = title;
+  $("popup-text").textContent = text;
+  if (!dialog.open) dialog.showModal();
 }
 
 function say(text, kind) {
@@ -299,9 +322,14 @@ async function bookSelected() {
   booking = false;
   $("book").disabled = false;
   if (r.ok) {
-    say(`נקבע: ${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${isolate(r.data.service_name)} אצל ${isolate(barberName(r.data.barber_id))}`, "ok");
+    const booked = `${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${isolate(r.data.service_name)} אצל ${isolate(barberName(r.data.barber_id))}`;
+    say(`נקבע: ${booked}`, "ok");
+    popup("✓ התור נקבע", `${booked} · ${money(r.data.price_minor, r.data.currency)}`, "ok");
   } else {
-    say(explain(r, { time: clock(slot.start_local) }), "error");
+    const reason = explain(r, { time: clock(slot.start_local) });
+    say(reason, "error");
+    const taken = r.data && r.data.code === "slot_taken";
+    popup(taken ? "השעה כבר תפוסה" : "לא הצלחנו לקבוע את התור", reason, "error");
   }
   await refresh();
 }
@@ -377,6 +405,7 @@ $("logout").addEventListener("click", () => {
   $("password").value = "";
 });
 $("book").addEventListener("click", book);
+$("popup-close").addEventListener("click", () => $("popup").close());
 for (const id of ["barber", "service", "date"]) $(id).addEventListener("change", () => busyWhile(refresh));
 </script>
 </body>

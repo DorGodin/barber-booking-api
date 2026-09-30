@@ -29,7 +29,7 @@ def create_app(config: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI):
         Base.metadata.create_all(engine)
         with app.state.sessionmaker() as session:
-            seed_if_empty(session)
+            seed_if_empty(session, config)
         yield
         engine.dispose()
 

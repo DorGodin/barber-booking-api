@@ -95,3 +95,22 @@ direction character in this very file.
 
 **Rule:** gate a commit on the test command's own exit code, never on a pipeline's:
 `pytest -q > out.txt; code=$?` — then commit only if `code` is 0.
+
+## 2026-09-30 — Importing a fixture's data re-ran conftest and changed the passwords
+
+`from tests.conftest import PASSWORDS` in a new test returned different passwords from the
+ones the `client` fixture had seeded: pytest had already imported the file as `conftest`,
+the test imported it again as `tests.conftest`, and its module-level `secrets.token_urlsafe`
+ran a second time. Every login in the new test failed with 401.
+
+**Rule:** share test data through a fixture (`passwords`), never by importing a conftest's
+module-level values - especially random ones.
+
+## 2026-09-30 — The local database was reset seconds after a booking was made in it
+
+To load the new seed, the local database was deleted while the running page was in use:
+the server's log showed a booking created a minute earlier, and it went with the rest. The
+data was disposable, but nobody had said so.
+
+**Rule:** before resetting a database someone may be using, read the server's log or ask.
+Stop the server first, then reset, then start - never reset under a running server.
