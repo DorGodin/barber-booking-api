@@ -61,3 +61,19 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   accurate when adding anything that fetches.
 - **`[hidden] { display: none !important; }` stays.** Without it, any element with its own
   `display` rule ignores `hidden`.
+
+### Hebrew, right to left
+
+- **`<html lang="he" dir="rtl">`**, and times keep `direction: ltr` inside it: 10:30 never
+  becomes 30:10.
+- **A name from the server inside a Hebrew sentence is wrapped in `isolate()`** (FSI...PDI),
+  so a Latin barber or service name cannot drag punctuation to the wrong side.
+- **Write direction characters as escapes (`\u2068`), never as the characters.** They are
+  invisible in review — the Trojan Source class. `tests/test_source_hygiene.py` fails on any.
+- **The customer never sees the server's English.** Every error code has Hebrew words in
+  `FRIENDLY`, and the fallback is Hebrew too. Adding a code on the server means adding it here.
+- **Labels are tied with `for=`, never wrapped around a field.** A label around a `<select>`
+  takes every option into the field's accessible name.
+- **Prices and dates go through `Intl` with `he-IL`**, whatever the browser's own language.
+- The seeded menu and accounts are Hebrew. Tests read the names from `app/seed.py`, so a
+  rename there never breaks them.

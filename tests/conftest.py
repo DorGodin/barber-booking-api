@@ -10,6 +10,11 @@ from fastapi.testclient import TestClient
 
 from app.config import Settings
 from app.main import create_app
+from app.seed import MENU
+
+# The seeded menu by duration, read from the seed itself, so renaming a service
+# there never breaks a test here.
+HAIRCUT, TRIM, COMBO = (name for name, _minutes, _price in MENU)
 
 TZ = ZoneInfo("Asia/Jerusalem")
 PASSWORDS = {role: secrets.token_urlsafe(12) for role in ("owner", "barber", "customer")}

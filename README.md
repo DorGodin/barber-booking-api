@@ -19,15 +19,15 @@ make install
 make run
 ```
 
-Open **http://127.0.0.1:8100** for the booking page — sign in as the seeded customer, pick a
-barber, a service and a day, and book. The API's interactive docs are at
+Open **http://127.0.0.1:8100** for the booking page, in Hebrew, right to left — sign in as the
+seeded customer, pick a barber, a service and a day, and book. The API's interactive docs are at
 http://127.0.0.1:8100/docs.
 
 The first start creates three accounts, with the passwords from `.env`:
 
 | Username | Role | Can |
 |---|---|---|
-| `owner` | owner | everything: services, barbers, hours, time off, cancel any booking |
+| `owner` | owner — בעל המספרה | everything: services, barbers, hours, time off, cancel any booking |
 | `barber` | barber | see the bookings on their own schedule |
 | `customer` | customer | book, see and cancel their own bookings |
 

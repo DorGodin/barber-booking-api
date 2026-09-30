@@ -1,31 +1,38 @@
 <!doctype html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Barber Booking</title>
+<title>תורים למספרה</title>
 <style>
   :root { --ink:#1f2933; --mut:#6b7280; --line:#e4e7eb; --bg:#f6f5f2; --brand:#1d4e5f; --ok:#0e7c66; --bad:#b4232c; }
   * { box-sizing: border-box; }
   /* An element's own display rule beats the browser's [hidden] rule, so a
      hidden grid or flex box stays on screen. This puts hidden back in charge. */
   [hidden] { display: none !important; }
-  body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--ink); }
+  body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background:var(--bg); color:var(--ink); }
   header { background:var(--brand); color:#fff; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; }
-  header h1 { margin:0; font-size:20px; letter-spacing:.3px; }
+  header h1 { margin:0; font-size:20px; }
   header button { background:transparent; color:#fff; border:1px solid #fff8; }
   main { max-width:1000px; margin:24px auto; padding:0 16px; }
   .grid { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
   @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
   .panel { background:#fff; border:1px solid var(--line); border-radius:10px; padding:18px; }
-  h2 { margin:0 0 14px; font-size:15px; text-transform:uppercase; letter-spacing:1.2px; color:var(--brand); }
-  label { display:block; font-size:13px; color:var(--mut); margin-bottom:10px; }
+  h2 { margin:0 0 14px; font-size:16px; color:var(--brand); }
+  /* Labels are tied to their field with for=, never wrapped around it: a label
+     that wraps a select takes every option into the field's name, so a screen
+     reader would announce the barber field as the whole list of barbers. */
+  .field { margin-bottom:10px; }
+  label { display:block; font-size:13px; color:var(--mut); }
   input, select { display:block; width:100%; margin-top:4px; padding:9px 10px; font-size:15px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); }
+  /* A username and a password are Latin text; typed right to left they read
+     backwards while they are being typed. */
+  input[autocomplete="username"], input[type="password"] { direction:ltr; text-align:right; }
   button { font:inherit; font-size:14px; padding:8px 14px; border-radius:6px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; }
   button:disabled { opacity:.5; cursor:wait; }
   button.ghost { background:#fff; color:var(--brand); }
   .slots { display:grid; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap:8px; margin:12px 0; }
-  .slots button { background:#fff; color:var(--brand); padding:8px 0; }
+  .slots button { background:#fff; color:var(--brand); padding:8px 0; direction:ltr; }
   .slots button[aria-pressed="true"] { background:var(--brand); color:#fff; }
   .confirm { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px; border:1px dashed var(--brand); border-radius:8px; }
   ul { list-style:none; padding:0; margin:0; }
@@ -42,52 +49,52 @@
 </head>
 <body>
 <header>
-  <h1>✂ Barber Booking</h1>
+  <h1>✂ תורים למספרה</h1>
   <div data-testid="whoami" hidden>
     <span data-testid="display-name"></span>
-    <button data-testid="logout" type="button">Sign out</button>
+    <button data-testid="logout" type="button">יציאה</button>
   </div>
 </header>
 
 <main>
   <section class="auth" data-testid="auth">
     <form class="panel" data-testid="login-form">
-      <h2>Sign in</h2>
-      <label>Username <input data-testid="username" autocomplete="username" required></label>
-      <label>Password <input data-testid="password" type="password" autocomplete="current-password" required></label>
-      <button data-testid="login" type="submit">Sign in</button>
+      <h2>כניסה</h2>
+      <div class="field"><label for="login-username">שם משתמש</label><input id="login-username" data-testid="username" autocomplete="username" required></div>
+      <div class="field"><label for="login-password">סיסמה</label><input id="login-password" data-testid="password" type="password" autocomplete="current-password" required></div>
+      <button data-testid="login" type="submit">כניסה</button>
       <p data-testid="login-error" class="error" role="alert" hidden></p>
     </form>
     <form class="panel" data-testid="signup-form">
-      <h2>New here?</h2>
-      <label>Your name <input data-testid="signup-name" maxlength="80" required></label>
-      <label>Username <input data-testid="signup-username" autocomplete="username" required></label>
-      <label>Password <input data-testid="signup-password" type="password" autocomplete="new-password" minlength="8" required></label>
-      <button data-testid="signup" type="submit">Create account</button>
+      <h2>פעם ראשונה כאן?</h2>
+      <div class="field"><label for="signup-name">השם שלך</label><input id="signup-name" data-testid="signup-name" maxlength="80" required></div>
+      <div class="field"><label for="signup-username">שם משתמש</label><input id="signup-username" data-testid="signup-username" autocomplete="username" required></div>
+      <div class="field"><label for="signup-password">סיסמה</label><input id="signup-password" data-testid="signup-password" type="password" autocomplete="new-password" minlength="8" required></div>
+      <button data-testid="signup" type="submit">יצירת חשבון</button>
       <p data-testid="signup-error" class="error" role="alert" hidden></p>
     </form>
   </section>
 
   <section data-testid="app" aria-busy="false" hidden>
     <div class="grid">
-      <div class="panel">
-        <h2 data-testid="left-title">Book a time</h2>
-        <label>Barber <select data-testid="barber"></select></label>
+      <div class="panel" data-testid="left-panel">
+        <h2 data-testid="left-title">קביעת תור</h2>
+        <div class="field"><label for="barber">ספר</label><select id="barber" data-testid="barber"></select></div>
         <div data-testid="book-panel">
-          <label>Service <select data-testid="service"></select></label>
-          <label>Date <input type="date" data-testid="date"></label>
-          <div class="slots" data-testid="slots" role="group" aria-label="Free times"></div>
-          <p class="muted" data-testid="no-slots" hidden>No free times that day.</p>
+          <div class="field"><label for="service">שירות</label><select id="service" data-testid="service"></select></div>
+          <div class="field"><label for="date">תאריך</label><input id="date" type="date" data-testid="date"></div>
+          <div class="slots" data-testid="slots" role="group" aria-label="שעות פנויות"></div>
+          <p class="muted" data-testid="no-slots" hidden>אין שעות פנויות ביום הזה.</p>
           <div class="confirm" data-testid="confirm" hidden>
             <span data-testid="confirm-text"></span>
-            <button data-testid="book" type="button">Book</button>
+            <button data-testid="book" type="button">קביעת התור</button>
           </div>
         </div>
       </div>
-      <div class="panel">
-        <h2 data-testid="bookings-title">My bookings</h2>
+      <div class="panel" data-testid="right-panel">
+        <h2 data-testid="bookings-title">התורים שלי</h2>
         <ul data-testid="bookings"></ul>
-        <p class="muted" data-testid="no-bookings" hidden>Nothing booked yet.</p>
+        <p class="muted" data-testid="no-bookings" hidden>עוד אין תורים.</p>
       </div>
     </div>
     <p data-testid="message" role="status" aria-live="polite"></p>
@@ -125,25 +132,42 @@ async function api(method, path, body, extra = {}) {
   return { ok: resp.ok, status: resp.status, data };
 }
 
-// The product answers every refusal with a stable code; the page turns each
-// into words a customer understands, and never branches on the English.
+// A name from the server - a barber, a service, a customer - is often Latin
+// text inside a Hebrew sentence. Without isolation the Unicode bidi algorithm
+// lets it pull the punctuation beside it to the wrong side. FSI...PDI wraps it
+// in a direction of its own. Written as escapes, never as the characters
+// themselves: those are invisible, and invisible direction characters in source
+// are how "Trojan Source" hides code from a reviewer.
+const isolate = (value) => `\u2068${value}\u2069`;
+
+// Every refusal has a stable code, and every code has Hebrew words. The page
+// never shows the server's English detail: an unmapped refusal still gets a
+// Hebrew sentence.
 const FRIENDLY = {
-  slot_taken: (c) => `Someone just booked ${c.time}. Pick another time.`,
-  customer_overlap: () => "You already have a booking at that time.",
-  outside_hours: () => "That does not fit inside the barber's hours.",
-  barber_off: () => "The barber is not working that day.",
-  in_past: () => "That time has already passed.",
-  beyond_window: () => `Bookings open ${shop.booking_window_days} days ahead.`,
-  late_cancellation: () => `Bookings can only be cancelled up to ${shop.cancel_cutoff_hours} hours ahead. Please call the shop.`,
-  already_cancelled: () => "That booking is already cancelled.",
-  username_taken: () => "That username is taken.",
+  slot_taken: (c) => `מישהו בדיוק קבע את ${c.time}. אפשר לבחור שעה אחרת.`,
+  customer_overlap: () => "כבר יש לך תור בשעה הזו.",
+  outside_hours: () => "השירות לא נכנס בשעות העבודה של הספר.",
+  barber_off: () => "הספר לא עובד ביום הזה.",
+  in_past: () => "השעה הזו כבר עברה.",
+  beyond_window: () => `אפשר לקבוע תור עד ${shop.booking_window_days} ימים קדימה.`,
+  late_cancellation: () => `אפשר לבטל תור עד ${shop.cancel_cutoff_hours} שעות לפני. כדי לבטל עכשיו צריך להתקשר למספרה.`,
+  already_cancelled: () => "התור הזה כבר בוטל.",
+  already_started: () => "התור הזה כבר התחיל.",
+  username_taken: () => "שם המשתמש הזה תפוס.",
+  bad_credentials: () => "שם משתמש או סיסמה שגויים.",
+  unauthorized: () => "צריך להתחבר מחדש.",
+  forbidden: () => "אין לך הרשאה לפעולה הזו.",
+  not_found: () => "לא מצאנו את מה שחיפשת.",
+  service_inactive: () => "השירות הזה כבר לא ניתן.",
+  not_aligned: () => "תורים מתחילים ברבע שעה עגולה.",
+  idempotency_mismatch: () => "משהו השתבש בשליחה. כדאי לנסות שוב.",
 };
 
 function explain(resp, context = {}) {
   const code = resp.data && resp.data.code;
   if (code && FRIENDLY[code]) return FRIENDLY[code](context);
-  if (resp.data && typeof resp.data.detail === "string") return resp.data.detail;
-  return `Something went wrong (${resp.status}). Please try again.`;
+  if (resp.status === 422 && context.invalid) return context.invalid;
+  return `משהו השתבש (${resp.status}). כדאי לנסות שוב.`;
 }
 
 function say(text, kind) {
@@ -158,16 +182,17 @@ function say(text, kind) {
 const clock = (local) => local.slice(11, 16);
 function dayLabel(local) {
   const [y, m, d] = local.slice(0, 10).split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("he-IL", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 }
 function addDays(isoDate, days) {
   const [y, m, d] = isoDate.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
-function money(minor, currency) {
-  const symbol = { ILS: "₪", USD: "$", EUR: "€" }[currency] ?? `${currency} `;
-  return `${symbol}${(minor / 100).toFixed(2)}`;
-}
+// The Israeli way round - the amount, then the sign - whatever language the
+// browser itself is set to.
+const money = (minor, currency) => new Intl.NumberFormat("he-IL", { style: "currency", currency }).format(minor / 100);
+const ROLE = { customer: "לקוח", barber: "ספר", owner: "בעלים" };
+const STATUS = { confirmed: "מאושר", cancelled: "בוטל" };
 const barberName = (id) => (barbers.find((b) => b.id === id) || {}).display_name || "?";
 const serviceOf = (id) => services.find((s) => s.id === id) || {};
 
@@ -201,19 +226,19 @@ async function start() {
   $("auth").hidden = true;
   $("app").hidden = false;
   $("whoami").hidden = false;
-  $("display-name").textContent = `${me.display_name} · ${me.role}`;
+  $("display-name").textContent = `${isolate(me.display_name)} · ${ROLE[me.role]}`;
 
   $("barber").replaceChildren(...barbers.map((b) => option(b.id, b.display_name)));
-  $("service").replaceChildren(...services.map((s) => option(s.id, `${s.name} · ${s.duration_minutes} min · ${money(s.price_minor, s.currency)}`)));
+  $("service").replaceChildren(...services.map((s) => option(s.id, `${isolate(s.name)} · ${s.duration_minutes} דק׳ · ${money(s.price_minor, s.currency)}`)));
   $("date").min = shop.today;
   $("date").max = addDays(shop.today, shop.booking_window_days);
   $("date").value = shop.today;
 
   const customer = me.role === "customer";
   $("book-panel").hidden = !customer;
-  $("left-title").textContent = customer ? "Book a time" : me.role === "owner" ? "Show bookings for" : "Your schedule";
+  $("left-title").textContent = customer ? "קביעת תור" : me.role === "owner" ? "הצגת התורים של" : "היומן שלך";
   $("barber").parentElement.hidden = me.role === "barber";
-  $("bookings-title").textContent = { customer: "My bookings", barber: "My schedule", owner: "Bookings" }[me.role];
+  $("bookings-title").textContent = { customer: "התורים שלי", barber: "היומן שלי", owner: "תורים" }[me.role];
   say("", "ok");
   await refresh();
 }
@@ -250,13 +275,13 @@ async function refreshSlots() {
 }
 
 function select(slot, button) {
-  // One Idempotency-Key per chosen slot: pressing Book twice, or again after a
-  // dropped connection, can only ever produce the one booking.
+  // One Idempotency-Key per chosen slot: pressing the button twice, or again
+  // after a dropped connection, can only ever produce the one booking.
   selected = { slot, key: crypto.randomUUID() };
   for (const other of $("slots").children) other.setAttribute("aria-pressed", "false");
   button.setAttribute("aria-pressed", "true");
   const service = serviceOf($("service").value);
-  $("confirm-text").textContent = `${dayLabel(slot.start_local)} ${clock(slot.start_local)} · ${service.name} with ${barberName($("barber").value)}`;
+  $("confirm-text").textContent = `${dayLabel(slot.start_local)} ${clock(slot.start_local)} · ${isolate(service.name)} אצל ${isolate(barberName($("barber").value))}`;
   $("confirm").hidden = false;
 }
 
@@ -274,7 +299,7 @@ async function bookSelected() {
   booking = false;
   $("book").disabled = false;
   if (r.ok) {
-    say(`Booked: ${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${r.data.service_name} with ${barberName(r.data.barber_id)}`, "ok");
+    say(`נקבע: ${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${isolate(r.data.service_name)} אצל ${isolate(barberName(r.data.barber_id))}`, "ok");
   } else {
     say(explain(r, { time: clock(slot.start_local) }), "error");
   }
@@ -301,7 +326,7 @@ async function refreshBookings() {
     const detail = document.createElement("span");
     detail.className = "muted";
     detail.dataset.testid = "booking-detail";
-    detail.textContent = ` · ${b.service_name} with ${barberName(b.barber_id)} · ${money(b.price_minor, b.currency)} · ${b.status}`;
+    detail.textContent = ` · ${isolate(b.service_name)} אצל ${isolate(barberName(b.barber_id))} · ${money(b.price_minor, b.currency)} · ${STATUS[b.status] || b.status}`;
     text.append(when, detail);
     row.append(text);
     if (b.status === "confirmed" && me.role !== "barber") {
@@ -309,8 +334,8 @@ async function refreshBookings() {
       cancel.type = "button";
       cancel.className = "ghost";
       cancel.dataset.testid = "cancel";
-      cancel.textContent = "Cancel";
-      cancel.setAttribute("aria-label", `Cancel ${when.textContent}`);
+      cancel.textContent = "ביטול";
+      cancel.setAttribute("aria-label", `ביטול התור של ${when.textContent}`);
       cancel.addEventListener("click", () => cancelBooking(b));
       row.append(cancel);
     }
@@ -322,7 +347,7 @@ async function refreshBookings() {
 function cancelBooking(b) {
   return busyWhile(async () => {
     const r = await api("POST", `/bookings/${b.id}/cancel`);
-    say(r.ok ? `Cancelled ${dayLabel(b.start_local)} ${clock(b.start_local)}.` : explain(r), r.ok ? "ok" : "error");
+    say(r.ok ? `התור של ${dayLabel(b.start_local)} ${clock(b.start_local)} בוטל.` : explain(r), r.ok ? "ok" : "error");
     await refresh();
   });
 }
@@ -336,7 +361,9 @@ $("signup-form").addEventListener("submit", async (e) => {
   const username = $("signup-username").value, password = $("signup-password").value;
   const r = await api("POST", "/customers", { username, password, display_name: $("signup-name").value });
   if (!r.ok) {
-    $("signup-error").textContent = explain(r);
+    $("signup-error").textContent = explain(r, {
+      invalid: "כדאי לבדוק את הפרטים: שם משתמש באנגלית, באותיות קטנות, 3 עד 64 תווים, וסיסמה של 8 תווים לפחות.",
+    });
     $("signup-error").hidden = false;
     return;
   }

@@ -24,7 +24,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from tests.conftest import ALL_WEEK, TZ
+from tests.conftest import ALL_WEEK, HAIRCUT, TZ
 
 PASSWORDS = {role: secrets.token_urlsafe(12) for role in ("owner", "barber", "customer")}
 
@@ -95,7 +95,7 @@ def test_many_customers_racing_for_one_slot_get_exactly_one_booking(server, offs
     ).json()["id"]
     httpx.put(f"{server}/barbers/{barber}/hours", headers=owner, json={"hours": ALL_WEEK})
     haircut = next(
-        s for s in httpx.get(f"{server}/services", headers=owner).json()["content"] if s["name"] == "Haircut"
+        s for s in httpx.get(f"{server}/services", headers=owner).json()["content"] if s["name"] == HAIRCUT
     )
 
     customers = []

@@ -16,8 +16,8 @@ from app.models import BarberHours, Service, User
 from app.routers.barbers import DEFAULT_HOURS
 from app.security import hash_password
 
-ACCOUNTS = (("owner", "owner", "Shop owner"), ("barber", "barber", "Avi"), ("customer", "customer", "Dana"))
-MENU = (("Haircut", 30, 8000), ("Beard trim", 15, 4000), ("Haircut and beard", 45, 11000))
+ACCOUNTS = (("owner", "owner", "בעל המספרה"), ("barber", "barber", "אבי"), ("customer", "customer", "דנה"))
+MENU = (("תספורת", 30, 8000), ("סידור זקן", 15, 4000), ("תספורת וזקן", 45, 11000))
 
 
 def seed_if_empty(session: Session) -> bool:

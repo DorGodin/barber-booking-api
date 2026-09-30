@@ -58,3 +58,30 @@ time was chosen. Found by looking at the page, not by a test — so there is now
 
 **Rule:** `[hidden] { display: none !important; }` in the page's stylesheet, and UI tests
 assert visibility (`to_be_hidden`, which reads the computed style), never the attribute.
+
+## 2026-09-30 — A label wrapped around a select named the field after every option
+
+`<label>ספר <select>…</select></label>` gives the select an accessible name made of the
+label AND the text of every option inside it. A screen reader would announce the barber
+field as the whole list of barbers. It hid in English because the outside tests looked the
+label up by substring; the Hebrew rewrite looked it up exactly, and found nothing.
+
+**Rule:** tie a label to its field with `for=`. Look labels up exactly in tests — a
+substring match forgives exactly this.
+
+## 2026-09-30 — Invisible direction characters in the page's source
+
+The isolate helper was written with the actual U+2068 and U+2069 characters. They are
+invisible: a reviewer sees an empty template literal, an editor can drop them without a
+trace, and GitHub flags the file — the same characters are how "Trojan Source" hides code.
+
+**Rule:** write them as `⁨` escapes. `tests/test_source_hygiene.py` scans every source
+file and fails on any such character; it was proven by putting one back.
+
+## 2026-09-30 — The tests depended on the seeded menu's English names
+
+Renaming the seeded services to Hebrew would have broken 23 references to "Haircut" and
+"Beard trim" across the tests. They now read the names from `app/seed.py`, so the seed can
+change without touching a test.
+
+**Rule:** a test that needs seeded data reads it from the seed, never repeats it.
