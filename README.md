@@ -19,7 +19,9 @@ make install
 make run
 ```
 
-The API is on http://127.0.0.1:8100, and its interactive docs on http://127.0.0.1:8100/docs.
+Open **http://127.0.0.1:8100** for the booking page — sign in as the seeded customer, pick a
+barber, a service and a day, and book. The API's interactive docs are at
+http://127.0.0.1:8100/docs.
 
 The first start creates three accounts, with the passwords from `.env`:
 
@@ -79,6 +81,8 @@ is 06:00 UTC in summer and 07:00 UTC in winter. Every booking shows both `start`
 | POST | `/bookings` | customer |
 | GET | `/bookings`, `/bookings/{id}` | signed in — each sees only their own |
 | POST | `/bookings/{id}/cancel` | the customer who booked, or the owner |
+| GET | `/shop` | anyone — the shop's time zone, today on its clock, the window and the cutoff |
+| GET | `/` | anyone — the booking page |
 | GET | `/health` | anyone |
 
 ---
@@ -128,7 +132,8 @@ make install
 make run
 ```
 
-ה-API רץ על http://127.0.0.1:8100, והתיעוד האינטראקטיבי על http://127.0.0.1:8100/docs.
+פותחים את **http://127.0.0.1:8100** כדי להגיע למסך ההזמנה — מתחברים כלקוח, בוחרים ספר, שירות
+ויום, ומזמינים. התיעוד האינטראקטיבי של ה-API נמצא ב-http://127.0.0.1:8100/docs.
 
 בהפעלה הראשונה נוצרים שלושה משתמשים, עם הסיסמאות מ-`.env`: `owner` (בעלים — הכל), `barber`
 (ספר — רואה את התורים שלו) ו-`customer` (לקוח — מזמין, רואה ומבטל את התורים שלו). כל אחד יכול

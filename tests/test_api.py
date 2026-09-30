@@ -181,3 +181,21 @@ def test_a_customer_cannot_manage_the_shop(client, customer):
         ).status_code
         == 403
     )
+
+
+def test_the_booking_page_is_served_at_the_root(client):
+    page = client.get("/")
+
+    assert page.status_code == 200 and page.headers["content-type"].startswith("text/html")
+    for testid in ("login-form", "slots", "book", "bookings"):
+        assert f'data-testid="{testid}"' in page.text
+
+
+def test_the_shop_publishes_its_own_clock_and_rules(client):
+    from tests.conftest import TZ
+
+    shop = client.get("/shop").json()
+
+    assert shop["timezone"] == TZ.key
+    assert shop["today"] == datetime.now(UTC).astimezone(TZ).date().isoformat()
+    assert shop["booking_window_days"] == 60 and shop["cancel_cutoff_hours"] == 24

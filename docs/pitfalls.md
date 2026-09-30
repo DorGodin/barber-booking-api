@@ -47,3 +47,14 @@ rules separately — was broken by its own author.
 **Rule:** SQL fetches candidates, `Interval.overlaps` decides. `busy()` now returns bookings
 touching the window as well, and every caller asks `clashes()`. A rule that must agree in
 two places lives in one.
+
+## 2026-09-30 — Signed in, and the sign-in form stayed on screen
+
+The page hid the sign-in section with the `hidden` attribute after a successful login. The
+section also had `display: grid` in the stylesheet, and an element's own display rule beats
+the browser's `[hidden] { display: none }`. Every request succeeded; the form simply never
+went away. The confirmation bar, `display: flex`, had the same bug and showed before any
+time was chosen. Found by looking at the page, not by a test — so there is now a test.
+
+**Rule:** `[hidden] { display: none !important; }` in the page's stylesheet, and UI tests
+assert visibility (`to_be_hidden`, which reads the computed style), never the attribute.

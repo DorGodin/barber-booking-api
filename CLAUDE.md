@@ -23,6 +23,7 @@ the point of it, and most of these rules protect it.
 | `app/db.py` | the engine and `write_lock`, the BEGIN IMMEDIATE that prevents double booking |
 | `app/routers/` | one file per area |
 | `app/views.py` | how every entity looks on the wire, once |
+| `app/static/index.html` | the booking page: one file, no build step, every value written as text |
 
 **Availability and booking must never compute their rules separately.** If the listing and
 the booking disagree, the listing offers a slot the booking refuses. Change the rule in
@@ -48,3 +49,15 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 ## Verifying
 
 `make test`. A claim that something works comes with the output that shows it.
+
+## The booking page
+
+- **Times come from `start_local`, never from the browser's clock.** A customer abroad sees
+  the shop's 10:30.
+- **Every value from a user is set with `textContent`.** A display name is text, even when
+  it looks like a tag.
+- **`aria-busy` on the app section is true while the page fetches** and false once the
+  screen is current. Screen readers use it, and so do the outside UI tests — keep it
+  accurate when adding anything that fetches.
+- **`[hidden] { display: none !important; }` stays.** Without it, any element with its own
+  `display` rule ignores `hidden`.

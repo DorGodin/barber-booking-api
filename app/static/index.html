@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Barber Booking</title>
+<style>
+  :root { --ink:#1f2933; --mut:#6b7280; --line:#e4e7eb; --bg:#f6f5f2; --brand:#1d4e5f; --ok:#0e7c66; --bad:#b4232c; }
+  * { box-sizing: border-box; }
+  /* An element's own display rule beats the browser's [hidden] rule, so a
+     hidden grid or flex box stays on screen. This puts hidden back in charge. */
+  [hidden] { display: none !important; }
+  body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--ink); }
+  header { background:var(--brand); color:#fff; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; }
+  header h1 { margin:0; font-size:20px; letter-spacing:.3px; }
+  header button { background:transparent; color:#fff; border:1px solid #fff8; }
+  main { max-width:1000px; margin:24px auto; padding:0 16px; }
+  .grid { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .panel { background:#fff; border:1px solid var(--line); border-radius:10px; padding:18px; }
+  h2 { margin:0 0 14px; font-size:15px; text-transform:uppercase; letter-spacing:1.2px; color:var(--brand); }
+  label { display:block; font-size:13px; color:var(--mut); margin-bottom:10px; }
+  input, select { display:block; width:100%; margin-top:4px; padding:9px 10px; font-size:15px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); }
+  button { font:inherit; font-size:14px; padding:8px 14px; border-radius:6px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:wait; }
+  button.ghost { background:#fff; color:var(--brand); }
+  .slots { display:grid; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap:8px; margin:12px 0; }
+  .slots button { background:#fff; color:var(--brand); padding:8px 0; }
+  .slots button[aria-pressed="true"] { background:var(--brand); color:#fff; }
+  .confirm { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px; border:1px dashed var(--brand); border-radius:8px; }
+  ul { list-style:none; padding:0; margin:0; }
+  li { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); }
+  li:last-child { border-bottom:0; }
+  li[data-status="cancelled"] { color:var(--mut); text-decoration:line-through; }
+  .muted { color:var(--mut); font-size:13px; }
+  .auth { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
+  @media (max-width: 760px) { .auth { grid-template-columns: 1fr; } }
+  [data-testid="message"] { min-height:24px; margin:16px 0 0; font-weight:600; }
+  [data-testid="message"][data-kind="ok"] { color:var(--ok); }
+  [data-testid="message"][data-kind="error"], .error { color:var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <h1>✂ Barber Booking</h1>
+  <div data-testid="whoami" hidden>
+    <span data-testid="display-name"></span>
+    <button data-testid="logout" type="button">Sign out</button>
+  </div>
+</header>
+
+<main>
+  <section class="auth" data-testid="auth">
+    <form class="panel" data-testid="login-form">
+      <h2>Sign in</h2>
+      <label>Username <input data-testid="username" autocomplete="username" required></label>
+      <label>Password <input data-testid="password" type="password" autocomplete="current-password" required></label>
+      <button data-testid="login" type="submit">Sign in</button>
+      <p data-testid="login-error" class="error" role="alert" hidden></p>
+    </form>
+    <form class="panel" data-testid="signup-form">
+      <h2>New here?</h2>
+      <label>Your name <input data-testid="signup-name" maxlength="80" required></label>
+      <label>Username <input data-testid="signup-username" autocomplete="username" required></label>
+      <label>Password <input data-testid="signup-password" type="password" autocomplete="new-password" minlength="8" required></label>
+      <button data-testid="signup" type="submit">Create account</button>
+      <p data-testid="signup-error" class="error" role="alert" hidden></p>
+    </form>
+  </section>
+
+  <section data-testid="app" aria-busy="false" hidden>
+    <div class="grid">
+      <div class="panel">
+        <h2 data-testid="left-title">Book a time</h2>
+        <label>Barber <select data-testid="barber"></select></label>
+        <div data-testid="book-panel">
+          <label>Service <select data-testid="service"></select></label>
+          <label>Date <input type="date" data-testid="date"></label>
+          <div class="slots" data-testid="slots" role="group" aria-label="Free times"></div>
+          <p class="muted" data-testid="no-slots" hidden>No free times that day.</p>
+          <div class="confirm" data-testid="confirm" hidden>
+            <span data-testid="confirm-text"></span>
+            <button data-testid="book" type="button">Book</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2 data-testid="bookings-title">My bookings</h2>
+        <ul data-testid="bookings"></ul>
+        <p class="muted" data-testid="no-bookings" hidden>Nothing booked yet.</p>
+      </div>
+    </div>
+    <p data-testid="message" role="status" aria-live="polite"></p>
+  </section>
+</main>
+
+<script>
+// Every value that came from a user is written with textContent, never
+// innerHTML: a display name is text, even when it looks like a tag.
+const $ = (id) => document.querySelector(`[data-testid="${id}"]`);
+let token = null, me = null, shop = null, barbers = [], services = [], selected = null, booking = false;
+
+// aria-busy is true while the page is fetching and false once what is on screen
+// is current. A screen reader waits for it; so does a test, instead of guessing
+// how long a refresh takes. A counter, because two refreshes can overlap.
+let inFlight = 0;
+async function busyWhile(work) {
+  inFlight += 1;
+  $("app").setAttribute("aria-busy", "true");
+  try {
+    return await work();
+  } finally {
+    inFlight -= 1;
+    if (inFlight === 0) $("app").setAttribute("aria-busy", "false");
+  }
+}
+
+async function api(method, path, body, extra = {}) {
+  const headers = { ...extra };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const resp = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  let data = null;
+  try { data = await resp.json(); } catch { data = null; }
+  return { ok: resp.ok, status: resp.status, data };
+}
+
+// The product answers every refusal with a stable code; the page turns each
+// into words a customer understands, and never branches on the English.
+const FRIENDLY = {
+  slot_taken: (c) => `Someone just booked ${c.time}. Pick another time.`,
+  customer_overlap: () => "You already have a booking at that time.",
+  outside_hours: () => "That does not fit inside the barber's hours.",
+  barber_off: () => "The barber is not working that day.",
+  in_past: () => "That time has already passed.",
+  beyond_window: () => `Bookings open ${shop.booking_window_days} days ahead.`,
+  late_cancellation: () => `Bookings can only be cancelled up to ${shop.cancel_cutoff_hours} hours ahead. Please call the shop.`,
+  already_cancelled: () => "That booking is already cancelled.",
+  username_taken: () => "That username is taken.",
+};
+
+function explain(resp, context = {}) {
+  const code = resp.data && resp.data.code;
+  if (code && FRIENDLY[code]) return FRIENDLY[code](context);
+  if (resp.data && typeof resp.data.detail === "string") return resp.data.detail;
+  return `Something went wrong (${resp.status}). Please try again.`;
+}
+
+function say(text, kind) {
+  const message = $("message");
+  message.textContent = text;
+  message.dataset.kind = kind;
+}
+
+// Times are taken from start_local exactly as the shop's clock wrote them, and
+// never converted with the browser's clock: a customer abroad must see 10:30
+// for a 10:30 appointment, not the hour it is where they are sitting.
+const clock = (local) => local.slice(11, 16);
+function dayLabel(local) {
+  const [y, m, d] = local.slice(0, 10).split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+}
+function addDays(isoDate, days) {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+function money(minor, currency) {
+  const symbol = { ILS: "₪", USD: "$", EUR: "€" }[currency] ?? `${currency} `;
+  return `${symbol}${(minor / 100).toFixed(2)}`;
+}
+const barberName = (id) => (barbers.find((b) => b.id === id) || {}).display_name || "?";
+const serviceOf = (id) => services.find((s) => s.id === id) || {};
+
+function option(value, text) {
+  const el = document.createElement("option");
+  el.value = value;
+  el.textContent = text;
+  return el;
+}
+
+async function signIn(username, password, errorBox) {
+  const r = await api("POST", "/auth/token", { username, password });
+  if (!r.ok) {
+    errorBox.textContent = explain(r);
+    errorBox.hidden = false;
+    return;
+  }
+  errorBox.hidden = true;
+  token = r.data.access_token;
+  await busyWhile(async () => {
+    me = (await api("GET", "/me")).data;
+    await start();
+  });
+}
+
+async function start() {
+  shop = (await api("GET", "/shop")).data;
+  barbers = (await api("GET", "/barbers")).data.content;
+  services = (await api("GET", "/services")).data.content;
+
+  $("auth").hidden = true;
+  $("app").hidden = false;
+  $("whoami").hidden = false;
+  $("display-name").textContent = `${me.display_name} · ${me.role}`;
+
+  $("barber").replaceChildren(...barbers.map((b) => option(b.id, b.display_name)));
+  $("service").replaceChildren(...services.map((s) => option(s.id, `${s.name} · ${s.duration_minutes} min · ${money(s.price_minor, s.currency)}`)));
+  $("date").min = shop.today;
+  $("date").max = addDays(shop.today, shop.booking_window_days);
+  $("date").value = shop.today;
+
+  const customer = me.role === "customer";
+  $("book-panel").hidden = !customer;
+  $("left-title").textContent = customer ? "Book a time" : me.role === "owner" ? "Show bookings for" : "Your schedule";
+  $("barber").parentElement.hidden = me.role === "barber";
+  $("bookings-title").textContent = { customer: "My bookings", barber: "My schedule", owner: "Bookings" }[me.role];
+  say("", "ok");
+  await refresh();
+}
+
+async function refresh() {
+  await Promise.all([refreshSlots(), refreshBookings()]);
+}
+
+async function refreshSlots() {
+  selected = null;
+  $("confirm").hidden = true;
+  if (!me || me.role !== "customer" || !$("barber").value || !$("service").value || !$("date").value) return;
+  const params = new URLSearchParams({ date: $("date").value, service_id: $("service").value });
+  const r = await api("GET", `/barbers/${$("barber").value}/availability?${params}`);
+  const box = $("slots");
+  box.replaceChildren();
+  if (!r.ok) {
+    $("no-slots").hidden = true;
+    say(explain(r), "error");
+    return;
+  }
+  for (const slot of r.data.slots) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.testid = "slot";
+    button.dataset.start = slot.start;
+    button.textContent = clock(slot.start_local);
+    button.setAttribute("aria-pressed", "false");
+    button.setAttribute("aria-label", `${clock(slot.start_local)}, ${dayLabel(slot.start_local)}`);
+    button.addEventListener("click", () => select(slot, button));
+    box.appendChild(button);
+  }
+  $("no-slots").hidden = r.data.slots.length > 0;
+}
+
+function select(slot, button) {
+  // One Idempotency-Key per chosen slot: pressing Book twice, or again after a
+  // dropped connection, can only ever produce the one booking.
+  selected = { slot, key: crypto.randomUUID() };
+  for (const other of $("slots").children) other.setAttribute("aria-pressed", "false");
+  button.setAttribute("aria-pressed", "true");
+  const service = serviceOf($("service").value);
+  $("confirm-text").textContent = `${dayLabel(slot.start_local)} ${clock(slot.start_local)} · ${service.name} with ${barberName($("barber").value)}`;
+  $("confirm").hidden = false;
+}
+
+function book() {
+  if (!selected || booking) return;
+  return busyWhile(bookSelected);
+}
+
+async function bookSelected() {
+  booking = true;
+  $("book").disabled = true;
+  const { slot, key } = selected;
+  const body = { barber_id: $("barber").value, service_id: $("service").value, start: slot.start };
+  const r = await api("POST", "/bookings", body, { "Idempotency-Key": key });
+  booking = false;
+  $("book").disabled = false;
+  if (r.ok) {
+    say(`Booked: ${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${r.data.service_name} with ${barberName(r.data.barber_id)}`, "ok");
+  } else {
+    say(explain(r, { time: clock(slot.start_local) }), "error");
+  }
+  await refresh();
+}
+
+async function refreshBookings() {
+  if (!me) return;
+  const params = new URLSearchParams({ limit: "100" });
+  if (me.role === "owner" && $("barber").value) params.set("barber_id", $("barber").value);
+  const r = await api("GET", `/bookings?${params}`);
+  const list = $("bookings");
+  list.replaceChildren();
+  const rows = r.ok ? r.data.content : [];
+  for (const b of rows) {
+    const row = document.createElement("li");
+    row.dataset.testid = "booking-row";
+    row.dataset.id = b.id;
+    row.dataset.status = b.status;
+    const text = document.createElement("span");
+    const when = document.createElement("strong");
+    when.dataset.testid = "booking-when";
+    when.textContent = `${dayLabel(b.start_local)} ${clock(b.start_local)}`;
+    const detail = document.createElement("span");
+    detail.className = "muted";
+    detail.dataset.testid = "booking-detail";
+    detail.textContent = ` · ${b.service_name} with ${barberName(b.barber_id)} · ${money(b.price_minor, b.currency)} · ${b.status}`;
+    text.append(when, detail);
+    row.append(text);
+    if (b.status === "confirmed" && me.role !== "barber") {
+      const cancel = document.createElement("button");
+      cancel.type = "button";
+      cancel.className = "ghost";
+      cancel.dataset.testid = "cancel";
+      cancel.textContent = "Cancel";
+      cancel.setAttribute("aria-label", `Cancel ${when.textContent}`);
+      cancel.addEventListener("click", () => cancelBooking(b));
+      row.append(cancel);
+    }
+    list.appendChild(row);
+  }
+  $("no-bookings").hidden = rows.length > 0;
+}
+
+function cancelBooking(b) {
+  return busyWhile(async () => {
+    const r = await api("POST", `/bookings/${b.id}/cancel`);
+    say(r.ok ? `Cancelled ${dayLabel(b.start_local)} ${clock(b.start_local)}.` : explain(r), r.ok ? "ok" : "error");
+    await refresh();
+  });
+}
+
+$("login-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  signIn($("username").value, $("password").value, $("login-error"));
+});
+$("signup-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const username = $("signup-username").value, password = $("signup-password").value;
+  const r = await api("POST", "/customers", { username, password, display_name: $("signup-name").value });
+  if (!r.ok) {
+    $("signup-error").textContent = explain(r);
+    $("signup-error").hidden = false;
+    return;
+  }
+  await signIn(username, password, $("signup-error"));
+});
+$("logout").addEventListener("click", () => {
+  token = me = null;
+  $("app").hidden = true;
+  $("whoami").hidden = true;
+  $("auth").hidden = false;
+  $("password").value = "";
+});
+$("book").addEventListener("click", book);
+for (const id of ["barber", "service", "date"]) $(id).addEventListener("change", () => busyWhile(refresh));
+</script>
+</body>
+</html>

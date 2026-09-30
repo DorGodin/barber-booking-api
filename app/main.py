@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 
 from app.config import Settings
 from app.db import Base, make_engine, make_sessionmaker
@@ -45,6 +48,21 @@ def create_app(config: Settings | None = None) -> FastAPI:
     @app.get("/health", tags=["health"])
     def health():
         return {"status": "ok"}
+
+    @app.get("/shop", tags=["shop"])
+    def shop():
+        """The shop's own clock and rules, for a client that must not guess them.
+        A browser in another time zone would otherwise compute a different today."""
+        return {
+            "timezone": config.shop_tz.key,
+            "today": datetime.now(UTC).astimezone(config.shop_tz).date().isoformat(),
+            "booking_window_days": config.booking_window_days,
+            "cancel_cutoff_hours": config.cancel_cutoff_hours,
+        }
+
+    @app.get("/", include_in_schema=False)
+    def booking_page():
+        return FileResponse(Path(__file__).parent / "static" / "index.html")
 
     for router in (auth.router, services.router, barbers.router, bookings.router):
         app.include_router(router)
