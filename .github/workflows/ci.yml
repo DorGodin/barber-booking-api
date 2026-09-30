@@ -35,7 +35,9 @@ jobs:
         run: |
           cp .env.example .env
           docker compose up --build -d
-          for i in $(seq 1 60); do curl -sf http://127.0.0.1:8100/health && break; sleep 1; done
+          # Fail here, by name, rather than at the next step with a confusing curl error.
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:8100/health && exit 0; sleep 1; done
+          echo "the API never became healthy"; docker compose logs; exit 1
       - name: log in as the seeded owner
         run: |
           curl -sf -X POST http://127.0.0.1:8100/auth/token \
