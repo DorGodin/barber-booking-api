@@ -1,0 +1,56 @@
+name: ci
+
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  test:
+    name: tests (including the two-worker race)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13" }
+      - run: pip install -r requirements.lock.txt
+      - run: python -m pytest -q
+
+  lint:
+    name: lint and format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13" }
+      - run: pip install ruff==0.8.4
+      - run: ruff check .
+      - run: ruff format --check .
+
+  docker:
+    name: container starts, seeds, and answers a login
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: start
+        run: |
+          cp .env.example .env
+          docker compose up --build -d
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:8100/health && break; sleep 1; done
+      - name: log in as the seeded owner
+        run: |
+          curl -sf -X POST http://127.0.0.1:8100/auth/token \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"owner","password":"dev-owner-password"}' | grep -q access_token
+      - name: stop
+        if: always()
+        run: docker compose logs && docker compose down
+
+  secrets:
+    name: secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
