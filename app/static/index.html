@@ -51,6 +51,7 @@
   li:last-child { border-bottom:0; }
   /* A row's button keeps its size; the text beside it wraps instead. */
   li > button { flex-shrink:0; }
+  [data-testid="whoami"] > button { flex-shrink:0; }
   li > span:first-child { min-width:0; overflow-wrap:anywhere; }
   li[data-status="cancelled"] { color:var(--mut); text-decoration:line-through; }
   .muted { color:var(--mut); font-size:13px; }

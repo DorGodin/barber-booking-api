@@ -4,7 +4,8 @@
 
 A small, real appointment booking API for a barbershop, with a booking page in Hebrew:
 barbers, services, working hours, availability, bookings and cancellations - and an owner's
-screen to run the shop.
+screen to run the shop. The page is built for a phone as much as a desktop, and is tested on
+both, in Safari's engine (WebKit) and in Chromium.
 
 ![Two customers go for the same free time; the first is booked, the second is told it has just gone](docs/media/race.gif)
 
@@ -153,7 +154,8 @@ A lock in Python memory would not do: it protects one process, and the server ru
 
 ## עברית
 
-API קטן ואמיתי לקביעת תורים במספרה: ספרים, שירותים, שעות עבודה, זמינות, הזמנות וביטולים.
+API קטן ואמיתי לקביעת תורים במספרה: ספרים, שירותים, שעות עבודה, זמינות, הזמנות וביטולים —
+עם מסך הזמנה בעברית שמתאים גם לטלפון.
 
 הוא קיים כדי שיבדקו אותו **מבחוץ**. אין בו שום "קיצור" לבדיקות — אין endpoint לאיפוס, אין
 דלת אחורית — כך שתשתית בדיקות שמופנית אליו צריכה לעבוד בדיוק כמו מול כל מוצר אמיתי. התשתית
@@ -168,7 +170,7 @@ make run
 ```
 
 פותחים את **http://127.0.0.1:8100** כדי להגיע למסך ההזמנה — מתחברים כלקוח, בוחרים ספר, שירות
-ויום, ומזמינים. התיעוד האינטראקטיבי של ה-API נמצא ב-http://127.0.0.1:8100/docs.
+ויום, ומזמינים. המסך בנוי לטלפון בדיוק כמו למחשב, ונבדק על שניהם — ב-WebKit, המנוע של Safari, וב-Chromium. התיעוד האינטראקטיבי של ה-API נמצא ב-http://127.0.0.1:8100/docs.
 
 המספרה פתוחה **בימים א׳–ה׳, 10:00–19:00**. בהפעלה הראשונה נוצרים: בעל המספרה (`owner`); ארבעה
 ספרים — אבי (`barber`, כל יום), יוסי (`barber.yossi`, א׳ ג׳ ה׳), מורן (`barber.moran`, ב׳ ד׳) ורון
