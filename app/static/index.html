@@ -12,11 +12,14 @@
   [hidden] { display: none !important; }
   body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background:var(--bg); color:var(--ink); }
   header { background:var(--brand); color:#fff; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; }
-  header h1 { margin:0; font-size:20px; }
+  header h1 { margin:0; font-size:20px; white-space:nowrap; }
+  [data-testid="whoami"] { display:flex; align-items:center; gap:8px; text-align:left; }
   header button { background:transparent; color:#fff; border:1px solid #fff8; }
   main { max-width:1000px; margin:24px auto; padding:0 16px; }
-  .grid { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
-  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  /* minmax(0, 1fr), not 1fr: a 1fr track grows to its widest content, so one
+     wide table pushed the whole column past the edge of a phone. */
+  .grid { display:grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap:18px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: minmax(0, 1fr); } }
   .panel { background:#fff; border:1px solid var(--line); border-radius:10px; padding:18px; }
   h2 { margin:0 0 14px; font-size:16px; color:var(--brand); }
   /* Labels are tied to their field with for=, never wrapped around it: a label
@@ -24,7 +27,15 @@
      reader would announce the barber field as the whole list of barbers. */
   .field { margin-bottom:10px; }
   label { display:block; font-size:13px; color:var(--mut); }
-  input, select { display:block; width:100%; margin-top:4px; padding:9px 10px; font-size:15px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); }
+  /* 16px, not less: below it Safari on iOS zooms the whole page in when a
+     field takes the focus, and leaves it zoomed after. */
+  input, select { display:block; width:100%; margin-top:4px; padding:9px 10px; font-size:16px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); }
+  /* Safari draws its own select and ignores its height and padding - 23px
+     tall on an iPhone, whatever the CSS says. Drawn here instead, with the
+     arrow on the left, where a right to left page puts it. Safari also lets a
+     long option - a service's name, length and price - spill past the box and
+     widen the page; it is clipped here, and the list shows it whole. */
+  select { -webkit-appearance:none; appearance:none; padding-left:34px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%231d4e5f' stroke-width='2'/%3E%3C/svg%3E") no-repeat left 12px center; }
   /* A username and a password are Latin text; typed right to left they read
      backwards while they are being typed. */
   input[autocomplete="username"], input[type="password"] { direction:ltr; text-align:right; }
@@ -38,6 +49,9 @@
   ul { list-style:none; padding:0; margin:0; }
   li { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); }
   li:last-child { border-bottom:0; }
+  /* A row's button keeps its size; the text beside it wraps instead. */
+  li > button { flex-shrink:0; }
+  li > span:first-child { min-width:0; overflow-wrap:anywhere; }
   li[data-status="cancelled"] { color:var(--mut); text-decoration:line-through; }
   .muted { color:var(--mut); font-size:13px; }
   .auth { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
@@ -56,6 +70,31 @@
   dialog[data-kind="error"] .band { background:var(--bad); }
   dialog .body { padding:18px 22px; line-height:1.6; }
   dialog .actions { padding:0 22px 20px; text-align:left; }
+  /* On a touch screen everything pressable gets at least 44px - Apple's
+     minimum for a finger - and a checkbox the 24px WCAG minimum. A mouse is
+     precise; a thumb is not, and a near miss on a phone cancels the wrong
+     appointment. pointer:coarse covers a tablet, which is wider than 760px. */
+  @media (max-width: 760px), (pointer: coarse) {
+    button, input:not([type="checkbox"]), select, .owner-nav a { min-height:44px; }
+    button { min-width:44px; }
+    input[type="checkbox"] { width:24px; height:24px; }
+    header { padding:12px 16px; gap:10px; }
+    header h1 { font-size:18px; }
+  }
+  /* The owner's screen is four long sections stacked on a phone. A menu that
+     stays on top jumps to each; scroll-margin keeps a section's title from
+     landing underneath it. */
+  .owner-nav { position:sticky; top:0; z-index:5; display:flex; gap:8px; margin:0 -16px 16px; padding:8px 16px; background:var(--bg); border-bottom:1px solid var(--line); }
+  .owner-nav a { flex:1; display:flex; align-items:center; justify-content:center; padding:0 8px; border:1px solid var(--brand); border-radius:6px; background:#fff; color:var(--brand); text-decoration:none; font-size:14px; }
+  @media (min-width: 761px) { .owner-nav { display:none; } }
+  @media (max-width: 420px) {
+    table.hours th, table.hours td { padding:4px 3px; }
+    table.hours input:not([type="checkbox"]) { width:64px; padding:9px 4px; }
+    header h1 { font-size:16px; }
+    [data-testid="display-name"] { font-size:13px; }
+    .owner-nav a { font-size:13px; white-space:nowrap; padding:0 4px; }
+  }
+  @media (max-width: 760px) { [data-section] { scroll-margin-top:72px; } }
   [data-testid="message"][data-kind="ok"] { color:var(--ok); }
   [data-testid="message"][data-kind="error"], .error { color:var(--bad); }
 </style>
@@ -89,6 +128,11 @@
   </section>
 
   <section data-testid="app" aria-busy="false" hidden>
+    <nav class="owner-nav" data-testid="owner-nav" aria-label="חלקי המסך" hidden>
+      <a href="#bookings-section">תורים</a>
+      <a href="#hours-section">שעות עבודה</a>
+      <a href="#services-section">שירותים</a>
+    </nav>
     <div class="grid">
       <div class="panel" data-testid="left-panel">
         <h2 data-testid="left-title">קביעת תור</h2>
@@ -104,14 +148,14 @@
           </div>
         </div>
       </div>
-      <div class="panel" data-testid="right-panel">
+      <div class="panel" data-testid="right-panel" id="bookings-section" data-section>
         <h2 data-testid="bookings-title">התורים שלי</h2>
         <ul data-testid="bookings"></ul>
         <p class="muted" data-testid="no-bookings" hidden>עוד אין תורים.</p>
       </div>
     </div>
     <div class="grid owner" data-testid="owner" hidden>
-      <div class="panel" data-testid="hours-panel">
+      <div class="panel" data-testid="hours-panel" id="hours-section" data-section>
         <h2>שעות עבודה וימי חופש <span class="muted" data-testid="hours-for"></span></h2>
         <table class="hours"><tbody data-testid="hours"></tbody></table>
         <button data-testid="save-hours" type="button">שמירת השעות</button>
@@ -121,7 +165,7 @@
         <div class="field"><label for="dayoff-date">יום חופש חדש</label><input id="dayoff-date" type="date" data-testid="dayoff-date"></div>
         <button data-testid="add-dayoff" type="button" class="ghost">הוספת יום חופש</button>
       </div>
-      <div class="panel" data-testid="services-panel">
+      <div class="panel" data-testid="services-panel" id="services-section" data-section>
         <h2>שירותים</h2>
         <ul data-testid="services"></ul>
         <h3>שירות חדש</h3>
@@ -167,6 +211,17 @@ async function busyWhile(work) {
     inFlight -= 1;
     if (inFlight === 0) $("app").setAttribute("aria-busy", "false");
   }
+}
+
+// Every change of barber, service or day asks again, and the answers can come
+// back in any order. Each refresh takes a ticket; an answer that arrives after
+// a newer ticket was taken is dropped. Without this, the times for today could
+// land after the times for the day chosen and replace them - and the owner
+// could save one barber's hours onto another, whose name was on the screen.
+const latest = {};
+function ticket(name) {
+  const mine = (latest[name] = (latest[name] || 0) + 1);
+  return () => latest[name] === mine;
 }
 
 async function api(method, path, body, extra = {}) {
@@ -330,13 +385,16 @@ function control(tag, attributes) {
 async function refreshOwner() {
   if (!me || me.role !== "owner") return;
   $("owner").hidden = false;
+  $("owner-nav").hidden = false;
   if (!$("new-service-duration").options.length) {
     for (let minutes = 15; minutes <= 240; minutes += 15) $("new-service-duration").append(option(String(minutes), `${minutes} דק׳`));
     $("new-service-duration").value = "30";
   }
   const barberId = $("barber").value;
   $("hours-for").textContent = `· ${isolate(barberName(barberId))}`;
+  const current = ticket("owner");
   const [hours, off] = await Promise.all([api("GET", `/barbers/${barberId}/hours`), api("GET", `/barbers/${barberId}/time-off`)]);
+  if (!current()) return;
   renderHours(hours.ok ? hours.data.hours : {});
   renderDaysOff(off.ok ? off.data.days : []);
   renderServices();
@@ -501,7 +559,9 @@ async function refreshSlots() {
   $("confirm").hidden = true;
   if (!me || me.role !== "customer" || !$("barber").value || !$("service").value || !$("date").value) return;
   const params = new URLSearchParams({ date: $("date").value, service_id: $("service").value });
+  const current = ticket("slots");
   const r = await api("GET", `/barbers/${$("barber").value}/availability?${params}`);
+  if (!current()) return;
   const box = $("slots");
   box.replaceChildren();
   if (!r.ok) {
@@ -564,7 +624,9 @@ async function refreshBookings() {
   if (!me) return;
   const params = new URLSearchParams({ limit: "100" });
   if (me.role === "owner" && $("barber").value) params.set("barber_id", $("barber").value);
+  const current = ticket("bookings");
   const r = await api("GET", `/bookings?${params}`);
+  if (!current()) return;
   const list = $("bookings");
   list.replaceChildren();
   const rows = r.ok ? r.data.content : [];
@@ -627,6 +689,7 @@ $("logout").addEventListener("click", () => {
   token = me = null;
   $("app").hidden = true;
   $("owner").hidden = true;
+  $("owner-nav").hidden = true;
   $("whoami").hidden = true;
   $("auth").hidden = false;
   $("password").value = "";
