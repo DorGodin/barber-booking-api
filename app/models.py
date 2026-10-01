@@ -59,6 +59,16 @@ class RevokedToken(Base):
     expires_at: Mapped[datetime] = mapped_column(UTCDateTime, index=True)
 
 
+class Signup(Base):
+    """One account created, and from where - to limit how many one address makes."""
+
+    __tablename__ = "signups"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ip: Mapped[str] = mapped_column(String(64), index=True)
+    at: Mapped[datetime] = mapped_column(UTCDateTime, index=True, default=now_utc)
+
+
 class LoginFailure(Base):
     """One failed sign-in. Kept in the database, not in memory: the server runs
     several workers, and a count in each one's memory would let an attacker

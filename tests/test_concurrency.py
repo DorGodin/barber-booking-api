@@ -99,10 +99,14 @@ def test_many_customers_racing_for_one_slot_get_exactly_one_booking(server, offs
     )
 
     customers = []
-    for _ in offsets:
+    for n, _ in enumerate(offsets):
         name = f"c-{secrets.token_hex(4)}"
+        # Each from an address of its own, as different people's phones are: one
+        # address may make only a few accounts an hour.
         httpx.post(
-            f"{server}/customers", json={"username": name, "password": "long-enough", "display_name": "C"}
+            f"{server}/customers",
+            json={"username": name, "password": "long-enough", "display_name": "C"},
+            headers={"X-Forwarded-For": f"198.18.0.{n + 1}"},
         )
         customers.append(token(server, name, "long-enough"))
 

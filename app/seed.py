@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
@@ -35,11 +36,15 @@ BARBERS = (
     ("barber.ron", "רון", ("sun", "mon", "tue")),
 )
 
-# Yael already has a haircut booked every two hours with each barber for the
-# next working days, each barber half an hour after the one before - so the
-# grid shows free and taken times alternating, and Yael is never in two chairs.
+# A haircut is already booked every two hours with each barber for the next
+# working days, each barber half an hour after the one before - so the grid shows
+# free and taken times alternating. A customer may hold only two bookings ahead,
+# so the bookings belong to the shop's regulars, two each, and no one is ever in
+# two chairs. Dana and Yael hold none: they are the two customers to sign in as,
+# in two windows, and go for the same time.
 SEEDED_DAYS = 5
 EVERY = timedelta(hours=2)
+REGULAR = ("regular-{n:02d}", "לקוח קבוע {n}")
 
 
 def _password(variable: str) -> str:
@@ -57,8 +62,9 @@ def _account(session: Session, username: str, name: str, role: str, password: st
 
 
 def _seed_bookings(
-    session: Session, config: Settings, barbers: list[tuple[User, tuple]], customer: User, service: Service
+    session: Session, config: Settings, barbers: list[tuple[User, tuple]], customers, service: Service
 ) -> int:
+    """`customers` hands out who holds each booking - two each, the rule's limit."""
     today = datetime.now(UTC).astimezone(config.shop_tz).date()
     opening, closing = parse_hhmm(SHOP_OPEN), parse_hhmm(SHOP_CLOSE)
     made = 0
@@ -74,7 +80,7 @@ def _seed_bookings(
             while start + timedelta(minutes=service.duration_minutes) <= end_of_day:
                 session.add(
                     Booking(
-                        customer_id=customer.id,
+                        customer_id=next(customers).id,
                         barber_id=barber.id,
                         service_id=service.id,
                         start_utc=start,
@@ -86,6 +92,23 @@ def _seed_bookings(
                 made += 1
                 start += EVERY
     return made
+
+
+def _holders(session: Session):
+    """Who holds each seeded booking, in turn: the regulars - two bookings each,
+    consecutive, so a customer's two are one barber's same day, two hours apart,
+    and never overlap. Nobody signs in as a regular: they share one hash of a
+    random password nobody knows."""
+    unusable = hash_password(secrets.token_urlsafe(24))
+    n = 0
+    while True:
+        n += 1
+        username, name = (part.format(n=n) for part in REGULAR)
+        regular = User(username=username, password_hash=unusable, role="customer", display_name=name)
+        session.add(regular)
+        session.flush()
+        yield regular
+        yield regular
 
 
 def seed_if_empty(session: Session, config: Settings) -> bool:
@@ -105,9 +128,8 @@ def _seed(session: Session, config: Settings) -> None:
     customer_password = _password("SEED_CUSTOMER_PASSWORD")
 
     _account(session, *OWNER, "owner", owner_password)
-    customers = [
-        _account(session, username, name, "customer", customer_password) for username, name in CUSTOMERS
-    ]
+    for username, name in CUSTOMERS:
+        _account(session, username, name, "customer", customer_password)
     barbers = []
     for username, name, days in BARBERS:
         barber = _account(session, username, name, "barber", barber_password)
@@ -120,4 +142,4 @@ def _seed(session: Session, config: Settings) -> None:
     session.add_all(services)
     session.flush()
 
-    _seed_bookings(session, config, barbers, customers[1], services[0])
+    _seed_bookings(session, config, barbers, _holders(session), services[0])

@@ -72,6 +72,24 @@ def create_booking(
         service = active_service_or_error(session, body.service_id)
         wanted = check_bookable(session, config, body.barber_id, service, start, now)
 
+        # One customer may hold only so many times ahead, or one account - or
+        # a script - could take every free time in the shop. Counted under the
+        # lock, so two bookings sent at once cannot both pass it. Before the
+        # slot checks: a customer at the limit is told that, not that a time
+        # is taken.
+        ahead = session.scalar(
+            select(func.count())
+            .select_from(Booking)
+            .where(Booking.customer_id == user.id, Booking.status == "confirmed", Booking.start_utc > now)
+        )
+        if ahead >= config.max_future_bookings:
+            raise DomainError(
+                409,
+                "too_many_bookings",
+                f"at most {config.max_future_bookings} bookings ahead; cancel one to book another",
+                extra={"limit": config.max_future_bookings},
+            )
+
         if clashes(wanted, busy(session, wanted, barber_id=body.barber_id)):
             raise DomainError(409, "slot_taken", "that time is no longer available")
         if clashes(wanted, busy(session, wanted, customer_id=user.id)):

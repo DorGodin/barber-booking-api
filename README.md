@@ -43,7 +43,11 @@ passwords from `.env`:
 | `barber.moran` | מורן | Monday, Wednesday |
 | `barber.ron` | רון | Sunday, Monday, Tuesday |
 | `customer` | דנה | a customer with nothing booked |
-| `yael` | יעל | a customer who already holds a haircut every two hours with each barber for the next working days |
+| `yael` | יעל | a second customer with nothing booked |
+
+The taken times belong to the shop's regulars: a haircut every two hours with each barber for
+the next working days, two per regular - a customer may hold only two bookings ahead. Nobody
+signs in as a regular.
 
 Signed in as the owner, the same page becomes the management screen: each barber's weekly
 hours and days off, a new barber, the services and their prices, and every booking with a
@@ -73,6 +77,8 @@ These are what makes a booking product hard to get right — and what is worth t
 | Not in the past, and at most 60 days ahead | `422 in_past` / `beyond_window` |
 | Nothing on a barber's day off | `422 barber_off` |
 | A customer can cancel up to 24 hours before. The owner can cancel any time | `409 late_cancellation` |
+| A customer holds at most 2 bookings ahead; cancelling one makes room (`MAX_FUTURE_BOOKINGS`) | `409 too_many_bookings` |
+| One address makes at most 5 accounts an hour (`SIGNUPS_PER_ADDRESS`) - more accounts are the way around the limit above | `429 too_many_signups` |
 | A double tap with the same `Idempotency-Key` books once | the first booking, again |
 | Changing a price does not change bookings already made | — |
 | Somebody else's booking is *not found*, not *forbidden* — a 403 would confirm it exists | `404` |
@@ -201,8 +207,9 @@ make run
 
 המספרה פתוחה **בימים א׳–ה׳, 10:00–19:00**. בהפעלה הראשונה נוצרים: בעל המספרה (`owner`); ארבעה
 ספרים — אבי (`barber`, כל יום), יוסי (`barber.yossi`, א׳ ג׳ ה׳), מורן (`barber.moran`, ב׳ ד׳) ורון
-(`barber.ron`, א׳ ב׳ ג׳); ושתי לקוחות — דנה (`customer`) ויעל (`yael`), שכבר מחזיקה תספורת כל שעתיים
-אצל כל ספר בימי העבודה הקרובים. כך בכל יום יש הרכב ספרים אחר, ובכל יום רואים שעות פנויות ותפוסות
+(`barber.ron`, א׳ ב׳ ג׳); ושתי לקוחות בלי תורים — דנה (`customer`) ויעל (`yael`). השעות התפוסות שייכות
+ללקוחות הקבועים של המספרה: תספורת כל שעתיים אצל כל ספר בימי העבודה הקרובים, שתיים לכל לקוח קבוע, כי
+לקוח יכול להחזיק רק שני תורים קדימה. כך בכל יום יש הרכב ספרים אחר, ובכל יום רואים שעות פנויות ותפוסות
 לסירוגין. אפשר להתחבר כדנה בחלון אחד וכיעל בחלון אחר, לבחור את אותה שעה בשניהם וללחוץ "קביעת התור"
 בכל אחד — אחד יקבל חלון ירוק, והשני חלון אדום "השעה כבר תפוסה". בעל המספרה שמתחבר מקבל את מסך
 הניהול: שעות עבודה וימי חופש לכל ספר, ספר חדש, שירותים ומחירים, וביטול כל תור — גם פחות מ-24 שעות
@@ -224,6 +231,8 @@ make run
 | לא בעבר, ולכל היותר 60 יום קדימה | `422 in_past` / `beyond_window` |
 | שום תור ביום חופש של הספר | `422 barber_off` |
 | לקוח יכול לבטל עד 24 שעות לפני. הבעלים יכול לבטל תמיד | `409 late_cancellation` |
+| לקוח מחזיק לכל היותר 2 תורים קדימה; ביטול של אחד מפנה מקום (`MAX_FUTURE_BOOKINGS`) | `409 too_many_bookings` |
+| מכתובת אחת נפתחים לכל היותר 5 חשבונות בשעה (`SIGNUPS_PER_ADDRESS`) — עוד חשבונות הם הדרך לעקוף את החוק שלמעלה | `429 too_many_signups` |
 | לחיצה כפולה עם אותו `Idempotency-Key` מזמינה פעם אחת | ההזמנה הראשונה, שוב |
 | שינוי מחיר לא משנה הזמנות שכבר נעשו | — |
 | הזמנה של מישהו אחר *לא נמצאה*, ולא *אסורה* — 403 היה מאשר שהיא קיימת | `404` |

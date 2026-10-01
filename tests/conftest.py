@@ -32,6 +32,9 @@ def client(tmp_path: Path, monkeypatch) -> TestClient:
         booking_window_days=60,
         cancel_cutoff_hours=24,
         token_hours=1,
+        # These tests make customers from one address, the test client's. The
+        # limit itself is tested with its real value in test_signup_limits.py.
+        signups_per_address=1000,
     )
     with TestClient(create_app(config)) as test_client:
         yield test_client

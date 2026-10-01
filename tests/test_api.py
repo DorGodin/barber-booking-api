@@ -35,14 +35,17 @@ def test_a_booked_slot_leaves_the_availability_and_appears_in_my_bookings(client
     assert [b["id"] for b in mine["content"]] == [created.json()["id"]]
 
 
-def test_every_slot_the_listing_offers_can_actually_be_booked(client, customer, barber, services):
+def test_every_slot_the_listing_offers_can_actually_be_booked(
+    client, customer, new_customer, barber, services
+):
     service = services[COMBO]["id"]
     day = local_day(4)
     offered = slots(client, customer, barber, service, day)
 
+    # A customer of its own for each: one customer may hold only two bookings ahead.
     for start in offered[::9]:
         if start in slots(client, customer, barber, service, day):
-            assert book(client, customer, barber, service, start).status_code == 201, start
+            assert book(client, new_customer(), barber, service, start).status_code == 201, start
 
 
 def test_a_start_without_an_offset_is_refused(client, customer, barber, services):

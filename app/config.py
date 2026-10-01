@@ -16,6 +16,9 @@ class Settings:
     login_max_failures: int = 5
     login_max_failures_per_ip: int = 20
     login_lock_minutes: int = 15
+    max_future_bookings: int = 2
+    signups_per_address: int = 5
+    signup_window_minutes: int = 60
     accessibility_contact_name: str = "רכז/ת הנגישות של המספרה (לדוגמה)"
     accessibility_contact_phone: str = "03-0000000"
     accessibility_contact_email: str = "accessibility@example.com"
@@ -39,6 +42,9 @@ class Settings:
             login_max_failures=int(os.environ.get("LOGIN_MAX_FAILURES", "5")),
             login_max_failures_per_ip=int(os.environ.get("LOGIN_MAX_FAILURES_PER_IP", "20")),
             login_lock_minutes=int(os.environ.get("LOGIN_LOCK_MINUTES", "15")),
+            max_future_bookings=int(os.environ.get("MAX_FUTURE_BOOKINGS", "2")),
+            signups_per_address=int(os.environ.get("SIGNUPS_PER_ADDRESS", "5")),
+            signup_window_minutes=int(os.environ.get("SIGNUP_WINDOW_MINUTES", "60")),
             **{
                 field: os.environ[name]
                 for field, name in (

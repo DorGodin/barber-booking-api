@@ -60,14 +60,36 @@ def test_the_seeded_week_alternates_free_and_taken_times(client, owner, customer
     assert "10:30" in offered and "11:00" in offered, "the times between them are free"
 
 
-def test_no_seeded_customer_is_ever_in_two_chairs_at_once(client, passwords):
-    yael = login(client, "yael", passwords["customer"])
-    rows = client.get("/bookings", headers=yael, params={"limit": 100}).json()["content"]
-    spans = [(datetime.fromisoformat(r["start"]), datetime.fromisoformat(r["end"])) for r in rows]
+def test_no_seeded_customer_is_ever_in_two_chairs_at_once(client, owner):
+    rows, offset = [], 0
+    while True:
+        page = client.get("/bookings", headers=owner, params={"limit": 100, "offset": offset}).json()
+        rows += page["content"]
+        offset += 100
+        if offset >= page["total"]:
+            break
+    by_customer: dict[str, list] = {}
+    for r in rows:
+        by_customer.setdefault(r["customer_id"], []).append(
+            (datetime.fromisoformat(r["start"]), datetime.fromisoformat(r["end"]))
+        )
 
-    assert spans, "the seed made no bookings"
-    clashes = [(a, b) for a, b in combinations(spans, 2) if a[0] < b[1] and b[0] < a[1]]
+    assert rows, "the seed made no bookings"
+    clashes = [
+        (a, b)
+        for spans in by_customer.values()
+        for a, b in combinations(spans, 2)
+        if a[0] < b[1] and b[0] < a[1]
+    ]
     assert clashes == [], f"the seed broke the product's own rule: {clashes[:2]}"
+
+
+def test_the_two_customers_to_sign_in_as_are_free_to_book(client, passwords):
+    for username in ("customer", "yael"):
+        mine = client.get("/bookings", headers=login(client, username, passwords["customer"])).json()
+        assert (
+            mine["total"] == 0
+        ), f"{username} must be able to book: the demo is two of them going for one time"
 
 
 def test_every_seeded_barber_can_sign_in(client, passwords):
