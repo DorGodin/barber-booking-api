@@ -154,6 +154,12 @@ product: through its URL, and nothing else.
   nothing else: no `'unsafe-inline'`, no other origin. The sign-in is kept in `sessionStorage`,
   which survives a refresh but not closing the tab; the policy is what stops an injected script
   from reading it.
+- **Signing out ends the sign-in on the server.** Every token carries a `jti`; `POST /auth/logout`
+  revokes it, so a copy taken before the sign-out is refused at once. Other sign-ins stay.
+- **Dependencies are audited.** pip-audit runs on every push and every night
+  (`.github/workflows/dependencies.yml`), and Dependabot proposes every upgrade.
+- **An accessibility statement** is at `/accessibility`, linked from every screen. Fill in
+  `ACCESSIBILITY_*` in `.env` with the shop's real contact and premises before going live.
 - **The page meets WCAG 2.2 AA and works from the keyboard alone.** The times are a radio group:
   one Tab stop, the arrows to move (the left arrow is the next time, the page reads right to
   left), Home and End. After a booking or a cancellation the focus goes to that booking.
@@ -264,6 +270,12 @@ make test
 - **לדף יש Content-Security-Policy.** רק ה-script וה-style של הדף עצמו רצים, לפי sha256, ושום דבר
   אחר: בלי `'unsafe-inline'` ובלי מקור אחר. החיבור נשמר ב-`sessionStorage`, ששורד רענון אבל לא סגירת
   לשונית; המדיניות היא מה שמונע מ-script מוזרק לקרוא אותו.
+- **יציאה מסיימת את החיבור גם בשרת.** לכל token יש `jti`, ו-`POST /auth/logout` מבטל אותו, כך שעותק
+  שנלקח לפני היציאה נדחה מיד. החיבורים האחרים נשארים.
+- **התלויות נסרקות.** pip-audit רץ בכל push ובכל לילה (`.github/workflows/dependencies.yml`),
+  ו-Dependabot מציע כל שדרוג.
+- **הצהרת נגישות** נמצאת ב-`/accessibility`, עם קישור מכל מסך. לפני שעולים לאוויר צריך למלא ב-`.env`
+  את `ACCESSIBILITY_*` בפרטי הקשר ובתיאור המקום האמיתיים של המספרה.
 - **הדף עומד ב-WCAG 2.2 AA ועובד מהמקלדת בלבד.** השעות הן קבוצת radio: עצירת Tab אחת, החצים כדי לזוז
   (החץ השמאלי הוא השעה הבאה, כי הדף מימין לשמאל), ו-Home ו-End. אחרי הזמנה או ביטול המיקוד עובר להזמנה.
 
