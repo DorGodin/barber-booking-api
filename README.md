@@ -101,6 +101,19 @@ is 06:00 UTC in summer and 07:00 UTC in winter. Every booking shows both `start`
 
 ---
 
+## Two copies: one for you, one for the tests
+
+```bash
+make run        # http://127.0.0.1:8100 - yours, to click through
+make run-test   # http://127.0.0.1:8101 - for the QA suites, with its own database
+```
+
+The QA suites in qa-api-starter create barbers, customers, services and bookings on every
+run, and the product cannot delete them. Pointed at the copy you use, they bury it - one
+afternoon left 720 barbers and 363 services in the owner's screen. So they run against a
+second copy on 8101 with its own database file, `barber-test.db`, and never touch yours.
+`make reset-test-db` empties the test copy; `make reset-db` empties yours.
+
 ## Tests
 
 ```bash
@@ -183,6 +196,19 @@ make run
 **שעון קיץ מטופל, לא מנוחש.** שעות הפתיחה הן בשעון המקומי, והתורים מחושבים כרגעים אמיתיים
 ב-UTC בין הפתיחה לסגירה. לכן ביום המעבר לשעון קיץ יש 23 שעות ואין 02:30, ביום החזרה יש 25
 שעות ו-01:30 פעמיים, ופתיחה ב-09:00 היא 06:00 UTC בקיץ ו-07:00 UTC בחורף.
+
+### שני עותקים: שלך, ושל הבדיקות
+
+```bash
+make run        # http://127.0.0.1:8100 - שלך, כדי ללחוץ ולנסות
+make run-test   # http://127.0.0.1:8101 - לסוויטות ה-QA, עם מסד נתונים משלו
+```
+
+סוויטות ה-QA ב-qa-api-starter יוצרות ספרים, לקוחות, שירותים ותורים בכל ריצה, והמוצר לא יכול
+למחוק אותם. אם הן רצות על העותק שאתה עובד בו, הן קוברות אותו — אחר צהריים אחד השאיר 720 ספרים
+ו-363 שירותים במסך הבעלים. לכן הן רצות על עותק שני בפורט 8101, עם קובץ מסד נתונים משלו
+(`barber-test.db`), ולא נוגעות בשלך. `make reset-test-db` מנקה את עותק הבדיקות; `make reset-db`
+מנקה את שלך.
 
 ### בדיקות
 
