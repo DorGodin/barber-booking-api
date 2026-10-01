@@ -20,7 +20,7 @@ platformdirs==4.12.2
 pluggy==1.6.0
 pre_commit==4.0.1
 pydantic==2.13.5
-pydantic_core==2.46.5
+pydantic_core==2.49.0
 Pygments==2.21.0
 PyJWT==2.15.1
 pytest==9.0.3
