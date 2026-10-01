@@ -139,6 +139,22 @@ product: through its URL, and nothing else.
 
 ---
 
+## Sign-in and the page
+
+- **Guessing is limited.** 5 wrong passwords for one account from one address, or 20 from one
+  address for any accounts, refuse sign-in for 15 minutes — the right password too — with
+  `429 too_many_attempts` and `Retry-After`. The account count is per address, so nobody can lock
+  the owner out of the shop from somewhere else. Unknown usernames are counted like real ones.
+  The limits are `LOGIN_MAX_FAILURES`, `LOGIN_MAX_FAILURES_PER_IP` and `LOGIN_LOCK_MINUTES`.
+- **Behind a proxy, set `FORWARDED_ALLOW_IPS`** to the proxy's address. Without it every client
+  arrives as the proxy, and 20 failures from anyone would lock everyone out. uvicorn takes the
+  client's address from `X-Forwarded-For` only from the addresses listed there (by default only
+  127.0.0.1), so the header cannot be forged from outside.
+- **The page has a Content-Security-Policy.** Its own inline script and style run, by sha256, and
+  nothing else: no `'unsafe-inline'`, no other origin. The sign-in is kept in `sessionStorage`,
+  which survives a refresh but not closing the tab; the policy is what stops an injected script
+  from reading it.
+
 ## How it prevents double booking
 
 A booking is check-then-insert: is the slot free? then take it. Two requests can both check,
@@ -232,6 +248,19 @@ make test
 
 סוויטות ה-QA המעמיקות נמצאות ב-qa-api-starter, שבודק את ה-API הזה כמו שהוא בודק כל מוצר: דרך
 הכתובת שלו, ותו לא.
+
+### החיבור והדף
+
+- **ניחוש סיסמאות מוגבל.** 5 סיסמאות שגויות לחשבון אחד מכתובת אחת, או 20 מכתובת אחת לחשבונות כלשהם,
+  חוסמים כניסה ל-15 דקות — גם עם הסיסמה הנכונה — עם `429 too_many_attempts` ו-`Retry-After`. הספירה
+  לחשבון היא לפי כתובת, כך שאף אחד לא יכול לנעול את בעל המספרה מחוץ למספרה ממקום אחר. שם משתמש שלא
+  קיים נספר כמו שם אמיתי. הגבולות: `LOGIN_MAX_FAILURES`, `LOGIN_MAX_FAILURES_PER_IP`, `LOGIN_LOCK_MINUTES`.
+- **מאחורי proxy צריך להגדיר `FORWARDED_ALLOW_IPS`** לכתובת שלו. בלי זה כל הלקוחות מגיעים בכתובת של
+  ה-proxy, ו-20 כישלונות של מישהו אחד ינעלו את כולם. uvicorn לוקח את הכתובת מ-`X-Forwarded-For` רק
+  מהכתובות שברשימה (כברירת מחדל רק 127.0.0.1), כך שאי אפשר לזייף אותה מבחוץ.
+- **לדף יש Content-Security-Policy.** רק ה-script וה-style של הדף עצמו רצים, לפי sha256, ושום דבר
+  אחר: בלי `'unsafe-inline'` ובלי מקור אחר. החיבור נשמר ב-`sessionStorage`, ששורד רענון אבל לא סגירת
+  לשונית; המדיניות היא מה שמונע מ-script מוזרק לקרוא אותו.
 
 ### איך נמנעת הזמנה כפולה
 
