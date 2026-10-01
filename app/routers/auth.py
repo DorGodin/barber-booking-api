@@ -100,9 +100,9 @@ def logout(
     sign-ins of the same person - another phone - are untouched."""
     claims = read_token(authorization.removeprefix("Bearer "), config.secret_key)
     now = datetime.now(UTC)
-    session.execute(delete(RevokedToken).where(RevokedToken.expires_at <= now))
-    session.merge(RevokedToken(jti=claims["jti"], expires_at=datetime.fromtimestamp(claims["exp"], UTC)))
-    session.commit()
+    with write_lock(session):
+        session.execute(delete(RevokedToken).where(RevokedToken.expires_at <= now))
+        session.merge(RevokedToken(jti=claims["jti"], expires_at=datetime.fromtimestamp(claims["exp"], UTC)))
 
 
 @router.get("/me")

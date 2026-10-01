@@ -36,3 +36,18 @@ def test_the_check_would_see_one(tmp_path):
     (tmp_path / "page.js").write_text(f"const x = `{chr(0x2068)}name{chr(0x2069)}`;\n", encoding="utf-8")
 
     assert hidden_direction_characters(tmp_path) == ["page.js:1 U+2068 U+2069"]
+
+
+def test_no_route_commits_outside_the_write_lock():
+    """Every write in a route goes through write_lock, which takes the lock at
+    BEGIN. A route that reads, then writes and commits on its own deadlocks with
+    a concurrent write in SQLite and answers 500 - found for sign-in, sign-out
+    and the owner's saves (tests/test_concurrency.py). A plain commit in a route
+    is how that comes back."""
+    offenders = [
+        f"{path.relative_to(ROOT)}:{n}"
+        for path in sorted((ROOT / "app" / "routers").glob("*.py"))
+        for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
+        if "session.commit()" in line
+    ]
+    assert offenders == [], f"commit through write_lock instead: {offenders}"

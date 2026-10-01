@@ -142,3 +142,17 @@ server first; an instruction is not a guard.
 **Rule:** `reset-db` and `reset-test-db` refuse while a server is listening on their port,
 and say what to do. Proven both ways: refused with the test copy running, ran with the
 port free.
+
+## 2026-10-01 — Sign-in, sign-out and the owner's saves answered 500 under concurrent load
+
+An owner signing in while a customer on the same page signed out got a 500. The sign-in
+limits and the server-side sign-out had added writes to two routes, and neither took the write
+lock: each request read first, then tried to write, and two workers doing that at once
+deadlock in SQLite - one is refused at once with "database is locked". Reproduced with thirty
+requests at once against two workers: most of them 500, on every run. The owner's saves -
+hours, days off, services, barbers - had the same flaw from the start; a save during bookings
+failed the same way.
+
+**Rule:** every write in a route goes through `write_lock`, not only a check-then-write; a
+source test fails on a plain `session.commit()` in a route. Found by a failing page test whose
+sign-in step now says why it was refused - "500" - instead of "the screen never came".

@@ -18,6 +18,7 @@ from app.booking_rules import (
     latest_start,
 )
 from app.config import Settings
+from app.db import write_lock
 from app.deps import current_user, db, require, settings
 from app.errors import DomainError
 from app.models import BarberHours, TimeOff, User
@@ -46,18 +47,17 @@ def list_barbers(_: User = Depends(current_user), session: Session = Depends(db)
 
 @router.post("/barbers", status_code=201)
 def create_barber(body: AccountIn, _: User = Depends(require("owner")), session: Session = Depends(db)):
-    if session.scalar(select(User).where(User.username == body.username)):
-        raise DomainError(409, "username_taken", "that username is taken")
-    barber = User(
-        username=body.username,
-        password_hash=hash_password(body.password),
-        role="barber",
-        display_name=body.display_name,
-    )
-    session.add(barber)
-    session.flush()
-    session.add(BarberHours(barber_id=barber.id, hours_json=json.dumps(DEFAULT_HOURS)))
-    session.commit()
+    # The hash is slow on purpose; it is made before the lock, not while holding it.
+    password_hash = hash_password(body.password)
+    with write_lock(session):
+        if session.scalar(select(User).where(User.username == body.username)):
+            raise DomainError(409, "username_taken", "that username is taken")
+        barber = User(
+            username=body.username, password_hash=password_hash, role="barber", display_name=body.display_name
+        )
+        session.add(barber)
+        session.flush()
+        session.add(BarberHours(barber_id=barber.id, hours_json=json.dumps(DEFAULT_HOURS)))
     return barber_view(barber)
 
 
@@ -71,13 +71,13 @@ def get_hours(barber_id: str, _: User = Depends(current_user), session: Session 
 def set_hours(
     barber_id: str, body: HoursIn, _: User = Depends(require("owner")), session: Session = Depends(db)
 ):
-    barber_or_404(session, barber_id)
-    row = session.get(BarberHours, barber_id)
-    if row is None:
-        session.add(BarberHours(barber_id=barber_id, hours_json=json.dumps(body.hours)))
-    else:
-        row.hours_json = json.dumps(body.hours)
-    session.commit()
+    with write_lock(session):
+        barber_or_404(session, barber_id)
+        row = session.get(BarberHours, barber_id)
+        if row is None:
+            session.add(BarberHours(barber_id=barber_id, hours_json=json.dumps(body.hours)))
+        else:
+            row.hours_json = json.dumps(body.hours)
     return {"barber_id": barber_id, "hours": body.hours}
 
 
@@ -85,12 +85,11 @@ def set_hours(
 def add_time_off(
     barber_id: str, body: TimeOffIn, _: User = Depends(require("owner")), session: Session = Depends(db)
 ):
-    barber_or_404(session, barber_id)
-    session.add(TimeOff(barber_id=barber_id, day=body.date.isoformat()))
     try:
-        session.commit()
+        with write_lock(session):
+            barber_or_404(session, barber_id)
+            session.add(TimeOff(barber_id=barber_id, day=body.date.isoformat()))
     except IntegrityError:
-        session.rollback()
         raise DomainError(409, "already_off", f"already off on {body.date}") from None
     return {"barber_id": barber_id, "date": body.date.isoformat()}
 
@@ -110,9 +109,9 @@ def list_time_off(barber_id: str, _: User = Depends(require("owner")), session: 
 def remove_time_off(
     barber_id: str, day: date, _: User = Depends(require("owner")), session: Session = Depends(db)
 ):
-    barber_or_404(session, barber_id)
-    session.execute(delete(TimeOff).where(TimeOff.barber_id == barber_id, TimeOff.day == day.isoformat()))
-    session.commit()
+    with write_lock(session):
+        barber_or_404(session, barber_id)
+        session.execute(delete(TimeOff).where(TimeOff.barber_id == barber_id, TimeOff.day == day.isoformat()))
 
 
 @router.get("/barbers/{barber_id}/availability")

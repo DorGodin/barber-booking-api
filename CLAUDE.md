@@ -31,7 +31,12 @@ the booking disagree, the listing offers a slot the booking refuses. Change the 
 
 ## Concurrency
 
-Any check-then-write that must not race runs inside `with write_lock(session):`. It ends
+**Every write in a route runs inside `with write_lock(session):`** - not only a
+check-then-write that must not race. A request reads first (authentication loads the user),
+and two workers that each read and then write deadlock in SQLite: one is answered "database
+is locked", a 500. Sign-in, sign-out and the owner's saves all did, under concurrent load,
+until they took the lock; `tests/test_source_hygiene.py` fails on a `session.commit()` in a
+route. `write_lock` ends
 the request's earlier read transaction and begins a new one with `BEGIN IMMEDIATE`, which
 takes SQLite's write lock at the start. Without that first step SQLAlchemy silently
 ignores the option — `pytest.ini` turns that warning into an error. See `docs/pitfalls.md`.

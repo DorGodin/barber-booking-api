@@ -23,6 +23,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.config import Settings
+from app.db import write_lock
 from app.models import LoginFailure
 
 
@@ -45,14 +46,18 @@ def seconds_locked(session: Session, config: Settings, username: str, ip: str, n
     return max(waits, default=0)
 
 
+# Under the write lock, taken at BEGIN, like every other write here: a sign-in
+# reads first, and two workers that both read and then try to write deadlock in
+# SQLite - one of them answered "database is locked", a 500. Two sign-ins at once
+# were enough.
 def record_failure(session: Session, config: Settings, username: str, ip: str, now: datetime) -> None:
-    session.execute(
-        delete(LoginFailure).where(LoginFailure.at <= now - timedelta(minutes=config.login_lock_minutes))
-    )
-    session.add(LoginFailure(username=username, ip=ip, at=now))
-    session.commit()
+    with write_lock(session):
+        session.execute(
+            delete(LoginFailure).where(LoginFailure.at <= now - timedelta(minutes=config.login_lock_minutes))
+        )
+        session.add(LoginFailure(username=username, ip=ip, at=now))
 
 
 def forget_failures(session: Session, username: str, ip: str) -> None:
-    session.execute(delete(LoginFailure).where(LoginFailure.username == username, LoginFailure.ip == ip))
-    session.commit()
+    with write_lock(session):
+        session.execute(delete(LoginFailure).where(LoginFailure.username == username, LoginFailure.ip == ip))

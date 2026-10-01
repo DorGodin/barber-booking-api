@@ -129,3 +129,92 @@ def test_many_customers_racing_for_one_slot_get_exactly_one_booking(server, offs
     assert [c for c in codes if c >= 500] == [], f"the losers crashed instead of being refused: {codes}"
     assert codes.count(201) == 1, f"expected exactly one booking: {codes}"
     assert codes.count(409) == len(offsets) - 1, codes
+
+
+def test_sign_ins_and_sign_outs_at_once_never_answer_with_a_server_error(server):
+    """Every sign-in writes now - it clears or records a failure - and so does
+    every sign-out. Two workers that each read, then try to write, deadlock in
+    SQLite, and one is answered with "database is locked": a 500 for an owner
+    signing in while a customer on the same page signs out. Found in CI."""
+    people = []
+    for n in range(10):
+        name = f"c-{secrets.token_hex(4)}"
+        httpx.post(
+            f"{server}/customers",
+            json={"username": name, "password": "long-enough", "display_name": "C"},
+            headers={"X-Forwarded-For": f"2001:db8::1:{n + 1:x}"},
+        )
+        people.append(name)
+    sessions = [token(server, name, "long-enough") for name in people]
+
+    def sign_in(name):
+        return httpx.post(f"{server}/auth/token", json={"username": name, "password": "long-enough"})
+
+    def fail_sign_in(name):
+        return httpx.post(f"{server}/auth/token", json={"username": name, "password": "not-the-password"})
+
+    def sign_out(headers):
+        return httpx.post(f"{server}/auth/logout", headers=headers)
+
+    calls = [lambda n=n: sign_in(n) for n in people] + [lambda n=n: fail_sign_in(n) for n in people]
+    calls += [lambda h=h: sign_out(h) for h in sessions]
+    with ThreadPoolExecutor(len(calls)) as pool:
+        codes = sorted(r.status_code for r in pool.map(lambda call: call(), calls))
+
+    assert [c for c in codes if c >= 500] == [], f"a sign-in or sign-out met a locked database: {codes}"
+    assert codes.count(200) == 10 and codes.count(401) == 10 and codes.count(204) == 10, codes
+
+
+def test_the_owner_saving_while_customers_book_never_answers_with_a_server_error(server):
+    """The owner's writes - hours, days off, services, barbers - took no write lock.
+    A save that read before it wrote, while a booking held the lock, was refused
+    by SQLite at once: a 500 for the owner. The same deadlock as the sign-ins."""
+    owner = token(server, "owner", PASSWORDS["owner"])
+    barber = httpx.post(
+        f"{server}/barbers",
+        headers=owner,
+        json={"username": f"b-{secrets.token_hex(4)}", "password": "long-enough", "display_name": "B"},
+    ).json()["id"]
+    httpx.put(f"{server}/barbers/{barber}/hours", headers=owner, json={"hours": ALL_WEEK})
+    haircut = next(
+        s for s in httpx.get(f"{server}/services", headers=owner).json()["content"] if s["name"] == HAIRCUT
+    )["id"]
+    people = []
+    for n in range(10):
+        name = f"c-{secrets.token_hex(4)}"
+        httpx.post(
+            f"{server}/customers",
+            json={"username": name, "password": "long-enough", "display_name": "C"},
+            headers={"X-Forwarded-For": f"2001:db8::2:{n + 1:x}"},
+        )
+        people.append(token(server, name, "long-enough"))
+    day = (datetime.now(UTC).astimezone(TZ) + timedelta(days=5)).date()
+    starts = [datetime(day.year, day.month, day.day, 8 + n, 0, tzinfo=TZ).astimezone(UTC) for n in range(10)]
+
+    def book(n):
+        return httpx.post(
+            f"{server}/bookings",
+            headers=people[n],
+            json={
+                "barber_id": barber,
+                "service_id": haircut,
+                "start": starts[n].strftime("%Y-%m-%dT%H:%M:%SZ"),
+            },
+        )
+
+    def save_hours(_):
+        return httpx.put(f"{server}/barbers/{barber}/hours", headers=owner, json={"hours": ALL_WEEK})
+
+    def add_service(n):
+        return httpx.post(
+            f"{server}/services",
+            headers=owner,
+            json={"name": f"s-{secrets.token_hex(4)}", "duration_minutes": 30, "price_minor": 5000},
+        )
+
+    calls = [lambda n=n: book(n) for n in range(10)] + [lambda n=n: save_hours(n) for n in range(10)]
+    calls += [lambda n=n: add_service(n) for n in range(10)]
+    with ThreadPoolExecutor(len(calls)) as pool:
+        codes = sorted(r.status_code for r in pool.map(lambda call: call(), calls))
+
+    assert [c for c in codes if c >= 500] == [], f"an owner's save met a locked database: {codes}"
