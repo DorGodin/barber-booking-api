@@ -316,6 +316,15 @@ function option(value, text) {
   return el;
 }
 
+// The sign-in survives a refresh - on a phone, pulling the page down - but not
+// the tab: sessionStorage, not localStorage, so on a shared device closing the
+// tab is enough. Storage can be refused (a private window); then a refresh
+// signs out, as it did before.
+const SESSION = "barber.session";
+function remember(value) { try { sessionStorage.setItem(SESSION, value); } catch { /* refused: no resume */ } }
+function forget() { try { sessionStorage.removeItem(SESSION); } catch { /* nothing to forget */ } }
+function remembered() { try { return sessionStorage.getItem(SESSION); } catch { return null; } }
+
 async function signIn(username, password, errorBox) {
   const r = await api("POST", "/auth/token", { username, password });
   if (!r.ok) {
@@ -325,10 +334,51 @@ async function signIn(username, password, errorBox) {
   }
   errorBox.hidden = true;
   token = r.data.access_token;
+  remember(token);
   await busyWhile(async () => {
     me = (await api("GET", "/me")).data;
     await start();
   });
+}
+
+// A remembered sign-in is used only if the server still accepts it; an expired
+// or revoked one is dropped quietly and the sign-in form is shown.
+async function resume() {
+  const saved = remembered();
+  if (!saved) return;
+  token = saved;
+  await busyWhile(async () => {
+    const r = await api("GET", "/me");
+    if (!r.ok) {
+      token = null;
+      forget();
+      return;
+    }
+    me = r.data;
+    await start();
+  });
+}
+
+// Signing out leaves nothing of the person behind: on a shared device the next
+// one must not find their bookings in the page, their username in the form, or
+// - as before this - the password they signed up with still in the sign-up
+// form. Answers still on their way for them are dropped too.
+function signOut() {
+  token = me = null;
+  forget();
+  for (const name of Object.keys(latest)) latest[name] += 1;
+  selected = null;
+  for (const id of ["bookings", "slots", "hours", "days-off", "services", "barber", "service"]) $(id).replaceChildren();
+  for (const id of ["display-name", "hours-for", "confirm-text"]) $(id).textContent = "";
+  for (const id of ["confirm", "no-slots", "no-bookings", "no-days-off", "app", "owner", "owner-nav", "whoami"]) $(id).hidden = true;
+  say("", "ok");
+  clearForms();
+  $("auth").hidden = false;
+}
+
+function clearForms() {
+  for (const form of [$("login-form"), $("signup-form")]) form.reset();
+  for (const id of ["login-error", "signup-error"]) $(id).hidden = true;
 }
 
 async function start() {
@@ -336,6 +386,7 @@ async function start() {
   barbers = (await api("GET", "/barbers")).data.content;
   services = (await api("GET", "/services")).data.content;
 
+  clearForms();
   $("auth").hidden = true;
   $("app").hidden = false;
   $("whoami").hidden = false;
@@ -686,15 +737,7 @@ $("signup-form").addEventListener("submit", async (e) => {
   }
   await signIn(username, password, $("signup-error"));
 });
-$("logout").addEventListener("click", () => {
-  token = me = null;
-  $("app").hidden = true;
-  $("owner").hidden = true;
-  $("owner-nav").hidden = true;
-  $("whoami").hidden = true;
-  $("auth").hidden = false;
-  $("password").value = "";
-});
+$("logout").addEventListener("click", signOut);
 $("book").addEventListener("click", book);
 $("popup-close").addEventListener("click", () => $("popup").close());
 $("save-hours").addEventListener("click", saveHours);
@@ -702,6 +745,7 @@ $("add-dayoff").addEventListener("click", addDayOff);
 $("add-barber").addEventListener("click", addBarber);
 $("add-service").addEventListener("click", addService);
 for (const id of ["barber", "service", "date"]) $(id).addEventListener("change", () => busyWhile(refresh));
+resume();
 </script>
 </body>
 </html>
