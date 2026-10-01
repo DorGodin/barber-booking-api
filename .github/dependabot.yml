@@ -5,6 +5,12 @@ version: 2
 updates:
   - package-ecosystem: pip
     directory: /
+    # The lock is pip freeze output: every transitive package, pinned. Bumped one
+    # line at a time it cannot install - the package that needs it wants another
+    # version - so only requirements.txt is watched, and the lock is re-resolved
+    # on the pull request by a person (the dependencies workflow says so).
+    exclude-paths:
+      - requirements.lock.txt
     schedule: { interval: weekly }
     open-pull-requests-limit: 5
   - package-ecosystem: github-actions

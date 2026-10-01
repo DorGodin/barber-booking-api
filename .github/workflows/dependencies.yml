@@ -19,5 +19,27 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.13" }
       - run: pip install pip-audit==2.10.1
+      - name: the lock pins exactly what requirements.txt pins
+        # A pull request that bumps requirements.txt alone - Dependabot's do - would
+        # still install the old version from the lock, and pass without testing the
+        # new one. It fails here instead, until the lock is re-resolved.
+        run: |
+          python - <<'PY'
+          import re, sys
+          def pins(path):
+              found = {}
+              for line in open(path):
+                  m = re.match(r"\s*([A-Za-z0-9_.-]+)(\[[^\]]*\])?==([^\s;#]+)", line)
+                  if m:
+                      found[re.sub(r"[-_.]+", "-", m.group(1)).lower()] = m.group(3)
+              return found
+          wanted, locked = pins("requirements.txt"), pins("requirements.lock.txt")
+          wrong = [f"{n}: requirements.txt {v}, lock {locked.get(n, 'missing')}" for n, v in wanted.items() if locked.get(n) != v]
+          if wrong:
+              print("requirements.lock.txt does not match requirements.txt - run make lock and commit both:")
+              print("\n".join("  " + w for w in wrong))
+              sys.exit(1)
+          print(f"{len(wanted)} direct pins, all matched by the lock")
+          PY
       - name: every pinned package, direct and transitive
         run: pip-audit --requirement requirements.lock.txt --strict --progress-spinner off

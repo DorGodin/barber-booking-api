@@ -50,6 +50,12 @@ jobs:
   secrets:
     name: secret scan (gitleaks)
     runs-on: ubuntu-latest
+    # Stated here, not left to the repository's default: on a pull request the
+    # action reads its commits, and a token without pull-requests: read - the
+    # one Dependabot's pull requests get - is refused with a 403.
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }

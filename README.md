@@ -157,7 +157,9 @@ product: through its URL, and nothing else.
 - **Signing out ends the sign-in on the server.** Every token carries a `jti`; `POST /auth/logout`
   revokes it, so a copy taken before the sign-out is refused at once. Other sign-ins stay.
 - **Dependencies are audited.** pip-audit runs on every push and every night
-  (`.github/workflows/dependencies.yml`), and Dependabot proposes every upgrade.
+  (`.github/workflows/dependencies.yml`), and Dependabot proposes every upgrade of
+  `requirements.txt`. Its pull request fails until the lock is re-resolved on that branch
+  (`make lock`), so an upgrade is never merged untested.
 - **An accessibility statement** is at `/accessibility`, linked from every screen. Fill in
   `ACCESSIBILITY_*` in `.env` with the shop's real contact and premises before going live.
 - **The page meets WCAG 2.2 AA and works from the keyboard alone.** The times are a radio group:
@@ -273,7 +275,8 @@ make test
 - **יציאה מסיימת את החיבור גם בשרת.** לכל token יש `jti`, ו-`POST /auth/logout` מבטל אותו, כך שעותק
   שנלקח לפני היציאה נדחה מיד. החיבורים האחרים נשארים.
 - **התלויות נסרקות.** pip-audit רץ בכל push ובכל לילה (`.github/workflows/dependencies.yml`),
-  ו-Dependabot מציע כל שדרוג.
+  ו-Dependabot מציע כל שדרוג של `requirements.txt`. ה-PR שלו נכשל עד שמייצרים מחדש את הנעילה על
+  אותו branch (`make lock`), כך ששדרוג אף פעם לא ממוזג בלי שנבדק.
 - **הצהרת נגישות** נמצאת ב-`/accessibility`, עם קישור מכל מסך. לפני שעולים לאוויר צריך למלא ב-`.env`
   את `ACCESSIBILITY_*` בפרטי הקשר ובתיאור המקום האמיתיים של המספרה.
 - **הדף עומד ב-WCAG 2.2 AA ועובד מהמקלדת בלבד.** השעות הן קבוצת radio: עצירת Tab אחת, החצים כדי לזוז
