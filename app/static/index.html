@@ -44,7 +44,13 @@
   button.ghost { background:#fff; color:var(--brand); }
   .slots { display:grid; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap:8px; margin:12px 0; }
   .slots button { background:#fff; color:var(--brand); padding:8px 0; direction:ltr; }
-  .slots button[aria-pressed="true"] { background:var(--brand); color:#fff; }
+  .slots button[aria-checked="true"] { background:var(--brand); color:#fff; }
+  /* One visible ring for every engine's focus, offset so it shows on a dark
+     button as well as a light one. A keyboard user has to see where they are. */
+  :focus-visible { outline:3px solid var(--brand); outline-offset:2px; }
+  /* A field shows it on any focus. Chromium focuses the parts inside a date
+     field - day, month, year - and :focus-visible never reaches the field. */
+  input:focus, select:focus { outline:3px solid var(--brand); outline-offset:2px; }
   .confirm { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px; border:1px dashed var(--brand); border-radius:8px; }
   ul { list-style:none; padding:0; margin:0; }
   li { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); }
@@ -63,7 +69,8 @@
   table.hours { width:100%; border-collapse:collapse; margin-bottom:12px; }
   table.hours th, table.hours td { padding:4px 6px; text-align:start; font-weight:normal; }
   table.hours input:not([type="checkbox"]), .service-price { width:76px; display:inline-block; margin:0; direction:ltr; text-align:center; }
-  input[type="checkbox"] { width:auto; display:inline-block; margin:0 0 0 6px; }
+  /* 24px everywhere, not only on a phone: WCAG 2.2 asks it of every pointer. */
+  input[type="checkbox"] { width:24px; height:24px; display:inline-block; margin:0 0 0 6px; }
   dialog { border:0; border-radius:14px; padding:0; width:min(420px, 92vw); box-shadow:0 18px 50px #0004; }
   dialog::backdrop { background:#1f293399; }
   dialog .band { padding:18px 22px; color:#fff; font-size:18px; font-weight:700; }
@@ -78,7 +85,6 @@
   @media (max-width: 760px), (pointer: coarse) {
     button, input:not([type="checkbox"]), select, .owner-nav a { min-height:44px; }
     button { min-width:44px; }
-    input[type="checkbox"] { width:24px; height:24px; }
     header { padding:12px 16px; gap:10px; }
     header h1 { font-size:18px; }
   }
@@ -141,7 +147,7 @@
         <div data-testid="book-panel">
           <div class="field"><label for="service">שירות</label><select id="service" data-testid="service"></select></div>
           <div class="field"><label for="date">תאריך</label><input id="date" type="date" data-testid="date"></div>
-          <div class="slots" data-testid="slots" role="group" aria-label="שעות פנויות"></div>
+          <div class="slots" data-testid="slots" role="radiogroup" aria-label="שעות פנויות"></div>
           <p class="muted" data-testid="no-slots" hidden>אין שעות פנויות ביום הזה.</p>
           <div class="confirm" data-testid="confirm" hidden>
             <span data-testid="confirm-text"></span>
@@ -210,7 +216,13 @@ async function busyWhile(work) {
     return await work();
   } finally {
     inFlight -= 1;
-    if (inFlight === 0) $("app").setAttribute("aria-busy", "false");
+    if (inFlight === 0) {
+      $("app").setAttribute("aria-busy", "false");
+      const find = focusWhenSettled;
+      focusWhenSettled = null;
+      const target = find && find();
+      if (target) target.focus();
+    }
   }
 }
 
@@ -628,7 +640,12 @@ async function refreshSlots() {
     button.dataset.testid = "slot";
     button.dataset.start = slot.start;
     button.textContent = clock(slot.start_local);
-    button.setAttribute("aria-pressed", "false");
+    // A radio group, not a row of buttons: one Tab stop for all the times,
+    // the arrows to move between them. As buttons, a keyboard user pressed
+    // Tab once for every time of the day to get from the chosen one to "book".
+    button.setAttribute("role", "radio");
+    button.setAttribute("aria-checked", "false");
+    button.tabIndex = box.children.length === 0 ? 0 : -1;
     button.setAttribute("aria-label", `${clock(slot.start_local)}, ${dayLabel(slot.start_local)}`);
     button.addEventListener("click", () => select(slot, button));
     box.appendChild(button);
@@ -640,12 +657,49 @@ function select(slot, button) {
   // One Idempotency-Key per chosen slot: pressing the button twice, or again
   // after a dropped connection, can only ever produce the one booking.
   selected = { slot, key: crypto.randomUUID() };
-  for (const other of $("slots").children) other.setAttribute("aria-pressed", "false");
-  button.setAttribute("aria-pressed", "true");
+  for (const other of $("slots").children) {
+    other.setAttribute("aria-checked", "false");
+    other.tabIndex = -1;
+  }
+  button.setAttribute("aria-checked", "true");
+  button.tabIndex = 0;
   const service = serviceOf($("service").value);
   $("confirm-text").textContent = `${dayLabel(slot.start_local)} ${clock(slot.start_local)} · ${isolate(service.name)} אצל ${isolate(barberName($("barber").value))}`;
   $("confirm").hidden = false;
 }
+
+// The arrows move through the times, and moving chooses - as in any radio
+// group. The page reads right to left, so the left arrow is the next time.
+const STEP = { ArrowLeft: 1, ArrowDown: 1, ArrowRight: -1, ArrowUp: -1 };
+$("slots").addEventListener("keydown", (e) => {
+  const times = [...$("slots").children];
+  const at = times.indexOf(document.activeElement);
+  if (at < 0) return;
+  let to = null;
+  if (e.key in STEP) to = Math.min(times.length - 1, Math.max(0, at + STEP[e.key]));
+  else if (e.key === "Home") to = 0;
+  else if (e.key === "End") to = times.length - 1;
+  if (to === null) return;
+  e.preventDefault();
+  times[to].focus();
+  times[to].click();
+});
+
+// Where the focus goes when the popup closes. The browser returns it to the
+// button that opened the popup - but a booking hides that button, and the focus
+// fell to the top of the page. After a booking it goes to the new booking in
+// the list; after a refusal, back to the times.
+// Closed at once, the list may still be drawing: then the focus moves the
+// moment the page has settled, not never.
+let afterPopup = null, focusWhenSettled = null;
+$("popup").addEventListener("close", () => {
+  const find = afterPopup;
+  afterPopup = null;
+  if (!find) return;
+  const target = find();
+  if (target) target.focus();
+  else if (inFlight > 0) focusWhenSettled = find;
+});
 
 function book() {
   if (!selected || booking) return;
@@ -663,11 +717,13 @@ async function bookSelected() {
   if (r.ok) {
     const booked = `${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${isolate(r.data.service_name)} אצל ${isolate(barberName(r.data.barber_id))}`;
     say(`נקבע: ${booked}`, "ok");
+    afterPopup = () => document.querySelector(`[data-testid="booking-row"][data-id="${r.data.id}"]`);
     popup("✓ התור נקבע", `${booked} · ${money(r.data.price_minor, r.data.currency)}`, "ok");
   } else {
     const reason = explain(r, { time: clock(slot.start_local) });
     say(reason, "error");
     const taken = r.data && r.data.code === "slot_taken";
+    afterPopup = () => $("slots").querySelector('[tabindex="0"]') || $("date");
     popup(taken ? "השעה כבר תפוסה" : "לא הצלחנו לקבוע את התור", reason, "error");
   }
   await refresh();
@@ -688,6 +744,7 @@ async function refreshBookings() {
     row.dataset.testid = "booking-row";
     row.dataset.id = b.id;
     row.dataset.status = b.status;
+    row.tabIndex = -1;
     const text = document.createElement("span");
     const when = document.createElement("strong");
     when.dataset.testid = "booking-when";
@@ -718,6 +775,10 @@ function cancelBooking(b) {
     const r = await api("POST", `/bookings/${b.id}/cancel`);
     say(r.ok ? `התור של ${dayLabel(b.start_local)} ${clock(b.start_local)} בוטל.` : explain(r), r.ok ? "ok" : "error");
     await refresh();
+    // The list was drawn again and the button pressed is gone; the focus goes
+    // back to the same booking, now marked cancelled, not to the top of the page.
+    const row = document.querySelector(`[data-testid="booking-row"][data-id="${b.id}"]`);
+    if (row && document.activeElement === document.body) row.focus();
   });
 }
 
