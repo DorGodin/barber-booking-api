@@ -13,6 +13,9 @@ class Settings:
     booking_window_days: int
     cancel_cutoff_hours: int
     token_hours: int
+    login_max_failures: int = 5
+    login_max_failures_per_ip: int = 20
+    login_lock_minutes: int = 15
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -28,4 +31,7 @@ class Settings:
             booking_window_days=int(os.environ.get("BOOKING_WINDOW_DAYS", "60")),
             cancel_cutoff_hours=int(os.environ.get("CANCEL_CUTOFF_HOURS", "24")),
             token_hours=int(os.environ.get("TOKEN_HOURS", "12")),
+            login_max_failures=int(os.environ.get("LOGIN_MAX_FAILURES", "5")),
+            login_max_failures_per_ip=int(os.environ.get("LOGIN_MAX_FAILURES_PER_IP", "20")),
+            login_lock_minutes=int(os.environ.get("LOGIN_LOCK_MINUTES", "15")),
         )

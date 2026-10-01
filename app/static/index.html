@@ -258,6 +258,7 @@ const FRIENDLY = {
   already_started: () => "התור הזה כבר התחיל.",
   username_taken: () => "שם המשתמש הזה תפוס.",
   bad_credentials: () => "שם משתמש או סיסמה שגויים.",
+  too_many_attempts: (_, data) => `יותר מדי ניסיונות כניסה שגויים. אפשר לנסות שוב בעוד ${Math.max(1, Math.ceil(data.retry_after_seconds / 60))} דקות.`,
   unauthorized: () => "צריך להתחבר מחדש.",
   forbidden: () => "אין לך הרשאה לפעולה הזו.",
   not_found: () => "לא מצאנו את מה שחיפשת.",
@@ -270,7 +271,7 @@ const FRIENDLY = {
 
 function explain(resp, context = {}) {
   const code = resp.data && resp.data.code;
-  if (code && FRIENDLY[code]) return FRIENDLY[code](context);
+  if (code && FRIENDLY[code]) return FRIENDLY[code](context, resp.data);
   if (resp.status === 422 && context.invalid) return context.invalid;
   return `משהו השתבש (${resp.status}). כדאי לנסות שוב.`;
 }

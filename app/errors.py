@@ -11,12 +11,19 @@ from fastapi.responses import JSONResponse
 
 
 class DomainError(Exception):
-    def __init__(self, status: int, code: str, detail: str):
+    def __init__(
+        self, status: int, code: str, detail: str, extra: dict | None = None, headers: dict | None = None
+    ):
         self.status, self.code, self.detail = status, code, detail
+        self.extra, self.headers = extra or {}, headers or {}
 
 
 async def domain_error_handler(_: Request, exc: DomainError) -> JSONResponse:
-    return JSONResponse(status_code=exc.status, content={"detail": exc.detail, "code": exc.code})
+    return JSONResponse(
+        status_code=exc.status,
+        content={"detail": exc.detail, "code": exc.code, **exc.extra},
+        headers=exc.headers,
+    )
 
 
 def not_found(what: str) -> DomainError:

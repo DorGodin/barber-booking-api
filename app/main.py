@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+import re
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 
 from app.config import Settings
 from app.db import IMMEDIATE, Base, make_engine, make_sessionmaker
@@ -18,7 +21,39 @@ SECURITY_HEADERS = {
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
     "Cache-Control": "no-store",
+    # A JSON answer is never a page: nothing in it may run or be framed.
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
 }
+
+PAGE = Path(__file__).parent / "static" / "index.html"
+
+
+def page_policy(html: str) -> str:
+    """The booking page's Content-Security-Policy: its own inline script and
+    style, by hash, and nothing else - no other script, no inline handler, no
+    request to another site.
+
+    The page keeps the sign-in in sessionStorage, which any script running in
+    it can read. Escaping every name with textContent is the first defence;
+    this is the second, for the day one is missed. Hashes, not 'unsafe-inline':
+    with 'unsafe-inline' an injected <script> or onerror= runs as well.
+    """
+
+    def hashes(tag: str) -> str:
+        bodies = re.findall(rf"<{tag}>(.*?)</{tag}>", html, re.S)
+        return " ".join(
+            f"'sha256-{base64.b64encode(hashlib.sha256(body.encode()).digest()).decode()}'" for body in bodies
+        )
+
+    return (
+        "default-src 'none'; "
+        f"script-src {hashes('script')}; "
+        f"style-src {hashes('style')}; "
+        # The select's arrow is an inline SVG.
+        "img-src data:; "
+        "connect-src 'self'; "
+        "form-action 'none'; base-uri 'none'; frame-ancestors 'none'"
+    )
 
 
 def prepare_database(engine, make_session, config: Settings) -> None:
@@ -77,7 +112,11 @@ def create_app(config: Settings | None = None) -> FastAPI:
 
     @app.get("/", include_in_schema=False)
     def booking_page():
-        return FileResponse(Path(__file__).parent / "static" / "index.html")
+        # Read on every request, and hashed from the same bytes it serves: a
+        # policy computed once at startup would block the page the moment the
+        # file changed under a running server.
+        html = PAGE.read_text(encoding="utf-8")
+        return HTMLResponse(html, headers={"Content-Security-Policy": page_policy(html)})
 
     for router in (auth.router, services.router, barbers.router, bookings.router):
         app.include_router(router)

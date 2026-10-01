@@ -48,6 +48,19 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=now_utc)
 
 
+class LoginFailure(Base):
+    """One failed sign-in. Kept in the database, not in memory: the server runs
+    several workers, and a count in each one's memory would let an attacker
+    spread guesses across them."""
+
+    __tablename__ = "login_failures"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(64), index=True)
+    ip: Mapped[str] = mapped_column(String(64), index=True)
+    at: Mapped[datetime] = mapped_column(UTCDateTime, index=True, default=now_utc)
+
+
 class BarberHours(Base):
     """The weekly schedule, local wall-clock times: {"sun": ["09:00", "19:00"], "sat": null}."""
 
