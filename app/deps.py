@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.errors import DomainError
-from app.models import User
+from app.models import RevokedToken, User
 from app.security import read_token
 
 
@@ -34,7 +34,7 @@ def current_user(
     if not authorization or not authorization.startswith("Bearer "):
         raise unauthorized
     claims = read_token(authorization.removeprefix("Bearer "), config.secret_key)
-    if claims is None:
+    if claims is None or session.get(RevokedToken, claims["jti"]) is not None:
         raise unauthorized
     user = session.get(User, claims["sub"])
     if user is None:

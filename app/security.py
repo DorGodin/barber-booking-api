@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import secrets
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import jwt
@@ -35,14 +36,23 @@ def verify_password(password: str, stored: str | None) -> bool:
 
 
 def issue_token(user_id: str, role: str, secret: str, hours: int) -> str:
+    # jti names this one sign-in, so signing out can revoke it and no other.
     now = datetime.now(UTC)
     return jwt.encode(
-        {"sub": user_id, "role": role, "iat": now, "exp": now + timedelta(hours=hours)}, secret, "HS256"
+        {
+            "sub": user_id,
+            "role": role,
+            "iat": now,
+            "exp": now + timedelta(hours=hours),
+            "jti": uuid.uuid4().hex,
+        },
+        secret,
+        "HS256",
     )
 
 
 def read_token(token: str, secret: str) -> dict | None:
     try:
-        return jwt.decode(token, secret, algorithms=["HS256"], options={"require": ["sub", "exp"]})
+        return jwt.decode(token, secret, algorithms=["HS256"], options={"require": ["sub", "exp", "jti"]})
     except jwt.PyJWTError:
         return None

@@ -48,6 +48,17 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=now_utc)
 
 
+class RevokedToken(Base):
+    """A sign-in ended by signing out. A signed token stays valid until it
+    expires - nothing in it can be changed - so the server keeps the ones that
+    were ended, until they would have expired anyway."""
+
+    __tablename__ = "revoked_tokens"
+
+    jti: Mapped[str] = mapped_column(String(32), primary_key=True)
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime, index=True)
+
+
 class LoginFailure(Base):
     """One failed sign-in. Kept in the database, not in memory: the server runs
     several workers, and a count in each one's memory would let an attacker

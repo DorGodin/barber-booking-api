@@ -16,6 +16,11 @@ class Settings:
     login_max_failures: int = 5
     login_max_failures_per_ip: int = 20
     login_lock_minutes: int = 15
+    accessibility_contact_name: str = "רכז/ת הנגישות של המספרה (לדוגמה)"
+    accessibility_contact_phone: str = "03-0000000"
+    accessibility_contact_email: str = "accessibility@example.com"
+    accessibility_premises: str = "(לדוגמה) הכניסה למספרה במפלס הרחוב, בלי מדרגות."
+    accessibility_updated: str = "1 באוקטובר 2026"
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -34,4 +39,15 @@ class Settings:
             login_max_failures=int(os.environ.get("LOGIN_MAX_FAILURES", "5")),
             login_max_failures_per_ip=int(os.environ.get("LOGIN_MAX_FAILURES_PER_IP", "20")),
             login_lock_minutes=int(os.environ.get("LOGIN_LOCK_MINUTES", "15")),
+            **{
+                field: os.environ[name]
+                for field, name in (
+                    ("accessibility_contact_name", "ACCESSIBILITY_CONTACT_NAME"),
+                    ("accessibility_contact_phone", "ACCESSIBILITY_CONTACT_PHONE"),
+                    ("accessibility_contact_email", "ACCESSIBILITY_CONTACT_EMAIL"),
+                    ("accessibility_premises", "ACCESSIBILITY_PREMISES"),
+                    ("accessibility_updated", "ACCESSIBILITY_UPDATED"),
+                )
+                if os.environ.get(name)
+            },
         )

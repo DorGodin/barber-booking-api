@@ -1,0 +1,23 @@
+name: dependencies
+
+# A dependency nobody changed can turn vulnerable overnight: an advisory is
+# published, and the lock that was clean yesterday is not. So this runs on
+# every push and pull request, and every night, apart from the main pipeline.
+on:
+  push: { branches: [main] }
+  pull_request:
+  schedule:
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  audit:
+    name: known vulnerabilities in the locked dependencies (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13" }
+      - run: pip install pip-audit==2.10.1
+      - name: every pinned package, direct and transitive
+        run: pip-audit --requirement requirements.lock.txt --strict --progress-spinner off

@@ -2,17 +2,17 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Request
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, Header, Request
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.deps import current_user, db, settings
 from app.errors import DomainError
 from app.login_limits import forget_failures, record_failure, seconds_locked
-from app.models import User
+from app.models import RevokedToken, User
 from app.schemas import AccountIn, LoginIn
-from app.security import hash_password, issue_token, verify_password
+from app.security import hash_password, issue_token, read_token, verify_password
 from app.views import user_view
 
 router = APIRouter(tags=["auth"])
@@ -59,6 +59,23 @@ def sign_up(body: AccountIn, session: Session = Depends(db)):
     session.add(user)
     session.commit()
     return user_view(user)
+
+
+@router.post("/auth/logout", status_code=204)
+def logout(
+    authorization: str = Header(),
+    _: User = Depends(current_user),
+    session: Session = Depends(db),
+    config: Settings = Depends(settings),
+):
+    """Ends this sign-in on the server, not only in the browser: a token copied
+    before the sign-out stops working at once instead of in twelve hours. Other
+    sign-ins of the same person - another phone - are untouched."""
+    claims = read_token(authorization.removeprefix("Bearer "), config.secret_key)
+    now = datetime.now(UTC)
+    session.execute(delete(RevokedToken).where(RevokedToken.expires_at <= now))
+    session.merge(RevokedToken(jti=claims["jti"], expires_at=datetime.fromtimestamp(claims["exp"], UTC)))
+    session.commit()
 
 
 @router.get("/me")

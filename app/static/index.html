@@ -102,6 +102,8 @@
     .owner-nav a { font-size:13px; white-space:nowrap; padding:0 4px; }
   }
   @media (max-width: 760px) { [data-section] { scroll-margin-top:72px; } }
+  footer { max-width:1000px; margin:0 auto 24px; padding:0 16px; font-size:14px; }
+  footer a { color:var(--brand); display:inline-flex; align-items:center; min-height:44px; }
   [data-testid="message"][data-kind="ok"] { color:var(--ok); }
   [data-testid="message"][data-kind="error"], .error { color:var(--bad); }
 </style>
@@ -198,6 +200,7 @@
     <div class="actions"><button data-testid="popup-close" type="button" autofocus>סגירה</button></div>
   </dialog>
 </main>
+<footer><a href="/accessibility" data-testid="accessibility-link">הצהרת נגישות</a></footer>
 
 <script>
 // Every value that came from a user is written with textContent, never
@@ -377,6 +380,10 @@ async function resume() {
 // - as before this - the password they signed up with still in the sign-up
 // form. Answers still on their way for them are dropped too.
 function signOut() {
+  // The server ends this sign-in too, so a copy of the token taken before is
+  // worthless. The screen is cleared at once, without waiting for the answer.
+  const ending = token;
+  if (ending) fetch("/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${ending}` } }).catch(() => {});
   token = me = null;
   forget();
   for (const name of Object.keys(latest)) latest[name] += 1;

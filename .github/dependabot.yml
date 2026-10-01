@@ -1,0 +1,12 @@
+# A pull request for every dependency with a newer release, weekly, and at once
+# for a security advisory. The pull request runs the whole pipeline, so an
+# upgrade that breaks something is red before anyone merges it.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }

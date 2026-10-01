@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>הצהרת נגישות · תורים למספרה</title>
+<style>
+  /* --mut is darker than on the booking page: here it also sits on the beige
+     background, not only on white, and #6b7280 falls short of 4.5:1 there. */
+  :root { --ink:#1f2933; --mut:#4b5563; --line:#e4e7eb; --bg:#f6f5f2; --brand:#1d4e5f; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background:var(--bg); color:var(--ink); line-height:1.7; }
+  header { background:var(--brand); color:#fff; padding:16px 24px; }
+  header h1 { margin:0; font-size:20px; }
+  main { max-width:760px; margin:24px auto; padding:0 16px; }
+  section { background:#fff; border:1px solid var(--line); border-radius:10px; padding:18px; margin-bottom:16px; }
+  h2 { margin:0 0 10px; font-size:17px; color:var(--brand); }
+  ul { margin:0; padding-inline-start:20px; }
+  a { color:var(--brand); }
+  a:focus-visible { outline:3px solid var(--brand); outline-offset:2px; }
+  .muted { color:var(--mut); font-size:14px; }
+  [dir="ltr"] { unicode-bidi:isolate; }
+</style>
+</head>
+<body>
+<header><h1>הצהרת נגישות</h1></header>
+<main>
+  <section data-testid="level">
+    <h2>רמת הנגישות</h2>
+    <p>אתר קביעת התורים בנוי לעמוד בתקן הישראלי 5568 ובהנחיות WCAG 2.2 ברמה AA, כנדרש בתקנות שוויון זכויות לאנשים עם מוגבלות (התאמות נגישות לשירות).</p>
+  </section>
+  <section data-testid="checked">
+    <h2>מה נבדק, ואיך</h2>
+    <ul>
+      <li>כל מסך נסרק בכלי בדיקה אוטומטי (axe-core) מול WCAG 2.2 AA, בכל שינוי באתר.</li>
+      <li>קביעת תור וביטולו מהמקלדת בלבד, כולל לאן עובר המיקוד אחרי כל פעולה, ומסגרת מיקוד גלויה בכל שלב.</li>
+      <li>טלפון צר (320 פיקסלים), הגדלת הדף ל-200%, ומטרות לחיצה בגודל 44 פיקסלים לפחות.</li>
+      <li>כל שדה מתויג בשם שקורא מסך מקריא, וכל תוצאה של הזמנה מוכרזת.</li>
+    </ul>
+  </section>
+  <section data-testid="limits">
+    <h2>מגבלות ידועות</h2>
+    <ul>
+      <li>האתר עוד לא נבדק ידנית עם קורא מסך (VoiceOver או NVDA). הבדיקות האוטומטיות בודקות את המבנה והשמות, לא את מה שקורא המסך משמיע בפועל.</li>
+      <li>ב-Safari במחשב, מקש Tab מגיע לכפתורים רק כשמפעילים ניווט מקלדת בהגדרות המערכת. זו הגדרה של הדפדפן, לא של האתר.</li>
+    </ul>
+  </section>
+  <section data-testid="premises">
+    <h2>נגישות המספרה עצמה</h2>
+    <p>{{premises}}</p>
+  </section>
+  <section data-testid="contact">
+    <h2>נתקלתם בבעיה? פנו לרכז הנגישות</h2>
+    <p>{{contact_name}} · טלפון: <span dir="ltr">{{contact_phone}}</span> · דוא״ל: <a href="mailto:{{contact_email}}"><span dir="ltr">{{contact_email}}</span></a></p>
+    <p class="muted">נשמח לקבל כל פנייה, ונחזור אליכם תוך שלושה ימי עבודה.</p>
+  </section>
+  <p class="muted" data-testid="updated">עודכן לאחרונה: {{updated}}</p>
+  <p><a href="/" data-testid="back">חזרה לקביעת תור</a></p>
+</main>
+</body>
+</html>

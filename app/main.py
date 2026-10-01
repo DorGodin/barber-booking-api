@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import html as html_text
 import re
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -26,6 +27,7 @@ SECURITY_HEADERS = {
 }
 
 PAGE = Path(__file__).parent / "static" / "index.html"
+STATEMENT = Path(__file__).parent / "static" / "accessibility.html"
 
 
 def page_policy(html: str) -> str:
@@ -41,8 +43,12 @@ def page_policy(html: str) -> str:
 
     def hashes(tag: str) -> str:
         bodies = re.findall(rf"<{tag}>(.*?)</{tag}>", html, re.S)
-        return " ".join(
-            f"'sha256-{base64.b64encode(hashlib.sha256(body.encode()).digest()).decode()}'" for body in bodies
+        return (
+            " ".join(
+                f"'sha256-{base64.b64encode(hashlib.sha256(body.encode()).digest()).decode()}'"
+                for body in bodies
+            )
+            or "'none'"
         )
 
     return (
@@ -116,6 +122,22 @@ def create_app(config: Settings | None = None) -> FastAPI:
         # policy computed once at startup would block the page the moment the
         # file changed under a running server.
         html = PAGE.read_text(encoding="utf-8")
+        return HTMLResponse(html, headers={"Content-Security-Policy": page_policy(html)})
+
+    @app.get("/accessibility", include_in_schema=False)
+    def accessibility_statement():
+        """The accessibility statement Israeli law asks of a public site, with the
+        shop's own contact and premises from its settings - escaped, they are text."""
+        values = {
+            "contact_name": config.accessibility_contact_name,
+            "contact_phone": config.accessibility_contact_phone,
+            "contact_email": config.accessibility_contact_email,
+            "premises": config.accessibility_premises,
+            "updated": config.accessibility_updated,
+        }
+        html = STATEMENT.read_text(encoding="utf-8")
+        for name, value in values.items():
+            html = html.replace("{{" + name + "}}", html_text.escape(value))
         return HTMLResponse(html, headers={"Content-Security-Policy": page_policy(html)})
 
     for router in (auth.router, services.router, barbers.router, bookings.router):
