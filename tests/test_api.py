@@ -199,3 +199,17 @@ def test_the_shop_publishes_its_own_clock_and_rules(client):
     assert shop["timezone"] == TZ.key
     assert shop["today"] == datetime.now(UTC).astimezone(TZ).date().isoformat()
     assert shop["booking_window_days"] == 60 and shop["cancel_cutoff_hours"] == 24
+
+
+def test_the_owner_sees_a_barbers_days_off_in_date_order(client, owner, barber):
+    later, sooner = local_day(12), local_day(10)
+    for day in (later, sooner):
+        client.post(f"/barbers/{barber}/time-off", headers=owner, json={"date": day.isoformat()})
+
+    listed = client.get(f"/barbers/{barber}/time-off", headers=owner).json()["days"]
+
+    assert listed == [sooner.isoformat(), later.isoformat()]
+
+
+def test_only_the_owner_sees_days_off(client, customer, barber):
+    assert client.get(f"/barbers/{barber}/time-off", headers=customer).status_code == 403

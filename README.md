@@ -36,6 +36,10 @@ passwords from `.env`:
 | `customer` | דנה | a customer with nothing booked |
 | `yael` | יעל | a customer who already holds a haircut every two hours with each barber for the next working days |
 
+Signed in as the owner, the same page becomes the management screen: each barber's weekly
+hours and days off, a new barber, the services and their prices, and every booking with a
+cancel that works even inside the 24 hours.
+
 So every day has a different line-up, and each barber's day shows free and taken times
 alternating. The barbers share the barber password and the customers the customer one: sign
 in as דנה in one window and יעל in another, choose the same time in both, and press Book in
@@ -86,7 +90,7 @@ is 06:00 UTC in summer and 07:00 UTC in winter. Every booking shows both `start`
 | GET | `/barbers` | signed in |
 | POST | `/barbers` | owner |
 | GET / PUT | `/barbers/{id}/hours` | signed in / owner |
-| POST / DELETE | `/barbers/{id}/time-off`, `/barbers/{id}/time-off/{date}` | owner |
+| GET / POST / DELETE | `/barbers/{id}/time-off`, `/barbers/{id}/time-off/{date}` | owner |
 | GET | `/barbers/{id}/availability?date=&service_id=` | signed in |
 | POST | `/bookings` | customer |
 | GET | `/bookings`, `/bookings/{id}` | signed in — each sees only their own |
@@ -150,7 +154,9 @@ make run
 (`barber.ron`, א׳ ב׳ ג׳); ושתי לקוחות — דנה (`customer`) ויעל (`yael`), שכבר מחזיקה תספורת כל שעתיים
 אצל כל ספר בימי העבודה הקרובים. כך בכל יום יש הרכב ספרים אחר, ובכל יום רואים שעות פנויות ותפוסות
 לסירוגין. אפשר להתחבר כדנה בחלון אחד וכיעל בחלון אחר, לבחור את אותה שעה בשניהם וללחוץ "קביעת התור"
-בכל אחד — אחד יקבל חלון ירוק, והשני חלון אדום "השעה כבר תפוסה". כל אחד יכול להירשם כלקוח נוסף דרך
+בכל אחד — אחד יקבל חלון ירוק, והשני חלון אדום "השעה כבר תפוסה". בעל המספרה שמתחבר מקבל את מסך
+הניהול: שעות עבודה וימי חופש לכל ספר, ספר חדש, שירותים ומחירים, וביטול כל תור — גם פחות מ-24 שעות
+לפני. כל אחד יכול להירשם כלקוח נוסף דרך
 `POST /customers`.
 
 ### החוקים

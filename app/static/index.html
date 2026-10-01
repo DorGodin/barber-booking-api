@@ -43,6 +43,12 @@
   .auth { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
   @media (max-width: 760px) { .auth { grid-template-columns: 1fr; } }
   [data-testid="message"] { min-height:24px; margin:16px 0 0; font-weight:600; }
+  .owner { margin-top:18px; }
+  h3 { margin:18px 0 8px; font-size:14px; color:var(--brand); }
+  table.hours { width:100%; border-collapse:collapse; margin-bottom:12px; }
+  table.hours th, table.hours td { padding:4px 6px; text-align:start; font-weight:normal; }
+  table.hours input:not([type="checkbox"]), .service-price { width:76px; display:inline-block; margin:0; direction:ltr; text-align:center; }
+  input[type="checkbox"] { width:auto; display:inline-block; margin:0 0 0 6px; }
   dialog { border:0; border-radius:14px; padding:0; width:min(420px, 92vw); box-shadow:0 18px 50px #0004; }
   dialog::backdrop { background:#1f293399; }
   dialog .band { padding:18px 22px; color:#fff; font-size:18px; font-weight:700; }
@@ -102,6 +108,32 @@
         <h2 data-testid="bookings-title">התורים שלי</h2>
         <ul data-testid="bookings"></ul>
         <p class="muted" data-testid="no-bookings" hidden>עוד אין תורים.</p>
+      </div>
+    </div>
+    <div class="grid owner" data-testid="owner" hidden>
+      <div class="panel" data-testid="hours-panel">
+        <h2>שעות עבודה וימי חופש <span class="muted" data-testid="hours-for"></span></h2>
+        <table class="hours"><tbody data-testid="hours"></tbody></table>
+        <button data-testid="save-hours" type="button">שמירת השעות</button>
+        <h3>ימי חופש</h3>
+        <ul data-testid="days-off"></ul>
+        <p class="muted" data-testid="no-days-off" hidden>אין ימי חופש קבועים.</p>
+        <div class="field"><label for="dayoff-date">יום חופש חדש</label><input id="dayoff-date" type="date" data-testid="dayoff-date"></div>
+        <button data-testid="add-dayoff" type="button" class="ghost">הוספת יום חופש</button>
+      </div>
+      <div class="panel" data-testid="services-panel">
+        <h2>שירותים</h2>
+        <ul data-testid="services"></ul>
+        <h3>שירות חדש</h3>
+        <div class="field"><label for="new-service-name">שם השירות</label><input id="new-service-name" data-testid="new-service-name" maxlength="80"></div>
+        <div class="field"><label for="new-service-duration">משך</label><select id="new-service-duration" data-testid="new-service-duration"></select></div>
+        <div class="field"><label for="new-service-price">מחיר בשקלים</label><input id="new-service-price" data-testid="new-service-price" inputmode="decimal" dir="ltr"></div>
+        <button data-testid="add-service" type="button">הוספת השירות</button>
+        <h3>ספר חדש</h3>
+        <div class="field"><label for="new-barber-name">שם הספר</label><input id="new-barber-name" data-testid="new-barber-name" maxlength="80"></div>
+        <div class="field"><label for="new-barber-username">שם משתמש לספר</label><input id="new-barber-username" data-testid="new-barber-username" autocomplete="off" dir="ltr"></div>
+        <div class="field"><label for="new-barber-password">סיסמה לספר</label><input id="new-barber-password" data-testid="new-barber-password" type="password" autocomplete="new-password"></div>
+        <button data-testid="add-barber" type="button">הוספת הספר</button>
       </div>
     </div>
     <p data-testid="message" role="status" aria-live="polite"></p>
@@ -176,6 +208,8 @@ const FRIENDLY = {
   service_inactive: () => "השירות הזה כבר לא ניתן.",
   not_aligned: () => "תורים מתחילים ברבע שעה עגולה.",
   idempotency_mismatch: () => "משהו השתבש בשליחה. כדאי לנסות שוב.",
+  name_taken: () => "כבר יש שירות בשם הזה.",
+  already_off: () => "הספר כבר בחופש ביום הזה.",
 };
 
 function explain(resp, context = {}) {
@@ -267,7 +301,199 @@ async function start() {
 }
 
 async function refresh() {
-  await Promise.all([refreshSlots(), refreshBookings()]);
+  await Promise.all([refreshSlots(), refreshBookings(), refreshOwner()]);
+}
+
+// ---- The owner's screen -------------------------------------------------------
+const DAYS = [["sun", "ראשון"], ["mon", "שני"], ["tue", "שלישי"], ["wed", "רביעי"], ["thu", "חמישי"], ["fri", "שישי"], ["sat", "שבת"]];
+const HHMM = /^(([01][0-9]|2[0-3]):[0-5][0-9]|24:00)$/;
+const onQuarter = (hhmm) => Number(hhmm.slice(3)) % 15 === 0;
+
+// Shekels to agorot in whole numbers, never through a float: 92.55 * 100 is
+// 9254.999999999998, and an off-by-one price is a real charge to a real person.
+function parseShekels(text) {
+  const match = /^\s*([0-9]{1,6})(?:\.([0-9]{1,2}))?\s*$/.exec(text);
+  return match ? Number(match[1]) * 100 + Number((match[2] || "").padEnd(2, "0")) : null;
+}
+const shekels = (minor) => `${Math.floor(minor / 100)}.${String(minor % 100).padStart(2, "0")}`;
+
+function control(tag, attributes) {
+  const el = document.createElement(tag);
+  for (const [name, value] of Object.entries(attributes)) {
+    if (name === "testid") el.dataset.testid = value;
+    else if (name in el && name !== "type") el[name] = value;
+    else el.setAttribute(name, value);
+  }
+  return el;
+}
+
+async function refreshOwner() {
+  if (!me || me.role !== "owner") return;
+  $("owner").hidden = false;
+  if (!$("new-service-duration").options.length) {
+    for (let minutes = 15; minutes <= 240; minutes += 15) $("new-service-duration").append(option(String(minutes), `${minutes} דק׳`));
+    $("new-service-duration").value = "30";
+  }
+  const barberId = $("barber").value;
+  $("hours-for").textContent = `· ${isolate(barberName(barberId))}`;
+  const [hours, off] = await Promise.all([api("GET", `/barbers/${barberId}/hours`), api("GET", `/barbers/${barberId}/time-off`)]);
+  renderHours(hours.ok ? hours.data.hours : {});
+  renderDaysOff(off.ok ? off.data.days : []);
+  renderServices();
+}
+
+function renderHours(hours) {
+  const body = $("hours");
+  body.replaceChildren();
+  for (const [day, name] of DAYS) {
+    const span = hours[day];
+    const row = control("tr", { testid: "hours-row" });
+    row.dataset.day = day;
+    const heading = control("th", { scope: "row", textContent: name });
+    const works = control("input", { type: "checkbox", testid: "hours-works", checked: Boolean(span), "aria-label": `עובד ביום ${name}` });
+    const open = control("input", { testid: "hours-open", value: span ? span[0] : "10:00", "aria-label": `שעת פתיחה ביום ${name}`, disabled: !span });
+    const close = control("input", { testid: "hours-close", value: span ? span[1] : "19:00", "aria-label": `שעת סגירה ביום ${name}`, disabled: !span });
+    works.addEventListener("change", () => { open.disabled = close.disabled = !works.checked; });
+    const cells = [heading, control("td", {}), control("td", {}), control("td", {})];
+    cells[1].append(works);
+    cells[2].append(open);
+    cells[3].append(close);
+    row.append(...cells);
+    body.append(row);
+  }
+}
+
+function saveHours() {
+  return busyWhile(async () => {
+    const hours = {};
+    for (const row of $("hours").children) {
+      const name = row.querySelector("th").textContent;
+      const works = row.querySelector('[data-testid="hours-works"]').checked;
+      const open = row.querySelector('[data-testid="hours-open"]').value.trim();
+      const close = row.querySelector('[data-testid="hours-close"]').value.trim();
+      if (!works) { hours[row.dataset.day] = null; continue; }
+      if (![open, close].every((t) => HHMM.test(t) && onQuarter(t))) {
+        say(`ביום ${name}: כל שעה צריכה להיות ברבע שעה עגולה, למשל 10:00 או 18:45.`, "error");
+        return;
+      }
+      if (open >= close) {
+        say(`ביום ${name}: שעת הסגירה צריכה להיות אחרי שעת הפתיחה.`, "error");
+        return;
+      }
+      hours[row.dataset.day] = [open, close];
+    }
+    const barberId = $("barber").value;
+    const r = await api("PUT", `/barbers/${barberId}/hours`, { hours });
+    say(r.ok ? `שעות העבודה של ${isolate(barberName(barberId))} נשמרו.` : explain(r, { invalid: "השעות לא נשמרו. כדאי לבדוק כל יום." }), r.ok ? "ok" : "error");
+    await refreshOwner();
+  });
+}
+
+function renderDaysOff(days) {
+  const list = $("days-off");
+  list.replaceChildren();
+  for (const day of days) {
+    const row = control("li", { testid: "dayoff-row" });
+    row.dataset.day = day;
+    const label = control("span", { textContent: dayLabel(day) });
+    const remove = control("button", { type: "button", className: "ghost", testid: "remove-dayoff", textContent: "ביטול החופש", "aria-label": `ביטול יום החופש ב־${dayLabel(day)}` });
+    remove.addEventListener("click", () => removeDayOff(day));
+    row.append(label, remove);
+    list.append(row);
+  }
+  $("no-days-off").hidden = days.length > 0;
+}
+
+function addDayOff() {
+  return busyWhile(async () => {
+    const day = $("dayoff-date").value;
+    if (!day) { say("צריך לבחור תאריך ליום החופש.", "error"); return; }
+    const barberId = $("barber").value;
+    const r = await api("POST", `/barbers/${barberId}/time-off`, { date: day });
+    say(r.ok ? `נקבע יום חופש ל־${isolate(barberName(barberId))} ב־${dayLabel(day)}.` : explain(r), r.ok ? "ok" : "error");
+    await refresh();
+  });
+}
+
+function removeDayOff(day) {
+  return busyWhile(async () => {
+    const r = await api("DELETE", `/barbers/${$("barber").value}/time-off/${day}`);
+    say(r.ok ? `יום החופש ב־${dayLabel(day)} בוטל.` : explain(r), r.ok ? "ok" : "error");
+    await refresh();
+  });
+}
+
+function addBarber() {
+  return busyWhile(async () => {
+    const body = { display_name: $("new-barber-name").value.trim(), username: $("new-barber-username").value.trim(), password: $("new-barber-password").value };
+    const r = await api("POST", "/barbers", body);
+    if (!r.ok) {
+      say(explain(r, { invalid: "כדאי לבדוק את הפרטים: שם, שם משתמש באנגלית, באותיות קטנות, 3 עד 64 תווים, וסיסמה של 8 תווים לפחות." }), "error");
+      return;
+    }
+    barbers = (await api("GET", "/barbers")).data.content;
+    $("barber").replaceChildren(...barbers.map((b) => option(b.id, b.display_name)));
+    $("barber").value = r.data.id;
+    for (const id of ["new-barber-name", "new-barber-username", "new-barber-password"]) $(id).value = "";
+    say(`הספר ${isolate(r.data.display_name)} נוסף, בשעות העבודה של המספרה.`, "ok");
+    await refresh();
+  });
+}
+
+function renderServices() {
+  const list = $("services");
+  list.replaceChildren();
+  for (const s of services) {
+    const row = control("li", { testid: "service-row" });
+    row.dataset.id = s.id;
+    row.dataset.active = String(s.active);
+    const name = control("span", { textContent: `${isolate(s.name)} · ${s.duration_minutes} דק׳` });
+    const price = control("input", { className: "service-price", testid: "service-price", value: shekels(s.price_minor), inputmode: "decimal", "aria-label": `מחיר ${s.name} בשקלים` });
+    const active = control("input", { type: "checkbox", testid: "service-active", checked: s.active, "aria-label": `${s.name} מוצע ללקוחות` });
+    const save = control("button", { type: "button", className: "ghost", testid: "save-service", textContent: "שמירה" });
+    save.addEventListener("click", () => saveService(s, price, active));
+    const controls = control("span", {});
+    controls.append(price, active, save);
+    row.append(name, controls);
+    list.append(row);
+  }
+}
+
+async function reloadServices() {
+  services = (await api("GET", "/services")).data.content;
+  renderServices();
+}
+
+function saveService(service, priceInput, activeInput) {
+  return busyWhile(async () => {
+    const price = parseShekels(priceInput.value);
+    if (price === null) {
+      say("המחיר צריך להיות מספר בשקלים, עם עד שתי ספרות אחרי הנקודה, למשל 80 או 92.50.", "error");
+      return;
+    }
+    const r = await api("PATCH", `/services/${service.id}`, { price_minor: price, active: activeInput.checked });
+    say(r.ok ? `השירות ${isolate(service.name)} נשמר.` : explain(r), r.ok ? "ok" : "error");
+    await reloadServices();
+  });
+}
+
+function addService() {
+  return busyWhile(async () => {
+    const price = parseShekels($("new-service-price").value);
+    if (price === null) {
+      say("המחיר צריך להיות מספר בשקלים, עם עד שתי ספרות אחרי הנקודה, למשל 80 או 92.50.", "error");
+      return;
+    }
+    const body = { name: $("new-service-name").value.trim(), duration_minutes: Number($("new-service-duration").value), price_minor: price };
+    const r = await api("POST", "/services", body);
+    if (!r.ok) {
+      say(explain(r, { invalid: "כדאי לבדוק את שם השירות." }), "error");
+      return;
+    }
+    $("new-service-name").value = $("new-service-price").value = "";
+    say(`השירות ${isolate(r.data.name)} נוסף.`, "ok");
+    await reloadServices();
+  });
 }
 
 async function refreshSlots() {
@@ -400,12 +626,17 @@ $("signup-form").addEventListener("submit", async (e) => {
 $("logout").addEventListener("click", () => {
   token = me = null;
   $("app").hidden = true;
+  $("owner").hidden = true;
   $("whoami").hidden = true;
   $("auth").hidden = false;
   $("password").value = "";
 });
 $("book").addEventListener("click", book);
 $("popup-close").addEventListener("click", () => $("popup").close());
+$("save-hours").addEventListener("click", saveHours);
+$("add-dayoff").addEventListener("click", addDayOff);
+$("add-barber").addEventListener("click", addBarber);
+$("add-service").addEventListener("click", addService);
 for (const id of ["barber", "service", "date"]) $(id).addEventListener("change", () => busyWhile(refresh));
 </script>
 </body>

@@ -89,3 +89,13 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **The booking outcome is a `<dialog>` opened with `showModal()`**: focus goes to it,
   Escape closes it, the page behind it is inert. `show()` is not modal and is not
   acceptable here.
+
+### The owner's screen
+
+- **Shekels become agorot in whole numbers** (`parseShekels`), never `parseFloat(x) * 100`:
+  92.55 * 100 is 9254.999999999998. Up to two decimals; anything else is refused.
+- **The page checks hours before sending them** - on the quarter hour, closing after
+  opening - so the owner gets a Hebrew sentence about the day that is wrong, not a 422. The
+  server checks again; the page is a courtesy, not the rule.
+- **Everything the owner changes is part of `refresh()`**, so the bookings, the hours and the
+  services on screen are always the selected barber's current ones.

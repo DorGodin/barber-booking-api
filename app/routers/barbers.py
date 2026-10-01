@@ -95,6 +95,17 @@ def add_time_off(
     return {"barber_id": barber_id, "date": body.date.isoformat()}
 
 
+@router.get("/barbers/{barber_id}/time-off")
+def list_time_off(barber_id: str, _: User = Depends(require("owner")), session: Session = Depends(db)):
+    """The days a barber is off, so the owner can see them - adding and removing
+    a day off was possible before; seeing which days were off was not."""
+    barber_or_404(session, barber_id)
+    days = session.scalars(
+        select(TimeOff.day).where(TimeOff.barber_id == barber_id).order_by(TimeOff.day)
+    ).all()
+    return {"barber_id": barber_id, "days": list(days)}
+
+
 @router.delete("/barbers/{barber_id}/time-off/{day}", status_code=204)
 def remove_time_off(
     barber_id: str, day: date, _: User = Depends(require("owner")), session: Session = Depends(db)
