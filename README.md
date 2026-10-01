@@ -1,7 +1,15 @@
 # Barber Booking API
 
-A small, real appointment booking API for a barbershop: barbers, services, working hours,
-availability, bookings and cancellations.
+[![ci](https://github.com/DorGodin/barber-booking-api/actions/workflows/ci.yml/badge.svg)](https://github.com/DorGodin/barber-booking-api/actions/workflows/ci.yml)
+
+A small, real appointment booking API for a barbershop, with a booking page in Hebrew:
+barbers, services, working hours, availability, bookings and cancellations - and an owner's
+screen to run the shop.
+
+![Two customers go for the same free time; the first is booked, the second is told it has just gone](docs/media/race.gif)
+
+*Two customers, one free 10:00. The first is booked; the second is told the time has just gone.
+Recorded by the outside UI suite in [qa-api-starter](https://github.com/DorGodin/qa-api-starter).*
 
 It exists to be tested **from the outside**. It has no test hooks — no reset endpoint, no
 back door — so a test framework pointed at it has to work the way it would against any
