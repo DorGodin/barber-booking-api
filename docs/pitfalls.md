@@ -114,3 +114,20 @@ data was disposable, but nobody had said so.
 
 **Rule:** before resetting a database someone may be using, read the server's log or ask.
 Stop the server first, then reset, then start - never reset under a running server.
+
+## 2026-10-01 — A worker died on every fresh start, and the supervisor hid it
+
+Starting with several workers on an empty database, every worker ran the startup at once,
+and all but one died on "database is locked". uvicorn restarted them, the restarted ones
+found the database ready, and everything looked fine - CI included. It surfaced only when a
+load test started a fresh copy and its log said "Child process died".
+
+The cause was not where it first looked. Locking the seed's check-then-insert was worth
+doing - two workers could otherwise both see an empty database and both seed it - but the
+crash was `PRAGMA journal_mode=WAL` on connect. Switching to WAL needs an exclusive lock,
+and when the conflict could deadlock SQLite refuses at once, `busy_timeout` or not.
+
+**Rule:** a connection asks `PRAGMA journal_mode` first and switches only if the file is not
+already in WAL, retrying briefly while the first worker does it. Read the traceback for the
+line that failed before fixing the line you suspect. A crash a supervisor restarts is still
+a crash: `tests/test_startup.py` reads the server's own log for one.

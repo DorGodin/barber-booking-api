@@ -99,3 +99,11 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   server checks again; the page is a courtesy, not the rule.
 - **Everything the owner changes is part of `refresh()`**, so the bookings, the hours and the
   services on screen are always the selected barber's current ones.
+
+### Starting several workers on an empty database
+
+Every worker runs the startup at once. `prepare_database` creates the tables and seeds the
+shop under the write lock, with the emptiness check inside it, and the connect handler sets
+`busy_timeout` and then asks whether the file is already in WAL mode before switching it -
+the switch needs an exclusive lock that SQLite refuses at once rather than waits for.
+`tests/test_startup.py` starts four workers on an empty database and fails on a crash.

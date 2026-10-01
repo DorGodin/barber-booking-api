@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 
 from app.config import Settings
-from app.db import Base, make_engine, make_sessionmaker
+from app.db import IMMEDIATE, Base, make_engine, make_sessionmaker
 from app.errors import DomainError, domain_error_handler
 from app.routers import auth, barbers, bookings, services
 from app.seed import seed_if_empty
@@ -21,15 +21,30 @@ SECURITY_HEADERS = {
 }
 
 
+def prepare_database(engine, make_session, config: Settings) -> None:
+    """Create the tables and seed an empty shop - safely from several workers.
+
+    Every worker runs this at startup, at the same moment. Unlocked, it is
+    check-then-write across processes, the same shape as two customers booking
+    one time: one worker died on "database is locked" on every fresh start, and
+    the supervisor's restart hid it. Both steps now take the write lock at BEGIN;
+    a worker that waits finds the work done and moves on.
+    """
+    with engine.connect() as connection:
+        connection.execution_options(**{IMMEDIATE: True})
+        with connection.begin():
+            Base.metadata.create_all(connection)
+    with make_session() as session:
+        seed_if_empty(session, config)
+
+
 def create_app(config: Settings | None = None) -> FastAPI:
     config = config or Settings.from_env()
     engine = make_engine(config.database_url)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        Base.metadata.create_all(engine)
-        with app.state.sessionmaker() as session:
-            seed_if_empty(session, config)
+        prepare_database(engine, app.state.sessionmaker, config)
         yield
         engine.dispose()
 

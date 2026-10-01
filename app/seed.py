@@ -16,6 +16,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import Settings
+from app.db import write_lock
 from app.models import BarberHours, Booking, Service, User
 from app.routers.barbers import SHOP_CLOSE, SHOP_OPEN
 from app.scheduling import WEEKDAYS, local_instant, parse_hhmm
@@ -88,8 +89,17 @@ def _seed_bookings(
 
 
 def seed_if_empty(session: Session, config: Settings) -> bool:
-    if session.scalar(select(func.count()).select_from(User)):
-        return False
+    """Seed the shop if it is empty, under the write lock: the emptiness check
+    and the inserts are one step, so two workers can never both see an empty
+    database and both seed it."""
+    with write_lock(session):
+        if session.scalar(select(func.count()).select_from(User)):
+            return False
+        _seed(session, config)
+    return True
+
+
+def _seed(session: Session, config: Settings) -> None:
     owner_password = _password("SEED_OWNER_PASSWORD")
     barber_password = _password("SEED_BARBER_PASSWORD")
     customer_password = _password("SEED_CUSTOMER_PASSWORD")
@@ -111,5 +121,3 @@ def seed_if_empty(session: Session, config: Settings) -> bool:
     session.flush()
 
     _seed_bookings(session, config, barbers, customers[1], services[0])
-    session.commit()
-    return True

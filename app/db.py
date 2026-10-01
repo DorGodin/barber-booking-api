@@ -12,6 +12,8 @@ runs several.
 
 from __future__ import annotations
 
+import sqlite3
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 
@@ -25,6 +27,29 @@ class Base(DeclarativeBase):
     pass
 
 
+def _ensure_wal(cursor) -> None:
+    """Put the database in WAL mode - from several workers starting at once.
+
+    Switching to WAL needs an exclusive lock, and SQLite does not always wait
+    for it: when the conflict could deadlock it refuses at once, busy_timeout or
+    not. On every fresh start with several workers, all but one died on
+    "database is locked". WAL is stored in the file, so a connection first asks
+    whether it is already on - which needs no exclusive lock - and only the
+    first worker ever switches; the others retry briefly while it does.
+    """
+    for attempt in range(40):
+        try:
+            if cursor.execute("PRAGMA journal_mode").fetchone()[0].lower() == "wal":
+                return
+            cursor.execute("PRAGMA journal_mode=WAL")
+            return
+        except sqlite3.OperationalError as exc:
+            if "locked" not in str(exc):
+                raise
+            time.sleep(min(0.05 * (attempt + 1), 0.5))
+    raise RuntimeError("could not put the database in WAL mode: it stayed locked")
+
+
 def make_engine(url: str):
     engine = create_engine(url, connect_args={"check_same_thread": False} if url.startswith("sqlite") else {})
 
@@ -36,8 +61,8 @@ def make_engine(url: str):
             # otherwise issue its own deferred BEGIN and ignore ours.
             dbapi_connection.isolation_level = None
             cursor = dbapi_connection.cursor()
-            cursor.execute("PRAGMA journal_mode=WAL")
             cursor.execute("PRAGMA busy_timeout=10000")
+            _ensure_wal(cursor)
             cursor.execute("PRAGMA foreign_keys=ON")
             cursor.close()
 
