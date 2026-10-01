@@ -30,10 +30,20 @@ lock:           ## after editing requirements.txt: re-resolve and commit both fi
 hooks:          ## once per clone: secret scan and lint on every commit
 	$(VENV)/bin/pre-commit install
 
-reset-db:       ## delete YOUR local database; the next `make run` re-seeds it
+# Refuse to delete a database while a server on its port is still serving it:
+# the server keeps running on a file that no longer exists, and the next start
+# fails with "address already in use". It happened twice in one day.
+define refuse_if_running
+	@if lsof -nP -iTCP:$(1) -sTCP:LISTEN >/dev/null 2>&1; then \
+		echo "a server is still running on port $(1) - stop it first (Ctrl+C in its tab), then run this again"; exit 1; fi
+endef
+
+reset-db:       ## delete YOUR local database; the next `make run` re-seeds it. Stop `make run` first
+	$(call refuse_if_running,$(PORT))
 	rm -f barber.db barber.db-wal barber.db-shm
 
-reset-test-db:  ## delete the test copy's database only; the next `make run-test` re-seeds it
+reset-test-db:  ## delete the test copy's database only; the next `make run-test` re-seeds it. Stop it first
+	$(call refuse_if_running,$(TEST_PORT))
 	rm -f $(TEST_DB) $(TEST_DB)-wal $(TEST_DB)-shm
 
 docker-up:      ## run the API in a container on port 8100

@@ -131,3 +131,14 @@ and when the conflict could deadlock SQLite refuses at once, `busy_timeout` or n
 already in WAL, retrying briefly while the first worker does it. Read the traceback for the
 line that failed before fixing the line you suspect. A crash a supervisor restarts is still
 a crash: `tests/test_startup.py` reads the server's own log for one.
+
+## 2026-10-01 — The database was reset under a running server, twice in one day
+
+`make reset-db && make run` deleted the database while `make run` was still serving it in
+another tab. The old server kept running on a file that no longer existed, and the new one
+failed with "address already in use". Both times the instruction had said to stop the
+server first; an instruction is not a guard.
+
+**Rule:** `reset-db` and `reset-test-db` refuse while a server is listening on their port,
+and say what to do. Proven both ways: refused with the test copy running, ran with the
+port free.
