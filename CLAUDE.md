@@ -76,6 +76,12 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **`aria-busy` on the app section is true while the page fetches** and false once the
   screen is current. Screen readers use it, and so do the outside UI tests — keep it
   accurate when adding anything that fetches.
+- **The owner books from the same panel, with a name field** (`guest-field`); a barber gets
+  no booking panel. **The service choice offers active services only** - the owner's list
+  holds withdrawn ones to manage, and offering one made the times fail and replace the
+  owner's message.
+- **One `refused()` shows every refusal** - booking, guest booking, move. A new way to book
+  uses it rather than a copy.
 - **Moving a booking is the booking panel with the barber and the service locked** to the
   booking's own, the times listed with `moving=`, and the book button sending the move.
   `stopMoving()` puts the panel back, on every way out - moved, stopped, signed out.

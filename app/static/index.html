@@ -156,6 +156,7 @@
           <div class="field"><label for="service">שירות</label><select id="service" data-testid="service"></select></div>
           <div class="field"><label for="date">תאריך</label><input id="date" type="date" data-testid="date"></div>
           <div class="slots" data-testid="slots" role="radiogroup" aria-label="שעות פנויות"></div>
+          <div class="field" data-testid="guest-field" hidden><label for="guest-name">שם הלקוח</label><input id="guest-name" data-testid="guest-name" maxlength="80" autocomplete="off"></div>
           <p class="muted" data-testid="no-slots" hidden>אין שעות פנויות ביום הזה.</p>
           <div class="confirm" data-testid="confirm" hidden>
             <span data-testid="confirm-text"></span>
@@ -402,7 +403,8 @@ function signOut() {
   stopMoving();
   for (const id of ["bookings", "slots", "hours", "days-off", "services", "barber", "service"]) $(id).replaceChildren();
   for (const id of ["display-name", "hours-for", "confirm-text"]) $(id).textContent = "";
-  for (const id of ["confirm", "no-slots", "no-bookings", "no-days-off", "app", "owner", "owner-nav", "whoami"]) $(id).hidden = true;
+  $("guest-name").value = "";
+  for (const id of ["confirm", "no-slots", "no-bookings", "no-days-off", "app", "owner", "owner-nav", "whoami", "guest-field"]) $(id).hidden = true;
   say("", "ok");
   clearForms();
   $("auth").hidden = false;
@@ -425,14 +427,17 @@ async function start() {
   $("display-name").textContent = `${isolate(me.display_name)} · ${ROLE[me.role]}`;
 
   $("barber").replaceChildren(...barbers.map((b) => option(b.id, b.display_name)));
-  $("service").replaceChildren(...services.map((s) => option(s.id, `${isolate(s.name)} · ${s.duration_minutes} דק׳ · ${money(s.price_minor, s.currency)}`)));
+  fillServiceChoice();
   $("date").min = shop.today;
   $("date").max = addDays(shop.today, shop.booking_window_days);
   $("date").value = shop.today;
 
   const customer = me.role === "customer";
-  $("book-panel").hidden = !customer;
-  $("left-title").textContent = customer ? "קביעת תור" : me.role === "owner" ? "הצגת התורים של" : "היומן שלך";
+  // The owner books too - by name, for whoever phoned or walked in - into the
+  // same diary the site books into. A barber only reads their own.
+  $("book-panel").hidden = me.role === "barber";
+  $("guest-field").hidden = me.role !== "owner";
+  $("left-title").textContent = customer ? "קביעת תור" : me.role === "owner" ? "התורים וקביעת תור בשם" : "היומן שלך";
   $("barber").parentElement.hidden = me.role === "barber";
   $("bookings-title").textContent = { customer: "התורים שלי", barber: "היומן שלי", owner: "תורים" }[me.role];
   say("", "ok");
@@ -604,6 +609,18 @@ function renderServices() {
 async function reloadServices() {
   services = (await api("GET", "/services")).data.content;
   renderServices();
+  fillServiceChoice();
+  await refreshSlots();
+}
+
+// What can be booked: the active services only. The owner's list holds the
+// withdrawn ones too, to manage them - offered here, the times for one were
+// refused, and the refusal replaced whatever the owner had just been told.
+function fillServiceChoice() {
+  const chosen = $("service").value;
+  const bookable = services.filter((s) => s.active);
+  $("service").replaceChildren(...bookable.map((s) => option(s.id, `${isolate(s.name)} · ${s.duration_minutes} דק׳ · ${money(s.price_minor, s.currency)}`)));
+  if (bookable.some((s) => s.id === chosen)) $("service").value = chosen;
 }
 
 function saveService(service, priceInput, activeInput) {
@@ -641,7 +658,7 @@ function addService() {
 async function refreshSlots() {
   selected = null;
   $("confirm").hidden = true;
-  if (!me || me.role !== "customer" || !$("barber").value || !$("service").value || !$("date").value) return;
+  if (!me || me.role === "barber" || !$("barber").value || !$("service").value || !$("date").value) return;
   const params = new URLSearchParams({ date: $("date").value, service_id: $("service").value });
   // While moving, the booking's own time is not in its way - the listing
   // offers exactly what the move will accept.
@@ -723,6 +740,16 @@ $("popup").addEventListener("close", () => {
   else if (inFlight > 0) focusWhenSettled = find;
 });
 
+// A refused booking, guest booking or move: the reason in Hebrew, a popup that
+// tells a time just taken from any other refusal, and the focus back to the times.
+function refused(r, slot, failedTitle, context = {}) {
+  const reason = explain(r, { time: clock(slot.start_local), ...context });
+  say(reason, "error");
+  const taken = r.data && r.data.code === "slot_taken";
+  afterPopup = () => $("slots").querySelector('[tabindex="0"]') || $("date");
+  popup(taken ? "השעה כבר תפוסה" : failedTitle, reason, "error");
+}
+
 function book() {
   if (!selected || booking) return;
   return busyWhile(bookSelected);
@@ -730,6 +757,7 @@ function book() {
 
 async function bookSelected() {
   if (moving) return moveSelected();
+  if (me.role === "owner") return bookGuest();
   booking = true;
   $("book").disabled = true;
   const { slot, key } = selected;
@@ -743,11 +771,35 @@ async function bookSelected() {
     afterPopup = () => document.querySelector(`[data-testid="booking-row"][data-id="${r.data.id}"]`);
     popup("✓ התור נקבע", `${booked} · ${money(r.data.price_minor, r.data.currency)}`, "ok");
   } else {
-    const reason = explain(r, { time: clock(slot.start_local) });
-    say(reason, "error");
-    const taken = r.data && r.data.code === "slot_taken";
-    afterPopup = () => $("slots").querySelector('[tabindex="0"]') || $("date");
-    popup(taken ? "השעה כבר תפוסה" : "לא הצלחנו לקבוע את התור", reason, "error");
+    refused(r, slot, "לא הצלחנו לקבוע את התור");
+  }
+  await refresh();
+}
+
+// The owner's booking is for someone with no account: a name, and the same
+// chair, hours and lock as any booking.
+async function bookGuest() {
+  const name = $("guest-name").value.trim();
+  if (!name) {
+    say("צריך לכתוב את שם הלקוח.", "error");
+    $("guest-name").focus();
+    return;
+  }
+  booking = true;
+  $("book").disabled = true;
+  const { slot } = selected;
+  const body = { barber_id: $("barber").value, service_id: $("service").value, start: slot.start, guest_name: name };
+  const r = await api("POST", "/bookings/guest", body);
+  booking = false;
+  $("book").disabled = false;
+  if (r.ok) {
+    const booked = `${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${isolate(r.data.service_name)} אצל ${isolate(barberName(r.data.barber_id))}`;
+    $("guest-name").value = "";
+    say(`נקבע בשם ${isolate(r.data.guest_name)}: ${booked}`, "ok");
+    afterPopup = () => document.querySelector(`[data-testid="booking-row"][data-id="${r.data.id}"]`);
+    popup("✓ התור נקבע", `${booked} · בשם ${isolate(r.data.guest_name)}`, "ok");
+  } else {
+    refused(r, slot, "לא הצלחנו לקבוע את התור", { invalid: "כדאי לבדוק את שם הלקוח." });
   }
   await refresh();
 }
@@ -794,11 +846,7 @@ async function moveSelected() {
     afterPopup = () => document.querySelector(`[data-testid="booking-row"][data-id="${r.data.id}"]`);
     popup("✓ התור הוזז", moved, "ok");
   } else {
-    const reason = explain(r, { time: clock(slot.start_local) });
-    say(reason, "error");
-    const taken = r.data && r.data.code === "slot_taken";
-    afterPopup = () => $("slots").querySelector('[tabindex="0"]') || $("date");
-    popup(taken ? "השעה כבר תפוסה" : "לא הצלחנו להזיז את התור", reason, "error");
+    refused(r, slot, "לא הצלחנו להזיז את התור");
   }
   await refresh();
 }
@@ -826,7 +874,10 @@ async function refreshBookings() {
     const detail = document.createElement("span");
     detail.className = "muted";
     detail.dataset.testid = "booking-detail";
-    detail.textContent = ` · ${isolate(b.service_name)} אצל ${isolate(barberName(b.barber_id))} · ${money(b.price_minor, b.currency)} · ${STATUS[b.status] || b.status}`;
+    // A guest's name is shown: the owner and the barber need to know who is
+    // coming. A customer's is not in the booking at all.
+    const who = b.guest_name ? ` · ${isolate(b.guest_name)} (בלי חשבון)` : "";
+    detail.textContent = ` · ${isolate(b.service_name)} אצל ${isolate(barberName(b.barber_id))}${who} · ${money(b.price_minor, b.currency)} · ${STATUS[b.status] || b.status}`;
     text.append(when, detail);
     row.append(text);
     if (b.status === "confirmed" && me.role === "customer") {

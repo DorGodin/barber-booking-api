@@ -191,3 +191,15 @@ the folder.
 **Rule:** a backup is switched to `journal_mode=DELETE` before it closes, one file that
 stands alone. A test of something that writes files asserts the exact files it leaves, not
 only that the one it named works.
+
+## 2026-10-02 — The owner's screen broke on a withdrawn service, and the first full run passed
+
+Giving the owner the booking panel made the owner's screen fetch times for the chosen
+service. The owner's service list includes withdrawn services; when one sorted first, the
+times were refused and the refusal replaced every message the owner was shown. The first
+full UI run passed - no service had been withdrawn yet - and the second, after the owner
+tests had withdrawn some, failed six tests.
+
+**Rule:** when a screen starts fetching something new for a role, run it against that role's
+whole data, withdrawn and inactive items included. A run that passes on a fresh database
+proves only the fresh database.
