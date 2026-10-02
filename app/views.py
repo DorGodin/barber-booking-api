@@ -35,6 +35,7 @@ def booking_view(booking: Booking, service_name: str, tz: ZoneInfo) -> dict:
     return {
         "id": booking.id,
         "customer_id": booking.customer_id,
+        "guest_name": booking.guest_name,
         "barber_id": booking.barber_id,
         "service_id": booking.service_id,
         "service_name": service_name,

@@ -31,7 +31,8 @@ migration:      ## after changing app/models.py: make migration m="add phone" - 
 	@test -n "$(m)" || { echo 'name the change: make migration m="add phone"'; exit 1; }
 	@d=$$(mktemp -d) && trap 'rm -rf "$$d"' EXIT && \
 	DATABASE_URL=sqlite:///$$d/m.db $(VENV)/bin/alembic upgrade head && \
-	DATABASE_URL=sqlite:///$$d/m.db $(VENV)/bin/alembic revision --autogenerate -m "$(m)"
+	n=$$(ls app/migrations/versions/*.py | wc -l) && \
+	DATABASE_URL=sqlite:///$$d/m.db $(VENV)/bin/alembic revision --autogenerate --rev-id $$(printf %04d $$((n + 1))) -m "$(m)"
 
 hooks:          ## once per clone: secret scan and lint on every commit
 	$(VENV)/bin/pre-commit install

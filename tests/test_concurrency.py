@@ -276,3 +276,48 @@ def test_customers_moving_to_one_time_at_once_get_it_once_and_the_rest_keep_thei
     stayed = sorted(b["start"] for _, b in holders)
     assert local(17) in starts
     assert len([s for s in starts if s in stayed]) == len(holders) - 1, starts
+
+
+def test_a_phone_booking_and_customers_racing_for_one_time_get_it_once(server):
+    """The owner books a caller while customers on the site go for the same
+    time. Exactly one of them gets it - whichever lock comes first."""
+    owner = token(server, "owner", PASSWORDS["owner"])
+    barber = httpx.post(
+        f"{server}/barbers",
+        headers=owner,
+        json={"username": f"g-{secrets.token_hex(4)}", "password": "long-enough", "display_name": "G"},
+    ).json()["id"]
+    httpx.put(f"{server}/barbers/{barber}/hours", headers=owner, json={"hours": ALL_WEEK})
+    haircut = next(
+        s for s in httpx.get(f"{server}/services", headers=owner).json()["content"] if s["name"] == HAIRCUT
+    )
+    day = (datetime.now(UTC).astimezone(TZ) + timedelta(days=5)).date()
+    start = (
+        datetime(day.year, day.month, day.day, 12, 0, tzinfo=TZ)
+        .astimezone(UTC)
+        .strftime("%Y-%m-%dT%H:%M:%SZ")
+    )
+    customers = []
+    for n in range(5):
+        name = f"gc-{secrets.token_hex(4)}"
+        httpx.post(
+            f"{server}/customers",
+            json={"username": name, "password": "long-enough", "display_name": "C"},
+            headers={"X-Forwarded-For": f"2001:db8:fd::{n + 1}"},
+        )
+        customers.append(token(server, name, "long-enough"))
+    body = {"barber_id": barber, "service_id": haircut["id"], "start": start}
+
+    def attempt(who):
+        if who == "owner":
+            return httpx.post(
+                f"{server}/bookings/guest", headers=owner, json={**body, "guest_name": "בטלפון"}, timeout=30
+            ).status_code
+        return httpx.post(f"{server}/bookings", headers=who, json=body, timeout=30).status_code
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        codes = sorted(pool.map(attempt, ["owner", *customers]))
+
+    assert [c for c in codes if c >= 500] == [], f"the losers crashed instead of being refused: {codes}"
+    assert codes.count(201) == 1, f"expected exactly one booking: {codes}"
+    assert codes.count(409) == 5, codes

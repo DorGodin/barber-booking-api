@@ -156,3 +156,18 @@ def start(engine, **settings) -> None:
 def version(engine) -> str | None:
     with engine.connect() as connection:
         return MigrationContext.configure(connection).get_current_revision()
+
+
+def move(client, headers, booking_id, start):
+    return client.post(f"/bookings/{booking_id}/move", headers=headers, json={"start": start})
+
+
+def a_second_barber(client, owner) -> tuple[str, dict]:
+    username = f"b-{secrets.token_hex(4)}"
+    barber_id = client.post(
+        "/barbers",
+        headers=owner,
+        json={"username": username, "password": "long-enough", "display_name": "B2"},
+    ).json()["id"]
+    client.put(f"/barbers/{barber_id}/hours", headers=owner, json={"hours": ALL_WEEK})
+    return barber_id, login(client, username, "long-enough")

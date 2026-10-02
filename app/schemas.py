@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Annotated
 
-from pydantic import AwareDatetime, BaseModel, Field, field_validator
+from pydantic import AwareDatetime, BaseModel, Field, StringConstraints, field_validator
 
 from app.scheduling import WEEKDAYS, parse_hhmm
 
@@ -70,3 +71,9 @@ class BookingIn(BaseModel):
     # different instant in every time zone, and guessing the shop's is how a
     # booking made abroad lands an hour off.
     start: AwareDatetime
+
+
+class GuestBookingIn(BookingIn):
+    """The owner books someone with no account - who phoned, or walked in."""
+
+    guest_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]

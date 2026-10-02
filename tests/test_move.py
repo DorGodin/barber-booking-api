@@ -2,14 +2,9 @@
 
 from __future__ import annotations
 
-import secrets
 from datetime import UTC, datetime, timedelta
 
-from tests.conftest import ALL_WEEK, HAIRCUT, TRIM, at, book, local_day, login, slots
-
-
-def move(client, headers, booking_id, start):
-    return client.post(f"/bookings/{booking_id}/move", headers=headers, json={"start": start})
+from tests.conftest import HAIRCUT, TRIM, a_second_barber, at, book, local_day, move, slots
 
 
 def quarter_after(delta: timedelta) -> str:
@@ -17,17 +12,6 @@ def quarter_after(delta: timedelta) -> str:
     t = datetime.now(UTC) + delta
     t = t.replace(second=0, microsecond=0) + timedelta(minutes=15 - t.minute % 15)
     return t.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def a_second_barber(client, owner) -> tuple[str, dict]:
-    username = f"b-{secrets.token_hex(4)}"
-    barber_id = client.post(
-        "/barbers",
-        headers=owner,
-        json={"username": username, "password": "long-enough", "display_name": "B2"},
-    ).json()["id"]
-    client.put(f"/barbers/{barber_id}/hours", headers=owner, json={"hours": ALL_WEEK})
-    return barber_id, login(client, username, "long-enough")
 
 
 def test_a_customer_moves_a_booking_and_the_old_time_is_free_again(client, customer, barber, services):

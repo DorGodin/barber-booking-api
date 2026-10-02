@@ -11,6 +11,7 @@ from alembic.autogenerate import compare_metadata
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import inspect
+from sqlalchemy.exc import IntegrityError
 
 from app.db import Base, make_sessionmaker
 from app.migrate import BASELINE, alembic_config
@@ -120,3 +121,32 @@ def test_the_migrations_go_down_and_up_again(engine):
         command.upgrade(config, "head")
 
     assert version(engine) == HEAD
+
+
+def test_a_booking_from_before_guest_bookings_keeps_its_customer_and_gains_the_check(engine):
+    with engine.connect() as connection, connection.begin():
+        command.upgrade(alembic_config(connection), "0001")
+        connection.exec_driver_sql(
+            "INSERT INTO users (id, username, password_hash, role, display_name, created_at) VALUES "
+            "('usr_c', 'early.customer', 'x', 'customer', 'C', '2026-10-01 10:00:00'), "
+            "('usr_b', 'early.barber', 'x', 'barber', 'B', '2026-10-01 10:00:00')"
+        )
+        connection.exec_driver_sql(
+            "INSERT INTO services (id, name, duration_minutes, price_minor, currency, active) "
+            "VALUES ('svc_1', 'תספורת', 30, 8000, 'ILS', 1)"
+        )
+        connection.exec_driver_sql(
+            "INSERT INTO bookings (id, customer_id, barber_id, service_id, start_utc, end_utc, status, "
+            "price_minor, currency, created_at) VALUES ('bkg_old', 'usr_c', 'usr_b', 'svc_1', "
+            "'2026-12-01 08:00:00', '2026-12-01 08:30:00', 'confirmed', 8000, 'ILS', '2026-10-01 10:00:00')"
+        )
+
+    start(engine)
+
+    assert version(engine) == HEAD
+    with engine.connect() as connection:
+        assert connection.exec_driver_sql(
+            "SELECT customer_id, guest_name FROM bookings WHERE id = 'bkg_old'"
+        ).one() == ("usr_c", None)
+        with pytest.raises(IntegrityError):
+            connection.exec_driver_sql("UPDATE bookings SET customer_id = NULL WHERE id = 'bkg_old'")

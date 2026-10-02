@@ -4,7 +4,17 @@ import json
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, TypeDecorator, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    TypeDecorator,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -122,10 +132,17 @@ class Booking(Base):
     __table_args__ = (
         Index("ix_bookings_barber_start", "barber_id", "start_utc"),
         Index("ix_bookings_customer_start", "customer_id", "start_utc"),
+        # A customer with an account, or a guest the owner booked by name - one
+        # or the other, never both and never neither.
+        CheckConstraint(
+            "(customer_id IS NULL) != (guest_name IS NULL)", name="ck_bookings_customer_or_guest"
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=lambda: new_id("bkg"))
-    customer_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    customer_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    # Booked by the owner for someone who phoned or walked in, with no account.
+    guest_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
     barber_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
     service_id: Mapped[str] = mapped_column(ForeignKey("services.id"))
     start_utc: Mapped[datetime] = mapped_column(UTCDateTime)

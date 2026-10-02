@@ -21,7 +21,8 @@ from app.db import write_lock
 from app.deps import current_user, db, require, settings
 from app.errors import DomainError
 from app.models import Booking, IdempotencyKey, Service, User
-from app.schemas import BookingIn, BookingMoveIn
+from app.scheduling import Interval
+from app.schemas import BookingIn, BookingMoveIn, GuestBookingIn
 from app.views import booking_view, page
 
 router = APIRouter(tags=["bookings"])
@@ -29,6 +30,21 @@ router = APIRouter(tags=["bookings"])
 
 def _view(session: Session, booking: Booking, config: Settings) -> dict:
     return booking_view(booking, session.get(Service, booking.service_id).name, config.shop_tz)
+
+
+def _refuse_clashes(
+    session: Session, wanted: Interval, barber_id: str, customer_id: str | None, excluding: str | None = None
+) -> None:
+    """The barber's chair is free, and so is the customer - who cannot be in two
+    chairs at once. A guest has no account to hold other bookings, so only the
+    chair is checked; asked about "no customer", busy() would answer with every
+    booking in the shop."""
+    if clashes(wanted, busy(session, wanted, barber_id=barber_id, excluding=excluding)):
+        raise DomainError(409, "slot_taken", "that time is no longer available")
+    if customer_id is not None and clashes(
+        wanted, busy(session, wanted, customer_id=customer_id, excluding=excluding)
+    ):
+        raise DomainError(409, "customer_overlap", "you already have a booking at that time")
 
 
 @router.post("/bookings", status_code=201)
@@ -84,10 +100,7 @@ def create_booking(
                 extra={"limit": config.max_future_bookings},
             )
 
-        if clashes(wanted, busy(session, wanted, barber_id=body.barber_id)):
-            raise DomainError(409, "slot_taken", "that time is no longer available")
-        if clashes(wanted, busy(session, wanted, customer_id=user.id)):
-            raise DomainError(409, "customer_overlap", "you already have a booking at that time")
+        _refuse_clashes(session, wanted, body.barber_id, user.id)
 
         booking = Booking(
             customer_id=user.id,
@@ -206,10 +219,39 @@ def move_booking(
         # The service as it is now may be off the menu; the booking keeps it.
         service = session.get(Service, booking.service_id)
         wanted = check_bookable(session, config, booking.barber_id, service, start, now)
-        if clashes(wanted, busy(session, wanted, barber_id=booking.barber_id, excluding=booking.id)):
-            raise DomainError(409, "slot_taken", "that time is no longer available")
-        if clashes(wanted, busy(session, wanted, customer_id=booking.customer_id, excluding=booking.id)):
-            raise DomainError(409, "customer_overlap", "you already have a booking at that time")
+        _refuse_clashes(session, wanted, booking.barber_id, booking.customer_id, excluding=booking.id)
 
         booking.start_utc, booking.end_utc = wanted.start, wanted.end
+        return _view(session, booking, config)
+
+
+@router.post("/bookings/guest", status_code=201)
+def create_guest_booking(
+    body: GuestBookingIn,
+    _: User = Depends(require("owner")),
+    session: Session = Depends(db),
+    config: Settings = Depends(settings),
+):
+    """The owner books, by name, someone who phoned or walked in. The same
+    chair, hours and lock as every booking - a phone booking the site does not
+    know about is how a shop double books - but no account, so no limit on
+    bookings ahead: that limit is for the site's customers."""
+    start = body.start.astimezone(UTC)
+    now = datetime.now(UTC)
+    with write_lock(session):
+        barber_or_404(session, body.barber_id)
+        service = active_service_or_error(session, body.service_id)
+        wanted = check_bookable(session, config, body.barber_id, service, start, now)
+        _refuse_clashes(session, wanted, body.barber_id, None)
+        booking = Booking(
+            guest_name=body.guest_name,
+            barber_id=body.barber_id,
+            service_id=service.id,
+            start_utc=wanted.start,
+            end_utc=wanted.end,
+            price_minor=service.price_minor,
+            currency=service.currency,
+        )
+        session.add(booking)
+        session.flush()
         return _view(session, booking, config)

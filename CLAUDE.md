@@ -27,6 +27,12 @@ the point of it, and most of these rules protect it.
 | `app/views.py` | how every entity looks on the wire, once |
 | `app/static/index.html` | the booking page: one file, no build step, every value written as text |
 
+**A booking is a customer's or a guest's, never both, never neither** - the database's own
+check holds it. A guest (`POST /bookings/guest`, the owner only) has a name and no account:
+the chair is checked, the customer is not, and the limit on bookings ahead does not apply.
+Every clash check goes through `_refuse_clashes` in `routers/bookings.py`; asked about "no
+customer", `busy()` returns every booking in the shop.
+
 **A move is the same booking at another time** - one request under the write lock, so the old
 time is held until the new one is taken. The listing for a move passes `moving=<id>`, and both
 leave that booking out of `busy()` the same way.
@@ -127,8 +133,10 @@ which skips a table that exists - a new column reached fresh databases and no ru
 2. `make migration m="add phone to users"` writes the migration into
    `app/migrations/versions/`. With the models unchanged it writes nothing.
 3. **Read it.** Autogenerate misses renames (it writes drop-and-add, which loses the
-   column's data) and cannot fill a new non-null column on rows that exist - give it a
-   `server_default`, or add it nullable, fill it, then tighten it.
+   column's data), misses CHECK constraints entirely (write them by hand, and a test that the
+   database refuses the row), and cannot fill a new non-null column on rows that exist - give
+   it a `server_default`, or add it nullable, fill it, then tighten it.
+   A downgrade that would delete people's data refuses instead (see `0002_guest_bookings.py`).
 4. `make test`. `tests/test_migrations.py` fails if the models and the migrations disagree.
 
 - **A migration never imports `app.models`.** The models keep changing after the migration is

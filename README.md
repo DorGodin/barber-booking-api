@@ -49,6 +49,8 @@ The API's interactive docs are at http://127.0.0.1:8100/docs.
 - No two customers in one chair at once — even when they press book in the same second.
 - A customer holds at most two bookings ahead, moves one to another free time up to 12 hours
   before, and cancels up to 24 hours before. The owner can always move and cancel.
+- The owner also books, by name, someone who phoned or walked in - into the same diary, under
+  the same rules.
 - Sign-in is limited after repeated wrong passwords; one address makes at most five accounts an hour.
 
 Every refusal answers with a stable `code`, and the page shows it in Hebrew.
@@ -139,6 +141,7 @@ Set these in `.env`:
 - אין שני לקוחות באותו כיסא באותו זמן — גם כשהם לוחצים באותה שנייה.
 - לקוח מחזיק לכל היותר שני תורים קדימה, יכול להזיז תור לשעה פנויה אחרת עד 12 שעות לפני, ולבטל עד 24 שעות
   לפני. בעל המספרה יכול להזיז ולבטל תמיד.
+- בעל המספרה קובע גם תור בשם, למי שהתקשר או נכנס מהרחוב - לאותו יומן ובאותם חוקים.
 - הכניסה נחסמת אחרי סיסמאות שגויות חוזרות; מכתובת אחת נפתחים לכל היותר חמישה חשבונות בשעה.
 
 כל סירוב מחזיר `code` קבוע, והמסך מציג אותו בעברית.
