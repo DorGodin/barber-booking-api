@@ -19,6 +19,9 @@ class Settings:
     max_future_bookings: int = 2
     signups_per_address: int = 5
     signup_window_minutes: int = 60
+    # Empty: a backups folder next to the database.
+    backup_dir: str = ""
+    backups_kept: int = 10
     accessibility_contact_name: str = "רכז/ת הנגישות של המספרה (לדוגמה)"
     accessibility_contact_phone: str = "03-0000000"
     accessibility_contact_email: str = "accessibility@example.com"
@@ -45,6 +48,8 @@ class Settings:
             max_future_bookings=int(os.environ.get("MAX_FUTURE_BOOKINGS", "2")),
             signups_per_address=int(os.environ.get("SIGNUPS_PER_ADDRESS", "5")),
             signup_window_minutes=int(os.environ.get("SIGNUP_WINDOW_MINUTES", "60")),
+            backup_dir=os.environ.get("BACKUP_DIR", ""),
+            backups_kept=int(os.environ.get("BACKUPS_KEPT", "10")),
             **{
                 field: os.environ[name]
                 for field, name in (

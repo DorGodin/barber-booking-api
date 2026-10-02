@@ -11,6 +11,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
+from app import backup
 from app.config import Settings
 from app.db import IMMEDIATE, make_engine, make_sessionmaker
 from app.errors import DomainError, domain_error_handler
@@ -63,6 +64,20 @@ def page_policy(html: str) -> str:
     )
 
 
+def backup_first(config: Settings):
+    """A migration changes a running shop's tables. If it goes wrong there must
+    be something to go back to - so the database is copied first, and a copy
+    that cannot be made stops the migration."""
+
+    def take(target: str) -> None:
+        database = backup.database_path(config.database_url)
+        backup.create(
+            database, backup.backup_dir(database, config.backup_dir), config.backups_kept, f"before-{target}"
+        )
+
+    return take
+
+
 def prepare_database(engine, make_session, config: Settings) -> None:
     """Migrate the tables and seed an empty shop - safely from several workers.
 
@@ -85,7 +100,7 @@ def prepare_database(engine, make_session, config: Settings) -> None:
         try:
             connection.execution_options(**{IMMEDIATE: True})
             with connection.begin():
-                migrate(connection)
+                migrate(connection, before_changes=backup_first(config) if sqlite else None)
         finally:
             if sqlite:
                 connection.connection.driver_connection.execute("PRAGMA foreign_keys=ON")

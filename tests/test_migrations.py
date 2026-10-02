@@ -3,10 +3,7 @@ database, on one from before migrations, and on one already up to date."""
 
 from __future__ import annotations
 
-import secrets
-from pathlib import Path
 from pprint import pformat
-from zoneinfo import ZoneInfo
 
 import pytest
 from alembic import command
@@ -15,40 +12,12 @@ from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import inspect
 
-from app.config import Settings
-from app.db import Base, make_engine, make_sessionmaker
-from app.main import prepare_database
+from app.db import Base, make_sessionmaker
 from app.migrate import BASELINE, alembic_config
 from app.models import User, new_id, now_utc
+from tests.conftest import start, version
 
 HEAD = ScriptDirectory.from_config(alembic_config()).get_current_head()
-
-
-@pytest.fixture
-def engine(tmp_path: Path, monkeypatch):
-    for role in ("owner", "barber", "customer"):
-        monkeypatch.setenv(f"SEED_{role.upper()}_PASSWORD", secrets.token_urlsafe(12))
-    engine = make_engine(f"sqlite:///{tmp_path / 'shop.db'}")
-    yield engine
-    engine.dispose()
-
-
-def start(engine) -> None:
-    """What every worker does when the server starts."""
-    config = Settings(
-        database_url=str(engine.url),
-        secret_key=secrets.token_hex(32),
-        shop_tz=ZoneInfo("Asia/Jerusalem"),
-        booking_window_days=60,
-        cancel_cutoff_hours=24,
-        token_hours=1,
-    )
-    prepare_database(engine, make_sessionmaker(engine), config)
-
-
-def version(engine) -> str | None:
-    with engine.connect() as connection:
-        return MigrationContext.configure(connection).get_current_revision()
 
 
 def a_database_from_before_migrations(engine) -> None:

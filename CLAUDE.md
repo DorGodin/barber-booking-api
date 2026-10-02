@@ -21,6 +21,7 @@ the point of it, and most of these rules protect it.
 | `app/scheduling.py` | pure rules: slots, overlap, DST. No database, no HTTP, no clock |
 | `app/booking_rules.py` | "is this bookable", used by BOTH the availability listing and the booking |
 | `app/db.py` | the engine and `write_lock`, the BEGIN IMMEDIATE that prevents double booking |
+| `app/backup.py` | copies of the database and putting one back - `make backup`, `make restore` |
 | `app/migrate.py`, `app/migrations/versions/` | how the tables reach the shape `app/models.py` describes, one migration per change |
 | `app/routers/` | one file per area |
 | `app/views.py` | how every entity looks on the wire, once |
@@ -129,6 +130,18 @@ which skips a table that exists - a new column reached fresh databases and no ru
   again before the connection serves a request.
 - A database from before migrations has the baseline's tables and no version; it is stamped
   at `0001` and continues from there, with its data.
+
+## Backups
+
+- **A copy is made with SQLite's backup, never by copying the file.** In WAL mode the latest
+  writes may still be in `barber.db-wal`; a copied file misses them or comes out torn.
+- **Every copy passes `PRAGMA integrity_check` before it counts**, and a file that does not is
+  never restored.
+- **The database is backed up before a migration changes it, and a backup that cannot be made
+  stops the migration.** Changing a shop's tables with nothing to go back to is not allowed.
+- **A restore backs up what it replaces first**, so restoring the wrong file can be undone.
+- `tests/test_backup.py` restores and reads the data back. A backup nobody has restored is not
+  known to be one.
 
 ### Starting several workers on an empty database
 

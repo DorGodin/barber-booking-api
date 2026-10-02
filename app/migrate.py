@@ -14,10 +14,13 @@ marked as being there and continues from it - with its data.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
+from alembic.runtime.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from sqlalchemy import Connection, inspect
 
 MIGRATIONS = Path(__file__).parent / "migrations"
@@ -31,12 +34,21 @@ def alembic_config(connection: Connection | None = None) -> Config:
     return config
 
 
-def migrate(connection: Connection) -> None:
+def migrate(connection: Connection, before_changes: Callable[[str], None] | None = None) -> None:
     """Apply every migration the database has not had, inside the caller's
     transaction - so several workers starting at once take turns, and the one
-    that waits finds the work done."""
+    that waits finds the work done.
+
+    `before_changes(target)` runs first when a database that has data is about
+    to be changed - the server backs it up there. If it raises, nothing is
+    changed."""
     tables = inspect(connection).get_table_names()
     config = alembic_config(connection)
+    head = ScriptDirectory.from_config(config).get_current_head()
+    if "users" in tables:
+        current = MigrationContext.configure(connection).get_current_revision() or BASELINE
+        if current != head and before_changes is not None:
+            before_changes(head)
     if "alembic_version" not in tables and "users" in tables:
         command.stamp(config, BASELINE)
     command.upgrade(config, "head")

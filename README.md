@@ -71,6 +71,16 @@ make run-test     # http://127.0.0.1:8101, with its own database
 `make reset-db` empties your copy and `make reset-test-db` the test copy — each only while its
 server is stopped.
 
+## Backups
+
+```bash
+make backup                  # a copy of your database - safe while the server runs
+make restore from=<file>     # put one back; stop the server first. Without from=, lists them
+```
+
+A copy is also taken by itself before an upgrade changes the database. They are kept in
+`backups/` next to the database, the newest ten.
+
 ## Before going live
 
 Set these in `.env`:
@@ -80,6 +90,7 @@ Set these in `.env`:
   each client's own address.
 - `ACCESSIBILITY_*` — the shop's real contact and premises for the accessibility statement at
   `/accessibility`.
+- Copy `backups/` off the machine regularly — a backup on the same disk is lost with it.
 
 `CLAUDE.md` holds the rules the code follows, and `docs/pitfalls.md` the mistakes behind them.
 
@@ -147,6 +158,16 @@ make run-test     # http://127.0.0.1:8101, עם מסד נתונים משלו
 
 `make reset-db` מרוקן את העותק שלכם ו-`make reset-test-db` את עותק הבדיקות — כל אחד רק כשהשרת שלו כבוי.
 
+### גיבויים
+
+```bash
+make backup                  # עותק של מסד הנתונים שלכם - בטוח גם כשהשרת רץ
+make restore from=<file>     # מחזיר עותק; קודם עוצרים את השרת. בלי from= מוצגת רשימת העותקים
+```
+
+עותק נלקח גם לבד, לפני ששדרוג משנה את מסד הנתונים. העותקים נשמרים ב-`backups/` ליד מסד הנתונים, עשרת
+האחרונים.
+
 ### לפני שעולים לאוויר
 
 מגדירים ב-`.env`:
@@ -154,5 +175,6 @@ make run-test     # http://127.0.0.1:8101, עם מסד נתונים משלו
 - `SECRET_KEY` — ערך אקראי חדש, באורך 32 תווים לפחות.
 - `FORWARDED_ALLOW_IPS` — הכתובת של ה-proxy שלפני השרת, כדי שההגבלות יספרו את הכתובת של כל לקוח.
 - `ACCESSIBILITY_*` — פרטי הקשר ותיאור המקום האמיתיים של המספרה, להצהרת הנגישות ב-`/accessibility`.
+- מעתיקים את `backups/` למקום אחר באופן קבוע — גיבוי על אותו דיסק הולך לאיבוד יחד איתו.
 
 `CLAUDE.md` מחזיק את הכללים שהקוד עוקב אחריהם, ו-`docs/pitfalls.md` את הטעויות שמאחוריהם.

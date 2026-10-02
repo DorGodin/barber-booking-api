@@ -6,10 +6,12 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
+from alembic.runtime.migration import MigrationContext
 from fastapi.testclient import TestClient
 
 from app.config import Settings
-from app.main import create_app
+from app.db import make_engine, make_sessionmaker
+from app.main import create_app, prepare_database
 from app.seed import MENU
 
 # The seeded menu by duration, read from the seed itself, so renaming a service
@@ -115,3 +117,33 @@ def book(client, headers, barber_id, service_id, start, **extra):
         headers={**headers, **extra},
         json={"barber_id": barber_id, "service_id": service_id, "start": start},
     )
+
+
+@pytest.fixture
+def engine(tmp_path: Path, monkeypatch):
+    """A database file of the test's own, for tests of what happens to the
+    file itself - migrations, backups - rather than through the API."""
+    for role in ("owner", "barber", "customer"):
+        monkeypatch.setenv(f"SEED_{role.upper()}_PASSWORD", secrets.token_urlsafe(12))
+    engine = make_engine(f"sqlite:///{tmp_path / 'shop.db'}")
+    yield engine
+    engine.dispose()
+
+
+def start(engine, **settings) -> None:
+    """What every worker does when the server starts."""
+    config = Settings(
+        database_url=engine.url.render_as_string(hide_password=False),
+        secret_key=secrets.token_hex(32),
+        shop_tz=TZ,
+        booking_window_days=60,
+        cancel_cutoff_hours=24,
+        token_hours=1,
+        **settings,
+    )
+    prepare_database(engine, make_sessionmaker(engine), config)
+
+
+def version(engine) -> str | None:
+    with engine.connect() as connection:
+        return MigrationContext.configure(connection).get_current_revision()

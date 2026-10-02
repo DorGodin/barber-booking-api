@@ -5,7 +5,7 @@ PORT ?= 8100
 TEST_PORT ?= 8101
 TEST_DB   ?= barber-test.db
 
-.PHONY: install run run-test test lock migration hooks docker-up docker-down reset-db reset-test-db
+.PHONY: install run run-test test lock migration backup restore hooks docker-up docker-down reset-db reset-test-db
 
 install:        ## create the venv and install the locked dependencies
 	python3.13 -m venv $(VENV)
@@ -51,6 +51,17 @@ reset-db:       ## delete YOUR local database; the next `make run` re-seeds it. 
 reset-test-db:  ## delete the test copy's database only; the next `make run-test` re-seeds it. Stop it first
 	$(call refuse_if_running,$(TEST_PORT))
 	rm -f $(TEST_DB) $(TEST_DB)-wal $(TEST_DB)-shm
+
+backup:         ## a copy of YOUR database, safe while the server runs - into backups/ next to it
+	@test -f .env || { echo "no .env - run: cp .env.example .env"; exit 1; }
+	@set -a; . ./.env; set +a; $(PY) -m app.backup create
+
+restore:        ## put a backup back: make restore from=<file>. Stop `make run` first. Without from=, lists them
+	$(call refuse_if_running,$(PORT))
+	@test -f .env || { echo "no .env - run: cp .env.example .env"; exit 1; }
+	@set -a; . ./.env; set +a; \
+	if [ -z "$(from)" ]; then echo "choose one - make restore from=<file>:"; $(PY) -m app.backup list; exit 1; fi; \
+	$(PY) -m app.backup restore "$(from)"
 
 docker-up:      ## run the API in a container on port 8100
 	docker compose up --build -d
