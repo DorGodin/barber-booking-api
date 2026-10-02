@@ -55,6 +55,10 @@ def create(database: Path, directory: Path, kept: int, label: str = "manual") ->
     copy = sqlite3.connect(target)
     try:
         source.backup(copy)
+        # The copy takes the source's WAL mode with it, and a WAL database is
+        # three files: copied off the machine alone, the .db could miss what is
+        # in the others. A backup is one file that stands on its own.
+        copy.execute("PRAGMA journal_mode=DELETE")
     finally:
         copy.close()
         source.close()
@@ -71,6 +75,9 @@ def backups(directory: Path) -> list[Path]:
 def prune(directory: Path, kept: int) -> None:
     for old in backups(directory)[:-kept] if kept > 0 else []:
         old.unlink()
+        # Backups made before they were one file each left these beside them.
+        for leftover in (old.with_name(old.name + "-wal"), old.with_name(old.name + "-shm")):
+            leftover.unlink(missing_ok=True)
 
 
 def restore(copy: Path, database: Path, directory: Path, kept: int) -> Path | None:

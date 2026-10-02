@@ -179,3 +179,15 @@ catalogue's anchor check, which runs in qa-api-starter's CI against this reposit
 
 **Rule:** before pushing a change to `app/`, run `make mutate-check` in qa-api-starter, and
 push the catalogue fix together with the product change.
+
+## 2026-10-02 — Backups were three files each, and pruning left two of them behind
+
+A backup copied from a WAL-mode database stays in WAL mode, so every backup came with a
+`-wal` and a `-shm`, and pruning deleted only the `.db`. Five backups pruned to three left ten
+orphans. The tests restored and read the data back - and passed - but never looked at what
+was in the folder. Found by running the next migration on a copy of real data and listing
+the folder.
+
+**Rule:** a backup is switched to `journal_mode=DELETE` before it closes, one file that
+stands alone. A test of something that writes files asserts the exact files it leaves, not
+only that the one it named works.
