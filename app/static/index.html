@@ -104,6 +104,8 @@
   @media (max-width: 760px) { [data-section] { scroll-margin-top:72px; } }
   footer { max-width:1000px; margin:0 auto 24px; padding:0 16px; font-size:14px; }
   footer a { color:var(--brand); display:inline-flex; align-items:center; min-height:44px; }
+  .moving { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:12px; padding:8px 12px; border:1px solid var(--brand); border-radius:6px; }
+  .moving p { flex:1 1 220px; margin:0; }
   [data-testid="message"][data-kind="ok"] { color:var(--ok); }
   [data-testid="message"][data-kind="error"], .error { color:var(--bad); }
 </style>
@@ -147,6 +149,10 @@
         <h2 data-testid="left-title">קביעת תור</h2>
         <div class="field"><label for="barber">ספר</label><select id="barber" data-testid="barber"></select></div>
         <div data-testid="book-panel">
+          <div class="moving" data-testid="moving" hidden>
+            <p data-testid="moving-text" tabindex="-1"></p>
+            <button data-testid="stop-moving" type="button" class="ghost">ביטול ההזזה</button>
+          </div>
           <div class="field"><label for="service">שירות</label><select id="service" data-testid="service"></select></div>
           <div class="field"><label for="date">תאריך</label><input id="date" type="date" data-testid="date"></div>
           <div class="slots" data-testid="slots" role="radiogroup" aria-label="שעות פנויות"></div>
@@ -207,6 +213,8 @@
 // innerHTML: a display name is text, even when it looks like a tag.
 const $ = (id) => document.querySelector(`[data-testid="${id}"]`);
 let token = null, me = null, shop = null, barbers = [], services = [], selected = null, booking = false;
+// The booking being moved, while the panel picks its new time; null otherwise.
+let moving = null;
 
 // aria-busy is true while the page is fetching and false once what is on screen
 // is current. A screen reader waits for it; so does a test, instead of guessing
@@ -268,6 +276,7 @@ const FRIENDLY = {
   barber_off: () => "הספר לא עובד ביום הזה.",
   in_past: () => "השעה הזו כבר עברה.",
   beyond_window: () => `אפשר לקבוע תור עד ${shop.booking_window_days} ימים קדימה.`,
+  late_move: () => `אפשר להזיז תור עד ${shop.move_cutoff_hours} שעות לפני. כדי לשנות עכשיו צריך להתקשר למספרה.`,
   late_cancellation: () => `אפשר לבטל תור עד ${shop.cancel_cutoff_hours} שעות לפני. כדי לבטל עכשיו צריך להתקשר למספרה.`,
   already_cancelled: () => "התור הזה כבר בוטל.",
   already_started: () => "התור הזה כבר התחיל.",
@@ -390,6 +399,7 @@ function signOut() {
   forget();
   for (const name of Object.keys(latest)) latest[name] += 1;
   selected = null;
+  stopMoving();
   for (const id of ["bookings", "slots", "hours", "days-off", "services", "barber", "service"]) $(id).replaceChildren();
   for (const id of ["display-name", "hours-for", "confirm-text"]) $(id).textContent = "";
   for (const id of ["confirm", "no-slots", "no-bookings", "no-days-off", "app", "owner", "owner-nav", "whoami"]) $(id).hidden = true;
@@ -633,6 +643,9 @@ async function refreshSlots() {
   $("confirm").hidden = true;
   if (!me || me.role !== "customer" || !$("barber").value || !$("service").value || !$("date").value) return;
   const params = new URLSearchParams({ date: $("date").value, service_id: $("service").value });
+  // While moving, the booking's own time is not in its way - the listing
+  // offers exactly what the move will accept.
+  if (moving) params.set("moving", moving.id);
   const current = ticket("slots");
   const r = await api("GET", `/barbers/${$("barber").value}/availability?${params}`);
   if (!current()) return;
@@ -716,6 +729,7 @@ function book() {
 }
 
 async function bookSelected() {
+  if (moving) return moveSelected();
   booking = true;
   $("book").disabled = true;
   const { slot, key } = selected;
@@ -734,6 +748,57 @@ async function bookSelected() {
     const taken = r.data && r.data.code === "slot_taken";
     afterPopup = () => $("slots").querySelector('[tabindex="0"]') || $("date");
     popup(taken ? "השעה כבר תפוסה" : "לא הצלחנו לקבוע את התור", reason, "error");
+  }
+  await refresh();
+}
+
+// Moving keeps the barber and the service - only the time changes - so the
+// panel is the booking panel with those two fixed to the booking's own.
+function startMoving(b) {
+  return busyWhile(async () => {
+    moving = b;
+    $("barber").value = b.barber_id;
+    $("service").value = b.service_id;
+    $("barber").disabled = $("service").disabled = true;
+    $("date").value = b.start_local.slice(0, 10);
+    $("left-title").textContent = "הזזת תור";
+    $("moving-text").textContent = `הזזת התור של ${dayLabel(b.start_local)} ${clock(b.start_local)} · ${isolate(b.service_name)} אצל ${isolate(barberName(b.barber_id))}. בוחרים שעה חדשה:`;
+    $("moving").hidden = false;
+    $("book").textContent = "הזזת התור";
+    await refresh();
+    // On a phone the panel is above the list: the focus - and the screen - go to it.
+    $("moving-text").focus();
+  });
+}
+
+function stopMoving() {
+  moving = null;
+  $("barber").disabled = $("service").disabled = false;
+  $("moving").hidden = true;
+  $("moving-text").textContent = "";
+  $("left-title").textContent = "קביעת תור";
+  $("book").textContent = "קביעת התור";
+}
+
+async function moveSelected() {
+  booking = true;
+  $("book").disabled = true;
+  const { slot } = selected;
+  const r = await api("POST", `/bookings/${moving.id}/move`, { start: slot.start });
+  booking = false;
+  $("book").disabled = false;
+  if (r.ok) {
+    const moved = `${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${isolate(r.data.service_name)} אצל ${isolate(barberName(r.data.barber_id))}`;
+    stopMoving();
+    say(`התור הוזז: ${moved}`, "ok");
+    afterPopup = () => document.querySelector(`[data-testid="booking-row"][data-id="${r.data.id}"]`);
+    popup("✓ התור הוזז", moved, "ok");
+  } else {
+    const reason = explain(r, { time: clock(slot.start_local) });
+    say(reason, "error");
+    const taken = r.data && r.data.code === "slot_taken";
+    afterPopup = () => $("slots").querySelector('[tabindex="0"]') || $("date");
+    popup(taken ? "השעה כבר תפוסה" : "לא הצלחנו להזיז את התור", reason, "error");
   }
   await refresh();
 }
@@ -764,6 +829,16 @@ async function refreshBookings() {
     detail.textContent = ` · ${isolate(b.service_name)} אצל ${isolate(barberName(b.barber_id))} · ${money(b.price_minor, b.currency)} · ${STATUS[b.status] || b.status}`;
     text.append(when, detail);
     row.append(text);
+    if (b.status === "confirmed" && me.role === "customer") {
+      const move = document.createElement("button");
+      move.type = "button";
+      move.className = "ghost";
+      move.dataset.testid = "move";
+      move.textContent = "הזזה";
+      move.setAttribute("aria-label", `הזזת התור של ${when.textContent}`);
+      move.addEventListener("click", () => startMoving(b));
+      row.append(move);
+    }
     if (b.status === "confirmed" && me.role !== "barber") {
       const cancel = document.createElement("button");
       cancel.type = "button";
@@ -810,6 +885,10 @@ $("signup-form").addEventListener("submit", async (e) => {
 });
 $("logout").addEventListener("click", signOut);
 $("book").addEventListener("click", book);
+$("stop-moving").addEventListener("click", () => busyWhile(async () => {
+  stopMoving();
+  await refresh();
+}));
 $("popup-close").addEventListener("click", () => $("popup").close());
 $("save-hours").addEventListener("click", saveHours);
 $("add-dayoff").addEventListener("click", addDayOff);

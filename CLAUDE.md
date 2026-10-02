@@ -70,6 +70,12 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **`aria-busy` on the app section is true while the page fetches** and false once the
   screen is current. Screen readers use it, and so do the outside UI tests — keep it
   accurate when adding anything that fetches.
+- **Moving a booking is the booking panel with the barber and the service locked** to the
+  booking's own, the times listed with `moving=`, and the book button sending the move.
+  `stopMoving()` puts the panel back, on every way out - moved, stopped, signed out.
+- **Before pushing a change to `app/`, run `make mutate-check` in qa-api-starter.** Its
+  catalogue anchors on lines of this code; a line that changes or appears twice breaks its
+  nightly run. It takes seconds.
 - **`[hidden] { display: none !important; }` stays.** Without it, any element with its own
   `display` rule ignores `hidden`.
 

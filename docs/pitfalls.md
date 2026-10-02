@@ -168,3 +168,14 @@ described a database that never existed.
 (`upgrade` to the revision, as it was), never from the current models - they keep moving
 and the past does not. When a test passes on the first run, break the code it guards and
 watch it fail; then add a later change and watch it still pass.
+
+## 2026-10-02 — The move feature was pushed with five mutation anchors broken
+
+The move route repeats lines from cancellation (the cutoff check, the barber's 403), and
+the visibility check moved into `booking_rules.py`. Five mutants in qa-api-starter's
+catalogue no longer matched exactly once. The push went out without checking; the
+catalogue's anchor check, which runs in qa-api-starter's CI against this repository's
+`main`, would have failed that night.
+
+**Rule:** before pushing a change to `app/`, run `make mutate-check` in qa-api-starter, and
+push the catalogue fix together with the product change.
