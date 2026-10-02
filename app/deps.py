@@ -37,7 +37,8 @@ def current_user(
     if claims is None or session.get(RevokedToken, claims["jti"]) is not None:
         raise unauthorized
     user = session.get(User, claims["sub"])
-    if user is None:
+    # A barber who left stops being signed in at once, not when the token expires.
+    if user is None or not user.active:
         raise unauthorized
     return user
 

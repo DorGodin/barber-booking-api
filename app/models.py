@@ -14,6 +14,7 @@ from sqlalchemy import (
     Text,
     TypeDecorator,
     UniqueConstraint,
+    true,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -56,6 +57,10 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(16))
     display_name: Mapped[str] = mapped_column(String(80))
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=now_utc)
+    # A barber who left: kept, with every booking they had, but offered to no
+    # one and signed in nowhere. server_default so the rows that exist when the
+    # column arrives are active too.
+    active: Mapped[bool] = mapped_column(default=True, server_default=true())
 
 
 class RevokedToken(Base):

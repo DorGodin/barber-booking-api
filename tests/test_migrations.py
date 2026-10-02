@@ -15,7 +15,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.db import Base, make_sessionmaker
 from app.migrate import BASELINE, alembic_config
-from app.models import User, new_id, now_utc
+from app.models import User
 from tests.conftest import start, version
 
 HEAD = ScriptDirectory.from_config(alembic_config()).get_current_head()
@@ -28,18 +28,12 @@ def a_database_from_before_migrations(engine) -> None:
     with engine.connect() as connection, connection.begin():
         command.upgrade(alembic_config(connection), BASELINE)
         connection.exec_driver_sql("DROP TABLE alembic_version")
-    with make_sessionmaker(engine)() as session:
-        session.add(
-            User(
-                id=new_id("usr"),
-                username="early.customer",
-                password_hash="x",
-                role="customer",
-                display_name="לקוח ותיק",
-                created_at=now_utc(),
-            )
+        # The row in plain SQL, with the baseline's columns: through today's
+        # model it would name columns the old database never had.
+        connection.exec_driver_sql(
+            "INSERT INTO users (id, username, password_hash, role, display_name, created_at) "
+            "VALUES ('usr_early', 'early.customer', 'x', 'customer', 'לקוח ותיק', '2026-10-01 10:00:00')"
         )
-        session.commit()
 
 
 def usernames(engine) -> list[str]:
@@ -73,8 +67,11 @@ def test_a_database_from_before_migrations_is_marked_and_keeps_its_customers(eng
     start(engine)
 
     assert version(engine) == HEAD
-    # Still the one customer, and nobody seeded over them.
+    # Still the one customer, and nobody seeded over them - active, as every
+    # account that existed when users.active arrived.
     assert usernames(engine) == ["early.customer"]
+    with engine.connect() as connection:
+        assert connection.exec_driver_sql("SELECT active FROM users").scalar() == 1
 
 
 def test_starting_again_on_an_up_to_date_database_changes_nothing(engine):

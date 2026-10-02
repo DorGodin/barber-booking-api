@@ -166,7 +166,9 @@ described a database that never existed.
 
 **Rule:** a database from the past is built from the migrations at that point
 (`upgrade` to the revision, as it was), never from the current models - they keep moving
-and the past does not. When a test passes on the first run, break the code it guards and
+and the past does not. That goes for its rows too: they are written in plain SQL with the
+columns of that time. Inserted through today's model, they name columns the old database
+never had - which is how migration 0003 broke this test again the same day. When a test passes on the first run, break the code it guards and
 watch it fail; then add a later change and watch it still pass.
 
 ## 2026-10-02 — The move feature was pushed with five mutation anchors broken
@@ -203,3 +205,15 @@ tests had withdrawn some, failed six tests.
 **Rule:** when a screen starts fetching something new for a role, run it against that role's
 whole data, withdrawn and inactive items included. A run that passes on a fresh database
 proves only the fresh database.
+
+## 2026-10-02 — A break-the-code check stacked six breaks into uncommitted code
+
+The check kept the files to restore in a shell variable and looped over it - in zsh, which
+does not split a variable into words. No copy was made, every "restore" failed, and each
+break stayed in the code on top of the last. Five of the six results were meaningless, and
+the feature's code, not yet committed, held all six breaks. Each was undone by hand,
+against its exact text.
+
+**Rule:** a break-the-code check runs under `bash`, takes a `tar` snapshot of `app/` first,
+restores from it after every break, and ends by diffing `app/` against the snapshot. Commit
+the feature before breaking it, so `git diff` shows anything left behind.

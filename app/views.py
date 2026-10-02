@@ -17,7 +17,7 @@ def user_view(user: User) -> dict:
 
 
 def barber_view(user: User) -> dict:
-    return {"id": user.id, "display_name": user.display_name}
+    return {"id": user.id, "display_name": user.display_name, "active": user.active}
 
 
 def service_view(service: Service) -> dict:

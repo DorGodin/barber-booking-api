@@ -49,6 +49,8 @@ The API's interactive docs are at http://127.0.0.1:8100/docs.
 - No two customers in one chair at once — even when they press book in the same second.
 - A customer holds at most two bookings ahead, moves one to another free time up to 12 hours
   before, and cancels up to 24 hours before. The owner can always move and cancel.
+- A barber who leaves is made inactive by the owner: offered to no one and signed in nowhere,
+  with their bookings kept for the owner to cancel.
 - The owner also books, by name, someone who phoned or walked in - into the same diary, under
   the same rules.
 - Sign-in is limited after repeated wrong passwords; one address makes at most five accounts an hour.
@@ -141,6 +143,7 @@ Set these in `.env`:
 - אין שני לקוחות באותו כיסא באותו זמן — גם כשהם לוחצים באותה שנייה.
 - לקוח מחזיק לכל היותר שני תורים קדימה, יכול להזיז תור לשעה פנויה אחרת עד 12 שעות לפני, ולבטל עד 24 שעות
   לפני. בעל המספרה יכול להזיז ולבטל תמיד.
+- ספר שעזב מסומן כלא פעיל: הוא לא מוצע לאף אחד ולא יכול להתחבר, והתורים שלו נשארים לבעל המספרה לטפל בהם.
 - בעל המספרה קובע גם תור בשם, למי שהתקשר או נכנס מהרחוב - לאותו יומן ובאותם חוקים.
 - הכניסה נחסמת אחרי סיסמאות שגויות חוזרות; מכתובת אחת נפתחים לכל היותר חמישה חשבונות בשעה.
 

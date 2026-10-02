@@ -35,6 +35,10 @@ class ServicePatch(BaseModel):
     active: bool | None = None
 
 
+class BarberPatch(BaseModel):
+    active: bool
+
+
 class HoursIn(BaseModel):
     """All seven days, every time. A missing day is ambiguous - closed, or forgotten?"""
 

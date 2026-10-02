@@ -44,6 +44,9 @@ def login(
         # The same answer for an unknown user and a wrong password.
         raise DomainError(401, "bad_credentials", "wrong username or password")
     forget_failures(session, body.username, ip)
+    # Told only to someone who knew the password - it confirms the account.
+    if not user.active:
+        raise DomainError(403, "account_inactive", "this account is no longer active")
     token = issue_token(user.id, user.role, config.secret_key, config.token_hours)
     return {"access_token": token, "token_type": "bearer", "role": user.role}
 

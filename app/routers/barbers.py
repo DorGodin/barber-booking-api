@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.booking_rules import (
     active_service_or_error,
     barber_or_404,
+    bookable_barber_or_error,
     busy,
     check_date_in_range,
     day_window,
@@ -24,7 +25,7 @@ from app.deps import current_user, db, require, settings
 from app.errors import DomainError
 from app.models import BarberHours, TimeOff, User
 from app.scheduling import available_starts
-from app.schemas import AccountIn, HoursIn, TimeOffIn
+from app.schemas import AccountIn, BarberPatch, HoursIn, TimeOffIn
 from app.security import hash_password
 from app.views import barber_view, iso_utc, page
 
@@ -41,9 +42,27 @@ DEFAULT_HOURS = {
 
 
 @router.get("/barbers")
-def list_barbers(_: User = Depends(current_user), session: Session = Depends(db)):
-    rows = session.scalars(select(User).where(User.role == "barber").order_by(User.display_name)).all()
+def list_barbers(user: User = Depends(current_user), session: Session = Depends(db)):
+    """The owner sees every barber, those who left included, to manage them and
+    their bookings. Everyone else sees the ones who can be booked."""
+    query = select(User).where(User.role == "barber").order_by(User.display_name)
+    if user.role != "owner":
+        query = query.where(User.active.is_(True))
+    rows = session.scalars(query).all()
     return page(len(rows), [barber_view(b) for b in rows])
+
+
+@router.patch("/barbers/{barber_id}")
+def update_barber(
+    barber_id: str, body: BarberPatch, _: User = Depends(require("owner")), session: Session = Depends(db)
+):
+    """A barber who leaves is made inactive, not deleted: their bookings stay,
+    for the owner to move or cancel one by one. A customer is not cancelled by
+    the system without anyone deciding to."""
+    with write_lock(session):
+        barber = barber_or_404(session, barber_id)
+        barber.active = body.active
+    return barber_view(barber)
 
 
 @router.post("/barbers", status_code=201)
@@ -127,7 +146,7 @@ def availability(
     session: Session = Depends(db),
     config: Settings = Depends(settings),
 ):
-    barber_or_404(session, barber_id)
+    bookable_barber_or_error(session, barber_id)
     service = active_service_or_error(session, service_id)
     now = datetime.now(UTC)
     check_date_in_range(config, day, now)

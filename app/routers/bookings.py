@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.booking_rules import (
     active_service_or_error,
-    barber_or_404,
+    bookable_barber_or_error,
     busy,
     check_bookable,
     clashes,
@@ -78,7 +78,7 @@ def create_booking(
                 response.headers["Idempotent-Replayed"] = "true"
                 return _view(session, session.get(Booking, seen.booking_id), config)
 
-        barber_or_404(session, body.barber_id)
+        bookable_barber_or_error(session, body.barber_id)
         service = active_service_or_error(session, body.service_id)
         wanted = check_bookable(session, config, body.barber_id, service, start, now)
 
@@ -216,6 +216,7 @@ def move_booking(
             # A second tap on the same choice: already done.
             return _view(session, booking, config)
 
+        bookable_barber_or_error(session, booking.barber_id)
         # The service as it is now may be off the menu; the booking keeps it.
         service = session.get(Service, booking.service_id)
         wanted = check_bookable(session, config, booking.barber_id, service, start, now)
@@ -239,7 +240,7 @@ def create_guest_booking(
     start = body.start.astimezone(UTC)
     now = datetime.now(UTC)
     with write_lock(session):
-        barber_or_404(session, body.barber_id)
+        bookable_barber_or_error(session, body.barber_id)
         service = active_service_or_error(session, body.service_id)
         wanted = check_bookable(session, config, body.barber_id, service, start, now)
         _refuse_clashes(session, wanted, body.barber_id, None)

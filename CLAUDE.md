@@ -27,6 +27,12 @@ the point of it, and most of these rules protect it.
 | `app/views.py` | how every entity looks on the wire, once |
 | `app/static/index.html` | the booking page: one file, no build step, every value written as text |
 
+**A barber who leaves is inactive, never deleted** (`PATCH /barbers/{id}`). Everything that
+books asks `bookable_barber_or_error`; everything that only manages - hours, days off, the
+owner's list and diary - still finds them. Their bookings are not cancelled by the system:
+the owner decides about each. An inactive user's token stops working at once, and
+`account_inactive` is told only after the right password.
+
 **A booking is a customer's or a guest's, never both, never neither** - the database's own
 check holds it. A guest (`POST /bookings/guest`, the owner only) has a name and no account:
 the chair is checked, the customer is not, and the limit on bookings ahead does not apply.

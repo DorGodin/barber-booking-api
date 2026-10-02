@@ -30,6 +30,14 @@ def barber_or_404(session: Session, barber_id: str) -> User:
     return barber
 
 
+def bookable_barber_or_error(session: Session, barber_id: str) -> User:
+    """A barber who can be booked: exists, and has not left."""
+    barber = barber_or_404(session, barber_id)
+    if not barber.active:
+        raise DomainError(422, "barber_inactive", "that barber no longer works here")
+    return barber
+
+
 def active_service_or_error(session: Session, service_id: str) -> Service:
     service = session.get(Service, service_id)
     if service is None:
