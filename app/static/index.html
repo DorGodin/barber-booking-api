@@ -158,6 +158,7 @@
           <div class="slots" data-testid="slots" role="radiogroup" aria-label="שעות פנויות"></div>
           <div class="field" data-testid="guest-field" hidden><label for="guest-name">שם הלקוח</label><input id="guest-name" data-testid="guest-name" maxlength="80" autocomplete="off"></div>
           <p class="muted" data-testid="no-slots" hidden>אין שעות פנויות ביום הזה.</p>
+          <p class="muted" data-testid="barber-left" hidden>הספר הזה לא פעיל, ואי אפשר לקבוע אצלו. התורים שכבר נקבעו אצלו מופיעים ביומן.</p>
           <div class="confirm" data-testid="confirm" hidden>
             <span data-testid="confirm-text"></span>
             <button data-testid="book" type="button">קביעת התור</button>
@@ -175,6 +176,9 @@
         <h2>שעות עבודה וימי חופש <span class="muted" data-testid="hours-for"></span></h2>
         <table class="hours"><tbody data-testid="hours"></tbody></table>
         <button data-testid="save-hours" type="button">שמירת השעות</button>
+        <h3>פעילות</h3>
+        <p class="muted" data-testid="barber-status"></p>
+        <button data-testid="barber-active-toggle" type="button" class="ghost"></button>
         <h3>ימי חופש</h3>
         <ul data-testid="days-off"></ul>
         <p class="muted" data-testid="no-days-off" hidden>אין ימי חופש קבועים.</p>
@@ -275,6 +279,8 @@ const FRIENDLY = {
   customer_overlap: () => "כבר יש לך תור בשעה הזו.",
   outside_hours: () => "השירות לא נכנס בשעות העבודה של הספר.",
   barber_off: () => "הספר לא עובד ביום הזה.",
+  barber_inactive: () => "הספר הזה כבר לא עובד במספרה.",
+  account_inactive: () => "החשבון הזה כבר לא פעיל. אפשר לפנות לבעל המספרה.",
   in_past: () => "השעה הזו כבר עברה.",
   beyond_window: () => `אפשר לקבוע תור עד ${shop.booking_window_days} ימים קדימה.`,
   late_move: () => `אפשר להזיז תור עד ${shop.move_cutoff_hours} שעות לפני. כדי לשנות עכשיו צריך להתקשר למספרה.`,
@@ -404,7 +410,7 @@ function signOut() {
   for (const id of ["bookings", "slots", "hours", "days-off", "services", "barber", "service"]) $(id).replaceChildren();
   for (const id of ["display-name", "hours-for", "confirm-text"]) $(id).textContent = "";
   $("guest-name").value = "";
-  for (const id of ["confirm", "no-slots", "no-bookings", "no-days-off", "app", "owner", "owner-nav", "whoami", "guest-field"]) $(id).hidden = true;
+  for (const id of ["confirm", "no-slots", "no-bookings", "no-days-off", "app", "owner", "owner-nav", "whoami", "guest-field", "barber-left"]) $(id).hidden = true;
   say("", "ok");
   clearForms();
   $("auth").hidden = false;
@@ -426,7 +432,7 @@ async function start() {
   $("whoami").hidden = false;
   $("display-name").textContent = `${isolate(me.display_name)} · ${ROLE[me.role]}`;
 
-  $("barber").replaceChildren(...barbers.map((b) => option(b.id, b.display_name)));
+  fillBarberChoice();
   fillServiceChoice();
   $("date").min = shop.today;
   $("date").max = addDays(shop.today, shop.booking_window_days);
@@ -485,6 +491,7 @@ async function refreshOwner() {
   const [hours, off] = await Promise.all([api("GET", `/barbers/${barberId}/hours`), api("GET", `/barbers/${barberId}/time-off`)]);
   if (!current()) return;
   renderHours(hours.ok ? hours.data.hours : {});
+  renderBarberActivity(barberId);
   renderDaysOff(off.ok ? off.data.days : []);
   renderServices();
 }
@@ -508,6 +515,31 @@ function renderHours(hours) {
     row.append(...cells);
     body.append(row);
   }
+}
+
+function renderBarberActivity(barberId) {
+  const active = barberOf(barberId).active !== false;
+  $("barber-status").textContent = active ? "הספר פעיל ומוצע ללקוחות." : "הספר לא פעיל: הוא לא מוצע ללקוחות ולא יכול להתחבר.";
+  $("barber-active-toggle").textContent = active ? "הוצאת הספר מהפעילות" : "החזרת הספר לפעילות";
+}
+
+// Leaving cancels nothing: the barber's bookings stay in the diary, for the
+// owner to move or cancel one by one.
+function toggleBarberActive() {
+  return busyWhile(async () => {
+    const barberId = $("barber").value;
+    const active = barberOf(barberId).active !== false;
+    const r = await api("PATCH", `/barbers/${barberId}`, { active: !active });
+    if (!r.ok) {
+      say(explain(r), "error");
+      return;
+    }
+    barbers = (await api("GET", "/barbers")).data.content;
+    fillBarberChoice();
+    const name = isolate(r.data.display_name);
+    say(r.data.active ? `${name} חזר לפעילות.` : `${name} הוצא מהפעילות. התורים שכבר נקבעו אצלו נשארו ביומן.`, "ok");
+    await refresh();
+  });
 }
 
 function saveHours() {
@@ -579,7 +611,7 @@ function addBarber() {
       return;
     }
     barbers = (await api("GET", "/barbers")).data.content;
-    $("barber").replaceChildren(...barbers.map((b) => option(b.id, b.display_name)));
+    fillBarberChoice();
     $("barber").value = r.data.id;
     for (const id of ["new-barber-name", "new-barber-username", "new-barber-password"]) $(id).value = "";
     say(`הספר ${isolate(r.data.display_name)} נוסף, בשעות העבודה של המספרה.`, "ok");
@@ -655,9 +687,27 @@ function addService() {
   });
 }
 
+// The owner's list holds barbers who left, marked, to manage them and their
+// diary; nobody else's does.
+function fillBarberChoice() {
+  const chosen = $("barber").value;
+  $("barber").replaceChildren(...barbers.map((b) => option(b.id, b.active ? b.display_name : `${b.display_name} (לא פעיל)`)));
+  if (barbers.some((b) => b.id === chosen)) $("barber").value = chosen;
+}
+const barberOf = (id) => barbers.find((b) => b.id === id) || {};
+
 async function refreshSlots() {
   selected = null;
   $("confirm").hidden = true;
+  // A barber who left has no times to offer: asked, the server refuses, and
+  // the refusal would replace whatever the owner was just told.
+  const left = Boolean($("barber").value) && barberOf($("barber").value).active === false;
+  $("barber-left").hidden = !left;
+  if (left) {
+    $("slots").replaceChildren();
+    $("no-slots").hidden = true;
+    return;
+  }
   if (!me || me.role === "barber" || !$("barber").value || !$("service").value || !$("date").value) return;
   const params = new URLSearchParams({ date: $("date").value, service_id: $("service").value });
   // While moving, the booking's own time is not in its way - the listing
@@ -766,7 +816,7 @@ async function bookSelected() {
   booking = false;
   $("book").disabled = false;
   if (r.ok) {
-    const booked = `${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${isolate(r.data.service_name)} אצל ${isolate(barberName(r.data.barber_id))}`;
+    const booked = `${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${isolate(r.data.service_name)} אצל ${isolate(r.data.barber_name)}`;
     say(`נקבע: ${booked}`, "ok");
     afterPopup = () => document.querySelector(`[data-testid="booking-row"][data-id="${r.data.id}"]`);
     popup("✓ התור נקבע", `${booked} · ${money(r.data.price_minor, r.data.currency)}`, "ok");
@@ -793,7 +843,7 @@ async function bookGuest() {
   booking = false;
   $("book").disabled = false;
   if (r.ok) {
-    const booked = `${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${isolate(r.data.service_name)} אצל ${isolate(barberName(r.data.barber_id))}`;
+    const booked = `${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${isolate(r.data.service_name)} אצל ${isolate(r.data.barber_name)}`;
     $("guest-name").value = "";
     say(`נקבע בשם ${isolate(r.data.guest_name)}: ${booked}`, "ok");
     afterPopup = () => document.querySelector(`[data-testid="booking-row"][data-id="${r.data.id}"]`);
@@ -814,7 +864,7 @@ function startMoving(b) {
     $("barber").disabled = $("service").disabled = true;
     $("date").value = b.start_local.slice(0, 10);
     $("left-title").textContent = "הזזת תור";
-    $("moving-text").textContent = `הזזת התור של ${dayLabel(b.start_local)} ${clock(b.start_local)} · ${isolate(b.service_name)} אצל ${isolate(barberName(b.barber_id))}. בוחרים שעה חדשה:`;
+    $("moving-text").textContent = `הזזת התור של ${dayLabel(b.start_local)} ${clock(b.start_local)} · ${isolate(b.service_name)} אצל ${isolate(b.barber_name)}. בוחרים שעה חדשה:`;
     $("moving").hidden = false;
     $("book").textContent = "הזזת התור";
     await refresh();
@@ -840,7 +890,7 @@ async function moveSelected() {
   booking = false;
   $("book").disabled = false;
   if (r.ok) {
-    const moved = `${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${isolate(r.data.service_name)} אצל ${isolate(barberName(r.data.barber_id))}`;
+    const moved = `${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${isolate(r.data.service_name)} אצל ${isolate(r.data.barber_name)}`;
     stopMoving();
     say(`התור הוזז: ${moved}`, "ok");
     afterPopup = () => document.querySelector(`[data-testid="booking-row"][data-id="${r.data.id}"]`);
@@ -877,7 +927,7 @@ async function refreshBookings() {
     // A guest's name is shown: the owner and the barber need to know who is
     // coming. A customer's is not in the booking at all.
     const who = b.guest_name ? ` · ${isolate(b.guest_name)} (בלי חשבון)` : "";
-    detail.textContent = ` · ${isolate(b.service_name)} אצל ${isolate(barberName(b.barber_id))}${who} · ${money(b.price_minor, b.currency)} · ${STATUS[b.status] || b.status}`;
+    detail.textContent = ` · ${isolate(b.service_name)} אצל ${isolate(b.barber_name)}${who} · ${money(b.price_minor, b.currency)} · ${STATUS[b.status] || b.status}`;
     text.append(when, detail);
     row.append(text);
     if (b.status === "confirmed" && me.role === "customer") {
@@ -942,6 +992,7 @@ $("stop-moving").addEventListener("click", () => busyWhile(async () => {
 }));
 $("popup-close").addEventListener("click", () => $("popup").close());
 $("save-hours").addEventListener("click", saveHours);
+$("barber-active-toggle").addEventListener("click", toggleBarberActive);
 $("add-dayoff").addEventListener("click", addDayOff);
 $("add-barber").addEventListener("click", addBarber);
 $("add-service").addEventListener("click", addService);

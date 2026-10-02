@@ -86,6 +86,10 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   no booking panel. **The service choice offers active services only** - the owner's list
   holds withdrawn ones to manage, and offering one made the times fail and replace the
   owner's message.
+- **A booking's names come from the booking** (`barber_name`, `service_name`), never from the
+  shop's current lists: a customer's list has no barber who left, and their booking with
+  that barber must still say who. The owner's list has them, marked, and the panel offers no
+  times for one - asked, the server refuses and the refusal would replace the owner's message.
 - **One `refused()` shows every refusal** - booking, guest booking, move. A new way to book
   uses it rather than a copy.
 - **Moving a booking is the booking panel with the barber and the service locked** to the

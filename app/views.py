@@ -31,12 +31,15 @@ def service_view(service: Service) -> dict:
     }
 
 
-def booking_view(booking: Booking, service_name: str, tz: ZoneInfo) -> dict:
+def booking_view(booking: Booking, service_name: str, barber_name: str, tz: ZoneInfo) -> dict:
     return {
         "id": booking.id,
         "customer_id": booking.customer_id,
         "guest_name": booking.guest_name,
         "barber_id": booking.barber_id,
+        # In the booking itself: a customer's list of barbers no longer has one
+        # who left, and their bookings with them must still say who.
+        "barber_name": barber_name,
         "service_id": booking.service_id,
         "service_name": service_name,
         "start": iso_utc(booking.start_utc),

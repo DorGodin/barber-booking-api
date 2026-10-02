@@ -29,7 +29,12 @@ router = APIRouter(tags=["bookings"])
 
 
 def _view(session: Session, booking: Booking, config: Settings) -> dict:
-    return booking_view(booking, session.get(Service, booking.service_id).name, config.shop_tz)
+    return booking_view(
+        booking,
+        session.get(Service, booking.service_id).name,
+        session.get(User, booking.barber_id).display_name,
+        config.shop_tz,
+    )
 
 
 def _refuse_clashes(
