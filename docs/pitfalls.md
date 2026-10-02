@@ -156,3 +156,15 @@ failed the same way.
 **Rule:** every write in a route goes through `write_lock`, not only a check-then-write; a
 source test fails on a plain `session.commit()` in a route. Found by a failing page test whose
 sign-in step now says why it was refused - "500" - instead of "the screen never came".
+
+## 2026-10-02 — The test for an old database built it from today's models
+
+The test for "a database from before migrations keeps its data" made that database with
+`create_all` from `app/models.py`. It passed - until a second migration added a column:
+the "old" database already had it, and the upgrade failed on a duplicate column. The test
+described a database that never existed.
+
+**Rule:** a database from the past is built from the migrations at that point
+(`upgrade` to the revision, as it was), never from the current models - they keep moving
+and the past does not. When a test passes on the first run, break the code it guards and
+watch it fail; then add a later change and watch it still pass.

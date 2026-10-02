@@ -21,6 +21,7 @@ the point of it, and most of these rules protect it.
 | `app/scheduling.py` | pure rules: slots, overlap, DST. No database, no HTTP, no clock |
 | `app/booking_rules.py` | "is this bookable", used by BOTH the availability listing and the booking |
 | `app/db.py` | the engine and `write_lock`, the BEGIN IMMEDIATE that prevents double booking |
+| `app/migrate.py`, `app/migrations/versions/` | how the tables reach the shape `app/models.py` describes, one migration per change |
 | `app/routers/` | one file per area |
 | `app/views.py` | how every entity looks on the wire, once |
 | `app/static/index.html` | the booking page: one file, no build step, every value written as text |
@@ -105,9 +106,33 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **Everything the owner changes is part of `refresh()`**, so the bookings, the hours and the
   services on screen are always the selected barber's current ones.
 
+## Changing a table
+
+**Every change to `app/models.py` comes with a migration, in the same commit.** The server
+applies the migrations a database has not had when it starts; it never runs `create_all`,
+which skips a table that exists - a new column reached fresh databases and no running shop.
+
+1. Change the model.
+2. `make migration m="add phone to users"` writes the migration into
+   `app/migrations/versions/`. With the models unchanged it writes nothing.
+3. **Read it.** Autogenerate misses renames (it writes drop-and-add, which loses the
+   column's data) and cannot fill a new non-null column on rows that exist - give it a
+   `server_default`, or add it nullable, fill it, then tighten it.
+4. `make test`. `tests/test_migrations.py` fails if the models and the migrations disagree.
+
+- **A migration never imports `app.models`.** The models keep changing after the migration is
+  written; `UTCDateTime` is rendered as `sa.DateTime()` for that reason.
+- **A migration that is in `main` is never edited** - a shop that already ran it will not run
+  it again. A fix is a new migration.
+- **SQLite alters a column by copying the table**, so foreign keys are off while migrations
+  run, `PRAGMA foreign_key_check` must come back empty before they commit, and they are on
+  again before the connection serves a request.
+- A database from before migrations has the baseline's tables and no version; it is stamped
+  at `0001` and continues from there, with its data.
+
 ### Starting several workers on an empty database
 
-Every worker runs the startup at once. `prepare_database` creates the tables and seeds the
+Every worker runs the startup at once. `prepare_database` migrates the tables and seeds the
 shop under the write lock, with the emptiness check inside it, and the connect handler sets
 `busy_timeout` and then asks whether the file is already in WAL mode before switching it -
 the switch needs an exclusive lock that SQLite refuses at once rather than waits for.

@@ -12,8 +12,9 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
 from app.config import Settings
-from app.db import IMMEDIATE, Base, make_engine, make_sessionmaker
+from app.db import IMMEDIATE, make_engine, make_sessionmaker
 from app.errors import DomainError, domain_error_handler
+from app.migrate import migrate
 from app.routers import auth, barbers, bookings, services
 from app.seed import seed_if_empty
 
@@ -63,7 +64,7 @@ def page_policy(html: str) -> str:
 
 
 def prepare_database(engine, make_session, config: Settings) -> None:
-    """Create the tables and seed an empty shop - safely from several workers.
+    """Migrate the tables and seed an empty shop - safely from several workers.
 
     Every worker runs this at startup, at the same moment. Unlocked, it is
     check-then-write across processes, the same shape as two customers booking
@@ -72,9 +73,22 @@ def prepare_database(engine, make_session, config: Settings) -> None:
     a worker that waits finds the work done and moves on.
     """
     with engine.connect() as connection:
-        connection.execution_options(**{IMMEDIATE: True})
-        with connection.begin():
-            Base.metadata.create_all(connection)
+        sqlite = engine.dialect.name == "sqlite"
+        # SQLite changes a column by copying the table and dropping the old
+        # one, and with foreign keys on, dropping it deletes every row that
+        # points at it. They are off for the migration - set on the driver's
+        # connection, because inside a transaction the setting is ignored -
+        # checked before it commits, and on again before the connection goes
+        # back to the pool for requests.
+        if sqlite:
+            connection.connection.driver_connection.execute("PRAGMA foreign_keys=OFF")
+        try:
+            connection.execution_options(**{IMMEDIATE: True})
+            with connection.begin():
+                migrate(connection)
+        finally:
+            if sqlite:
+                connection.connection.driver_connection.execute("PRAGMA foreign_keys=ON")
     with make_session() as session:
         seed_if_empty(session, config)
 

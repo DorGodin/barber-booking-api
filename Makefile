@@ -5,7 +5,7 @@ PORT ?= 8100
 TEST_PORT ?= 8101
 TEST_DB   ?= barber-test.db
 
-.PHONY: install run run-test test lock hooks docker-up docker-down reset-db reset-test-db
+.PHONY: install run run-test test lock migration hooks docker-up docker-down reset-db reset-test-db
 
 install:        ## create the venv and install the locked dependencies
 	python3.13 -m venv $(VENV)
@@ -26,6 +26,12 @@ test:           ## the product's own tests, including the two-worker race
 lock:           ## after editing requirements.txt: re-resolve and commit both files
 	$(PY) -m pip install -q -r requirements.txt
 	$(PY) -m pip freeze > requirements.lock.txt
+
+migration:      ## after changing app/models.py: make migration m="add phone" - then read the file it writes
+	@test -n "$(m)" || { echo 'name the change: make migration m="add phone"'; exit 1; }
+	@d=$$(mktemp -d) && trap 'rm -rf "$$d"' EXIT && \
+	DATABASE_URL=sqlite:///$$d/m.db $(VENV)/bin/alembic upgrade head && \
+	DATABASE_URL=sqlite:///$$d/m.db $(VENV)/bin/alembic revision --autogenerate -m "$(m)"
 
 hooks:          ## once per clone: secret scan and lint on every commit
 	$(VENV)/bin/pre-commit install
