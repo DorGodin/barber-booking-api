@@ -143,6 +143,7 @@ def create_app(config: Settings | None = None) -> FastAPI:
             "today": datetime.now(UTC).astimezone(config.shop_tz).date().isoformat(),
             "booking_window_days": config.booking_window_days,
             "cancel_cutoff_hours": config.cancel_cutoff_hours,
+            "move_cutoff_hours": config.move_cutoff_hours,
         }
 
     @app.get("/", include_in_schema=False)

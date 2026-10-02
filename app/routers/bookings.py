@@ -8,13 +8,20 @@ from fastapi import APIRouter, Depends, Header, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.booking_rules import active_service_or_error, barber_or_404, busy, check_bookable, clashes
+from app.booking_rules import (
+    active_service_or_error,
+    barber_or_404,
+    busy,
+    check_bookable,
+    clashes,
+    visible_booking_or_404,
+)
 from app.config import Settings
 from app.db import write_lock
 from app.deps import current_user, db, require, settings
-from app.errors import DomainError, not_found
+from app.errors import DomainError
 from app.models import Booking, IdempotencyKey, Service, User
-from app.schemas import BookingIn
+from app.schemas import BookingIn, BookingMoveIn
 from app.views import booking_view, page
 
 router = APIRouter(tags=["bookings"])
@@ -22,19 +29,6 @@ router = APIRouter(tags=["bookings"])
 
 def _view(session: Session, booking: Booking, config: Settings) -> dict:
     return booking_view(booking, session.get(Service, booking.service_id).name, config.shop_tz)
-
-
-def _visible_or_404(session: Session, booking_id: str, user: User) -> Booking:
-    """Somebody else's booking is not found, not forbidden. A 403 would confirm
-    it exists, and ids travel in links and screenshots."""
-    booking = session.get(Booking, booking_id)
-    if booking is None:
-        raise not_found("booking")
-    if user.role == "customer" and booking.customer_id != user.id:
-        raise not_found("booking")
-    if user.role == "barber" and booking.barber_id != user.id:
-        raise not_found("booking")
-    return booking
 
 
 @router.post("/bookings", status_code=201)
@@ -147,7 +141,7 @@ def get_booking(
     session: Session = Depends(db),
     config: Settings = Depends(settings),
 ):
-    return _view(session, _visible_or_404(session, booking_id, user), config)
+    return _view(session, visible_booking_or_404(session, booking_id, user), config)
 
 
 @router.post("/bookings/{booking_id}/cancel")
@@ -159,7 +153,7 @@ def cancel_booking(
 ):
     now = datetime.now(UTC)
     with write_lock(session):
-        booking = _visible_or_404(session, booking_id, user)
+        booking = visible_booking_or_404(session, booking_id, user)
         if user.role == "barber":
             raise DomainError(403, "forbidden", "barbers cannot cancel bookings; ask the owner")
         if booking.status == "cancelled":
@@ -175,4 +169,47 @@ def cancel_booking(
         booking.status = "cancelled"
         booking.cancelled_at = now
         booking.cancelled_by = user.id
+        return _view(session, booking, config)
+
+
+@router.post("/bookings/{booking_id}/move")
+def move_booking(
+    booking_id: str,
+    body: BookingMoveIn,
+    user: User = Depends(current_user),
+    session: Session = Depends(db),
+    config: Settings = Depends(settings),
+):
+    """The same booking at another time - same barber, service and price.
+
+    One step, under the write lock: the old time is held until the new one is
+    taken. Cancel-then-book would leave the customer with nothing whenever
+    somebody else took the new time in between."""
+    start = body.start.astimezone(UTC)
+    now = datetime.now(UTC)
+    with write_lock(session):
+        booking = visible_booking_or_404(session, booking_id, user)
+        if user.role == "barber":
+            raise DomainError(403, "forbidden", "barbers cannot move bookings; ask the owner")
+        if booking.status == "cancelled":
+            raise DomainError(409, "already_cancelled", "that booking is cancelled")
+        if booking.start_utc <= now:
+            raise DomainError(409, "already_started", "that booking has already started")
+        if user.role == "customer" and booking.start_utc - now < timedelta(hours=config.move_cutoff_hours):
+            raise DomainError(
+                409, "late_move", f"bookings can be moved up to {config.move_cutoff_hours} hours ahead"
+            )
+        if start == booking.start_utc:
+            # A second tap on the same choice: already done.
+            return _view(session, booking, config)
+
+        # The service as it is now may be off the menu; the booking keeps it.
+        service = session.get(Service, booking.service_id)
+        wanted = check_bookable(session, config, booking.barber_id, service, start, now)
+        if clashes(wanted, busy(session, wanted, barber_id=booking.barber_id, excluding=booking.id)):
+            raise DomainError(409, "slot_taken", "that time is no longer available")
+        if clashes(wanted, busy(session, wanted, customer_id=booking.customer_id, excluding=booking.id)):
+            raise DomainError(409, "customer_overlap", "you already have a booking at that time")
+
+        booking.start_utc, booking.end_utc = wanted.start, wanted.end
         return _view(session, booking, config)

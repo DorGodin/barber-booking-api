@@ -218,3 +218,61 @@ def test_the_owner_saving_while_customers_book_never_answers_with_a_server_error
         codes = sorted(r.status_code for r in pool.map(lambda call: call(), calls))
 
     assert [c for c in codes if c >= 500] == [], f"an owner's save met a locked database: {codes}"
+
+
+def test_customers_moving_to_one_time_at_once_get_it_once_and_the_rest_keep_theirs(server):
+    """Six customers, each with a booking of their own, all move to the same
+    time at once. One gets it; every other is refused and still has the
+    booking they had - a move never leaves a customer with nothing."""
+    owner = token(server, "owner", PASSWORDS["owner"])
+    barber = httpx.post(
+        f"{server}/barbers",
+        headers=owner,
+        json={"username": f"m-{secrets.token_hex(4)}", "password": "long-enough", "display_name": "M"},
+    ).json()["id"]
+    httpx.put(f"{server}/barbers/{barber}/hours", headers=owner, json={"hours": ALL_WEEK})
+    haircut = next(
+        s for s in httpx.get(f"{server}/services", headers=owner).json()["content"] if s["name"] == HAIRCUT
+    )
+    day = (datetime.now(UTC).astimezone(TZ) + timedelta(days=4)).date()
+
+    def local(hour):
+        return (
+            datetime(day.year, day.month, day.day, hour, 0, tzinfo=TZ)
+            .astimezone(UTC)
+            .strftime("%Y-%m-%dT%H:%M:%SZ")
+        )
+
+    holders = []
+    for n in range(6):
+        name = f"mv-{secrets.token_hex(4)}"
+        httpx.post(
+            f"{server}/customers",
+            json={"username": name, "password": "long-enough", "display_name": "C"},
+            headers={"X-Forwarded-For": f"2001:db8:fe::{n + 1}"},
+        )
+        headers = token(server, name, "long-enough")
+        booking = httpx.post(
+            f"{server}/bookings",
+            headers=headers,
+            json={"barber_id": barber, "service_id": haircut["id"], "start": local(8 + n)},
+        )
+        assert booking.status_code == 201, booking.text
+        holders.append((headers, booking.json()))
+
+    def attempt(holder):
+        headers, booking = holder
+        return httpx.post(
+            f"{server}/bookings/{booking['id']}/move", headers=headers, json={"start": local(17)}, timeout=30
+        ).status_code
+
+    with ThreadPoolExecutor(max_workers=len(holders)) as pool:
+        codes = sorted(pool.map(attempt, holders))
+
+    assert [c for c in codes if c >= 500] == [], f"the losers crashed instead of being refused: {codes}"
+    assert codes.count(200) == 1, f"expected exactly one move: {codes}"
+    assert codes.count(409) == len(holders) - 1, codes
+    starts = sorted(httpx.get(f"{server}/bookings/{b['id']}", headers=h).json()["start"] for h, b in holders)
+    stayed = sorted(b["start"] for _, b in holders)
+    assert local(17) in starts
+    assert len([s for s in starts if s in stayed]) == len(holders) - 1, starts

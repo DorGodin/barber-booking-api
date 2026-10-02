@@ -16,6 +16,7 @@ from app.booking_rules import (
     day_window,
     hours_for,
     latest_start,
+    visible_booking_or_404,
 )
 from app.config import Settings
 from app.db import write_lock
@@ -119,6 +120,9 @@ def availability(
     barber_id: str,
     day: date = Query(alias="date"),
     service_id: str = Query(),
+    moving: str | None = Query(
+        default=None, description="a booking being moved: its own time counts as free"
+    ),
     user: User = Depends(current_user),
     session: Session = Depends(db),
     config: Settings = Depends(settings),
@@ -127,15 +131,17 @@ def availability(
     service = active_service_or_error(session, service_id)
     now = datetime.now(UTC)
     check_date_in_range(config, day, now)
+    if moving is not None:
+        visible_booking_or_404(session, moving, user)
 
     window = day_window(session, config, barber_id, day)
     taken = []
     if window is not None:
-        taken = busy(session, window, barber_id=barber_id)
+        taken = busy(session, window, barber_id=barber_id, excluding=moving)
         # A customer is never offered a slot that clashes with their own
         # booking at another barber - the booking would refuse it.
         if user.role == "customer":
-            taken += busy(session, window, customer_id=user.id)
+            taken += busy(session, window, customer_id=user.id, excluding=moving)
 
     starts = available_starts(
         window, timedelta(minutes=service.duration_minutes), taken, now, latest_start(config, now)

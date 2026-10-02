@@ -1,17 +1,6 @@
 from datetime import UTC, datetime
 
-from tests.conftest import COMBO, HAIRCUT, TRIM, book, local_day, slots
-
-
-def at(day, hhmm):
-    from tests.conftest import TZ
-
-    hours, minutes = map(int, hhmm.split(":"))
-    return (
-        datetime(day.year, day.month, day.day, hours, minutes, tzinfo=TZ)
-        .astimezone(UTC)
-        .strftime("%Y-%m-%dT%H:%M:%SZ")
-    )
+from tests.conftest import COMBO, HAIRCUT, TRIM, at, book, local_day, slots
 
 
 def test_an_unknown_user_and_a_wrong_password_get_the_same_answer(client):

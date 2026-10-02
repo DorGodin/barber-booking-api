@@ -51,8 +51,26 @@ def is_off(session: Session, barber_id: str, day: date) -> bool:
     )
 
 
+def visible_booking_or_404(session: Session, booking_id: str, user: User) -> Booking:
+    """Somebody else's booking is not found, not forbidden. A 403 would confirm
+    it exists, and ids travel in links and screenshots."""
+    booking = session.get(Booking, booking_id)
+    if booking is None:
+        raise not_found("booking")
+    if user.role == "customer" and booking.customer_id != user.id:
+        raise not_found("booking")
+    if user.role == "barber" and booking.barber_id != user.id:
+        raise not_found("booking")
+    return booking
+
+
 def busy(
-    session: Session, window: Interval, *, barber_id: str | None = None, customer_id: str | None = None
+    session: Session,
+    window: Interval,
+    *,
+    barber_id: str | None = None,
+    customer_id: str | None = None,
+    excluding: str | None = None,
 ) -> list[Interval]:
     """Confirmed bookings near the window - touching it included.
 
@@ -60,6 +78,8 @@ def busy(
     Interval.overlaps, and every caller decides with it: the listing and the
     booking once decided overlap separately, one in SQL and one in Python, and a
     change to one would have left the other offering what it refused.
+
+    `excluding` is the booking being moved: its own time is not in its way.
     """
     query = select(Booking).where(
         Booking.status == "confirmed", Booking.start_utc <= window.end, Booking.end_utc >= window.start
@@ -68,6 +88,8 @@ def busy(
         query = query.where(Booking.barber_id == barber_id)
     if customer_id is not None:
         query = query.where(Booking.customer_id == customer_id)
+    if excluding is not None:
+        query = query.where(Booking.id != excluding)
     return [Interval(b.start_utc, b.end_utc) for b in session.scalars(query)]
 
 

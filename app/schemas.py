@@ -59,6 +59,10 @@ class TimeOffIn(BaseModel):
     date: date
 
 
+class BookingMoveIn(BaseModel):
+    start: AwareDatetime
+
+
 class BookingIn(BaseModel):
     barber_id: str
     service_id: str

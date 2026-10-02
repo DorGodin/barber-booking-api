@@ -101,6 +101,15 @@ def local_day(days_ahead: int):
     return (datetime.now(UTC).astimezone(TZ) + timedelta(days=days_ahead)).date()
 
 
+def at(day, hhmm):
+    hours, minutes = map(int, hhmm.split(":"))
+    return (
+        datetime(day.year, day.month, day.day, hours, minutes, tzinfo=TZ)
+        .astimezone(UTC)
+        .strftime("%Y-%m-%dT%H:%M:%SZ")
+    )
+
+
 def slots(client, headers, barber_id, service_id, day) -> list[str]:
     resp = client.get(
         f"/barbers/{barber_id}/availability",

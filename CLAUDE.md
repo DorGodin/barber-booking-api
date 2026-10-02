@@ -27,6 +27,10 @@ the point of it, and most of these rules protect it.
 | `app/views.py` | how every entity looks on the wire, once |
 | `app/static/index.html` | the booking page: one file, no build step, every value written as text |
 
+**A move is the same booking at another time** - one request under the write lock, so the old
+time is held until the new one is taken. The listing for a move passes `moving=<id>`, and both
+leave that booking out of `busy()` the same way.
+
 **Availability and booking must never compute their rules separately.** If the listing and
 the booking disagree, the listing offers a slot the booking refuses. Change the rule in
 `booking_rules.py` and both follow.
