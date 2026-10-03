@@ -63,6 +63,27 @@
   .muted { color:var(--mut); font-size:13px; }
   .auth { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
   @media (max-width: 760px) { .auth { grid-template-columns: 1fr; } }
+  .auth { grid-template-columns: minmax(0, 420px); justify-content:center; }
+  .auth-legacy { display:grid; gap:18px; margin-top:12px; }
+  .otp button[type="submit"] { width:100%; min-height:44px; }
+  .hint { text-align:center; font-size:14px; margin:10px 0 0; }
+  .link { background:none; border:0; color:var(--brand); text-decoration:underline; padding:10px 4px; min-height:44px; }
+  .link:disabled { color:var(--mut); text-decoration:none; cursor:default; }
+  .otp-more { display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; }
+  .otp [data-testid="change-phone"] { display:block; margin:0 auto; }
+  .code-wrap { position:relative; width:max-content; margin:6px auto 12px; }
+  .code-boxes { display:flex; gap:10px; direction:ltr; }
+  .code-boxes span { width:48px; height:56px; border:1.5px solid var(--line); border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700; background:#fff; }
+  .code-boxes span.filled { border-color:var(--ink); }
+  .code-wrap:focus-within .code-boxes span.now { border:2px solid var(--brand); }
+  /* The real field, over the boxes: it takes the taps, the keyboard and the
+     autofill; the boxes only show what is in it. */
+  .code-wrap input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; font-size:16px; }
+  .code-wrap.bad .code-boxes span { border-color:var(--bad); color:var(--bad); }
+  details.legacy { grid-column:1 / -1; text-align:center; }
+  details.legacy summary { color:var(--brand); cursor:pointer; padding:10px; min-height:44px; }
+  details.legacy[open] { text-align:start; }
+  .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
   [data-testid="message"] { min-height:24px; margin:16px 0 0; font-weight:600; }
   .owner { margin-top:18px; }
   h3 { margin:18px 0 8px; font-size:14px; color:var(--brand); }
@@ -121,6 +142,39 @@
 
 <main>
   <section class="auth" data-testid="auth">
+    <form class="panel otp" data-testid="code-request-form" novalidate>
+      <h2>ברוכים הבאים</h2>
+      <div class="field"><label for="full-name">שם מלא</label><input id="full-name" data-testid="full-name" autocomplete="name" maxlength="80" required></div>
+      <div class="field"><label for="phone">מספר טלפון</label><input id="phone" data-testid="phone" type="tel" inputmode="numeric" autocomplete="tel-national" dir="ltr" placeholder="0501234567" maxlength="20" required></div>
+      <button data-testid="send-code" type="submit">שולחים קוד</button>
+      <p class="muted hint">קוד קצר ב־SMS, ואת/ה כבר בדרך לכיסא.</p>
+      <p data-testid="code-request-error" class="error" role="alert" hidden></p>
+    </form>
+    <form class="panel otp" data-testid="code-form" novalidate hidden>
+      <h2>קוד אימות</h2>
+      <p class="muted" data-testid="code-sent-to"></p>
+      <!-- One real field, laid invisibly over four drawn boxes: a phone offers
+           the code from the SMS to a field marked one-time-code, and four
+           separate fields break that; a screen reader reads one field too. -->
+      <label for="code" class="visually-hidden">קוד בן 4 ספרות</label>
+      <div class="code-wrap" data-testid="code-wrap">
+        <div class="code-boxes" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <input id="code" data-testid="code" inputmode="numeric" autocomplete="one-time-code" maxlength="4" dir="ltr" aria-describedby="code-error code-locked-hint">
+      </div>
+      <p data-testid="code-error" id="code-error" class="error" role="alert" hidden></p>
+      <button data-testid="verify-code" type="submit" aria-label="לכיסא, כניסה לחשבון">לכיסא</button>
+      <p class="muted hint" data-testid="code-locked-hint" id="code-locked-hint" hidden>מתקנים ספרה, והכפתור חוזר לפעול</p>
+      <div class="otp-more">
+        <button data-testid="resend-code" type="button" class="link">עוד קוד, בבקשה</button>
+        <span class="muted" data-testid="resend-wait" aria-live="polite"></span>
+      </div>
+      <button data-testid="change-phone" type="button" class="link">החלפת מספר</button>
+    </form>
+    <!-- Until every account has a phone and the test suites sign in by code,
+         the old sign-in stays here, folded away. -->
+    <details class="legacy" data-testid="password-sign-in">
+      <summary>כניסה עם שם משתמש וסיסמה</summary>
+      <div class="auth-legacy">
     <form class="panel" data-testid="login-form">
       <h2>כניסה</h2>
       <div class="field"><label for="login-username">שם משתמש</label><input id="login-username" data-testid="username" autocomplete="username" required></div>
@@ -136,6 +190,8 @@
       <button data-testid="signup" type="submit">יצירת חשבון</button>
       <p data-testid="signup-error" class="error" role="alert" hidden></p>
     </form>
+      </div>
+    </details>
   </section>
 
   <section data-testid="app" aria-busy="false" hidden>
@@ -281,6 +337,14 @@ const FRIENDLY = {
   barber_off: () => "הספר לא עובד ביום הזה.",
   barber_inactive: () => "הספר הזה כבר לא עובד במספרה.",
   account_inactive: () => "החשבון הזה כבר לא פעיל. אפשר לפנות לבעל המספרה.",
+  bad_phone: () => "מספר הטלפון צריך להיות של נייד: 05 ועוד 8 ספרות, למשל 0501234567.",
+  code_too_soon: (_, data) => `אפשר לבקש קוד חדש בעוד ${data.retry_after_seconds} שניות.`,
+  too_many_codes: (_, data) => `נשלחו יותר מדי קודים. אפשר לנסות שוב בעוד ${Math.max(1, Math.ceil(data.retry_after_seconds / 60))} דקות.`,
+  sms_failed: () => "לא הצלחנו לשלוח את ה־SMS. אפשר לנסות שוב.",
+  no_code: () => "צריך לבקש קוד קודם.",
+  code_expired: () => "הקוד פג. אפשר לבקש קוד חדש.",
+  code_used_up: () => "הקוד ננעל אחרי 3 ניסיונות. אפשר לבקש קוד חדש.",
+  wrong_code: (_, data) => data.attempts_left > 0 ? `הקוד לא נכון. ${data.attempts_left === 1 ? "נשאר ניסיון אחד" : `נשארו ${data.attempts_left} ניסיונות`}.` : "הקוד לא נכון, והוא ננעל. אפשר לבקש קוד חדש.",
   in_past: () => "השעה הזו כבר עברה.",
   beyond_window: () => `אפשר לקבוע תור עד ${shop.booking_window_days} ימים קדימה.`,
   late_move: () => `אפשר להזיז תור עד ${shop.move_cutoff_hours} שעות לפני. כדי לשנות עכשיו צריך להתקשר למספרה.`,
@@ -375,6 +439,107 @@ async function signIn(username, password, errorBox) {
   });
 }
 
+// ---- Sign-in with a code ------------------------------------------------------
+// The phone is who you are and the code is the password. The phone is sent as
+// typed: the server reads it whatever the spaces, dashes or +972 around it, and
+// says - in a code the page has words for - when it is not a mobile number.
+const otp = { name: "", phone: "", rejected: null, lockedOut: false, timer: null };
+
+function showCodeStep(last4, waitSeconds) {
+  $("code-request-form").hidden = true;
+  $("code-form").hidden = false;
+  $("code-sent-to").textContent = `שלחנו קוד בן 4 ספרות למספר שמסתיים ב־${last4}`;
+  $("code").value = "";
+  setCodeState(null);
+  countDown(waitSeconds);
+  $("code").focus();
+}
+
+// After a wrong code the button stays off while the boxes hold the code just
+// refused - sending it again cannot help - and comes back the moment a digit
+// changes. After the last try it stays off until a new code is asked for.
+function setCodeState(error, lockedOut = false) {
+  otp.rejected = error ? $("code").value : null;
+  otp.lockedOut = lockedOut;
+  $("code-error").textContent = error || "";
+  $("code-error").hidden = !error;
+  if (error) $("code").setAttribute("aria-invalid", "true");
+  else $("code").removeAttribute("aria-invalid");
+  syncVerifyButton();
+}
+
+function drawCodeBoxes() {
+  const value = $("code").value;
+  [...document.querySelectorAll(".code-boxes span")].forEach((box, i) => {
+    box.textContent = value[i] || "";
+    box.classList.toggle("filled", i < value.length);
+    box.classList.toggle("now", i === Math.min(value.length, 3));
+  });
+  $("code-wrap").classList.toggle("bad", $("code").getAttribute("aria-invalid") === "true");
+}
+
+function syncVerifyButton() {
+  drawCodeBoxes();
+  const blocked = otp.lockedOut || (otp.rejected !== null && $("code").value === otp.rejected);
+  $("verify-code").disabled = blocked;
+  $("code-locked-hint").hidden = !blocked || otp.lockedOut;
+}
+
+function countDown(seconds) {
+  clearInterval(otp.timer);
+  let left = Math.max(0, Math.ceil(seconds));
+  const tick = () => {
+    $("resend-code").disabled = left > 0;
+    $("resend-wait").textContent = left > 0 ? `· אפשר בעוד ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}` : "";
+    if (left <= 0) clearInterval(otp.timer);
+    left -= 1;
+  };
+  tick();
+  otp.timer = setInterval(tick, 1000);
+}
+
+function askForCode(errorBox) {
+  return busyWhile(async () => {
+    const r = await api("POST", "/auth/otp", { full_name: otp.name, phone: otp.phone });
+    if (!r.ok) {
+      errorBox.textContent = explain(r, { invalid: "צריך שם מלא, לפחות 2 אותיות." });
+      errorBox.hidden = false;
+      if (r.data && r.data.code === "code_too_soon") countDown(r.data.retry_after_seconds);
+      return;
+    }
+    errorBox.hidden = true;
+    showCodeStep(r.data.phone_last4, r.data.resend_after_seconds);
+  });
+}
+
+function verifyCode() {
+  if ($("verify-code").disabled) return;
+  return busyWhile(async () => {
+    const r = await api("POST", "/auth/otp/verify", { phone: otp.phone, code: $("code").value });
+    if (!r.ok) {
+      const code = r.data && r.data.code;
+      const usedUp = code === "code_used_up" || code === "code_expired" || (code === "wrong_code" && r.data.attempts_left === 0);
+      setCodeState(explain(r, { invalid: "הקוד הוא 4 ספרות." }), usedUp);
+      return;
+    }
+    clearInterval(otp.timer);
+    token = r.data.access_token;
+    remember(token);
+    me = (await api("GET", "/me")).data;
+    await start();
+  });
+}
+
+function resetCodeSignIn() {
+  clearInterval(otp.timer);
+  Object.assign(otp, { name: "", phone: "", rejected: null, lockedOut: false });
+  $("code-form").hidden = true;
+  $("code-request-form").hidden = false;
+  for (const id of ["code-request-error", "code-error", "code-locked-hint"]) $(id).hidden = true;
+  $("code-request-form").reset();
+  $("code").value = "";
+}
+
 // A remembered sign-in is used only if the server still accepts it; an expired
 // or revoked one is dropped quietly and the sign-in form is shown.
 async function resume() {
@@ -417,6 +582,7 @@ function signOut() {
 }
 
 function clearForms() {
+  resetCodeSignIn();
   for (const form of [$("login-form"), $("signup-form")]) form.reset();
   for (const id of ["login-error", "signup-error"]) $(id).hidden = true;
 }
@@ -967,6 +1133,29 @@ function cancelBooking(b) {
   });
 }
 
+$("code-request-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  otp.name = $("full-name").value.trim();
+  otp.phone = $("phone").value;
+  askForCode($("code-request-error"));
+});
+$("code-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  verifyCode();
+});
+$("code").addEventListener("input", () => {
+  // Digits only, whatever the keyboard offered; four of them sign in at once.
+  $("code").value = $("code").value.replace(/\D/g, "").slice(0, 4);
+  syncVerifyButton();
+  if ($("code").value.length === 4 && !$("verify-code").disabled) verifyCode();
+});
+$("resend-code").addEventListener("click", () => askForCode($("code-error")));
+$("change-phone").addEventListener("click", () => {
+  clearInterval(otp.timer);
+  $("code-form").hidden = true;
+  $("code-request-form").hidden = false;
+  $("phone").focus();
+});
 $("login-form").addEventListener("submit", (e) => {
   e.preventDefault();
   signIn($("username").value, $("password").value, $("login-error"));
