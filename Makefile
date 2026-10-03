@@ -16,9 +16,9 @@ run:            ## start the API on http://127.0.0.1:8100 (reads .env)
 	@test -f .env || { echo "no .env - run: cp .env.example .env"; exit 1; }
 	set -a; . ./.env; set +a; $(PY) -m uvicorn app.main:create_app --factory --port $(PORT) --workers 2
 
-run-test:       ## a second copy for the QA suites, on 8101 with its own database, so they never touch yours
+run-test:       ## a second copy for the QA suites, on 8101 with its own database, its SMS to qa-api-starter's fake provider
 	@test -f .env || { echo "no .env - run: cp .env.example .env"; exit 1; }
-	set -a; . ./.env; set +a; DATABASE_URL=sqlite:///./$(TEST_DB) $(PY) -m uvicorn app.main:create_app --factory --port $(TEST_PORT) --workers 2
+	set -a; . ./.env; set +a; DATABASE_URL=sqlite:///./$(TEST_DB) SMS_URL=$${QA_SMS_URL:-http://127.0.0.1:8109/messages} $(PY) -m uvicorn app.main:create_app --factory --port $(TEST_PORT) --workers 2
 
 test:           ## the product's own tests, including the two-worker race
 	$(PY) -m pytest -q
