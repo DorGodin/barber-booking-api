@@ -156,7 +156,10 @@
   footer .actions { display:flex; justify-content:center; gap:10px; margin-bottom:6px; }
   footer .action { width:44px; height:44px; border-radius:50%; border:1.5px solid var(--ink); display:flex; align-items:center; justify-content:center; color:var(--ink); }
   footer .action svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
-  footer .legal { display:flex; justify-content:center; gap:18px; flex-wrap:wrap; }
+  footer .legal { display:flex; justify-content:center; align-items:center; gap:12px; flex-wrap:wrap; }
+  /* The divider's scissors, between the two links - still here: the page has
+     enough that moves. */
+  footer .snips { width:16px; height:16px; fill:none; stroke:var(--ink); stroke-width:1.8; transform:scaleX(-1); }
   footer a { color:var(--brand); display:inline-flex; align-items:center; min-height:44px; }
   .moving { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:12px; padding:8px 12px; border:1px solid var(--brand); border-radius:6px; }
   .moving p { flex:1 1 220px; margin:0; }
@@ -307,6 +310,7 @@
   {{shop_contact}}
   <nav class="legal" aria-label="מידע על האתר">
     <a href="/accessibility" data-testid="accessibility-link">הצהרת נגישות</a>
+    <svg class="snips" data-testid="legal-scissors" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.5 8.5L20 18M8.5 15.5L20 6"/></svg>
     <a href="/privacy" data-testid="privacy-link">מדיניות פרטיות</a>
   </nav>
 </footer>
