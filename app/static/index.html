@@ -29,9 +29,6 @@
   header .brand { margin:14px 0 0; font-size:30px; line-height:1; letter-spacing:.5px; }
   header .tagline { margin:4px 0 0; font-size:11px; font-weight:700; letter-spacing:5px; }
   header .since { margin:4px 0 0; font-size:13px; font-weight:600; color:var(--gold); }
-  header .actions { display:flex; justify-content:center; gap:10px; margin-top:10px; }
-  header .action { width:44px; height:44px; border-radius:50%; border:1.5px solid var(--ink); display:flex; align-items:center; justify-content:center; color:var(--ink); }
-  header .action svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
   .cut { display:flex; align-items:center; gap:6px; max-width:1000px; margin:8px auto 14px; padding:0 16px; }
   .cut span { flex:1; border-top:2px dashed var(--ink); }
   .cut svg { width:18px; height:18px; fill:none; stroke:var(--ink); stroke-width:1.8; transform:scaleX(-1); transform-origin:center; animation:snip 1.6s ease-in-out infinite; }
@@ -110,6 +107,8 @@
   details.legacy { grid-column:1 / -1; text-align:center; }
   details.legacy summary { color:var(--brand); cursor:pointer; padding:10px; min-height:44px; }
   details.legacy[open] { text-align:start; }
+  /* A phone number reads left to right but stands, like every field here, on the right. */
+  #phone { text-align:right; }
   .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
   [data-testid="message"] { min-height:24px; margin:16px 0 0; font-weight:600; }
   .owner { margin-top:18px; }
@@ -153,7 +152,11 @@
      section from the menu, a field the keyboard reaches - lands below it, never
      under it (WCAG 2.4.11, focus not obscured). */
   @media (max-width: 760px) { html { scroll-padding-top:72px; } [data-section] { scroll-margin-top:72px; } }
-  footer { max-width:1000px; margin:0 auto 24px; padding:0 16px; font-size:14px; }
+  footer { max-width:1000px; margin:24px auto; padding:16px 16px 0; font-size:14px; text-align:center; border-top:2px dashed var(--line); }
+  footer .actions { display:flex; justify-content:center; gap:10px; margin-bottom:6px; }
+  footer .action { width:44px; height:44px; border-radius:50%; border:1.5px solid var(--ink); display:flex; align-items:center; justify-content:center; color:var(--ink); }
+  footer .action svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  footer .legal { display:flex; justify-content:center; gap:18px; flex-wrap:wrap; }
   footer a { color:var(--brand); display:inline-flex; align-items:center; min-height:44px; }
   .moving { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:12px; padding:8px 12px; border:1px solid var(--brand); border-radius:6px; }
   .moving p { flex:1 1 220px; margin:0; }
@@ -300,7 +303,13 @@
     <div class="actions"><button data-testid="popup-close" type="button" autofocus>סגירה</button></div>
   </dialog>
 </main>
-<footer><a href="/accessibility" data-testid="accessibility-link">הצהרת נגישות</a></footer>
+<footer>
+  {{shop_contact}}
+  <nav class="legal" aria-label="מידע על האתר">
+    <a href="/accessibility" data-testid="accessibility-link">הצהרת נגישות</a>
+    <a href="/privacy" data-testid="privacy-link">מדיניות פרטיות</a>
+  </nav>
+</footer>
 
 <script>
 // Every value that came from a user is written with textContent, never

@@ -15,7 +15,7 @@ from app import backup
 from app.config import Settings
 from app.db import IMMEDIATE, make_engine, make_sessionmaker
 from app.errors import DomainError, domain_error_handler, not_found
-from app.identity import IMAGE_TYPES, header_html, identity_from, media_file, under_brand
+from app.identity import IMAGE_TYPES, contact_html, header_html, identity_from, media_file, under_brand
 from app.migrate import migrate
 from app.routers import auth, barbers, bookings, services
 from app.seed import seed_if_empty
@@ -32,6 +32,7 @@ SECURITY_HEADERS = {
 
 PAGE = Path(__file__).parent / "static" / "index.html"
 STATEMENT = Path(__file__).parent / "static" / "accessibility.html"
+PRIVACY = Path(__file__).parent / "static" / "privacy.html"
 
 
 def page_policy(html: str) -> str:
@@ -169,6 +170,7 @@ def create_app(config: Settings | None = None, sms: SmsSender | None = None) -> 
         html = (
             PAGE.read_text(encoding="utf-8")
             .replace("{{shop_header}}", header_html(identity))
+            .replace("{{shop_contact}}", contact_html(identity))
             .replace("{{shop_title}}", html_text.escape(f"{identity.brand} {identity.tagline.title()}"))
         )
         return HTMLResponse(html, headers={"Content-Security-Policy": page_policy(html)})
@@ -197,6 +199,24 @@ def create_app(config: Settings | None = None, sms: SmsSender | None = None) -> 
             "updated": config.accessibility_updated,
         }
         html = STATEMENT.read_text(encoding="utf-8")
+        for name, value in values.items():
+            html = html.replace("{{" + name + "}}", html_text.escape(value))
+        return HTMLResponse(html, headers={"Content-Security-Policy": page_policy(html)})
+
+    @app.get("/privacy", include_in_schema=False)
+    def privacy_policy():
+        """What the shop keeps about a customer, why, for how long, and how to ask
+        for it to be shown, corrected or deleted - with the shop's own details
+        from its settings, escaped."""
+        address = identity.address
+        values = {
+            "shop_brand": identity.brand,
+            "shop_address_line": f" · {address}" if address else "",
+            "contact_phone": config.privacy_contact_phone,
+            "contact_email": config.privacy_contact_email,
+            "updated": config.privacy_updated,
+        }
+        html = PRIVACY.read_text(encoding="utf-8")
         for name, value in values.items():
             html = html.replace("{{" + name + "}}", html_text.escape(value))
         return HTMLResponse(html, headers={"Content-Security-Policy": page_policy(html)})

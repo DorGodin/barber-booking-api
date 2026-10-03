@@ -48,6 +48,9 @@ class Settings:
     accessibility_contact_email: str = "accessibility@example.com"
     accessibility_premises: str = "(לדוגמה) הכניסה למספרה במפלס הרחוב, בלי מדרגות."
     accessibility_updated: str = "1 באוקטובר 2026"
+    privacy_contact_phone: str = "03-0000000"
+    privacy_contact_email: str = "privacy@example.com"
+    privacy_updated: str = "3 באוקטובר 2026"
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -95,6 +98,9 @@ class Settings:
                     ("accessibility_contact_email", "ACCESSIBILITY_CONTACT_EMAIL"),
                     ("accessibility_premises", "ACCESSIBILITY_PREMISES"),
                     ("accessibility_updated", "ACCESSIBILITY_UPDATED"),
+                    ("privacy_contact_phone", "PRIVACY_CONTACT_PHONE"),
+                    ("privacy_contact_email", "PRIVACY_CONTACT_EMAIL"),
+                    ("privacy_updated", "PRIVACY_UPDATED"),
                 )
                 if os.environ.get(name)
             },

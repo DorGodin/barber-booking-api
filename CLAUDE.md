@@ -86,6 +86,10 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   the brand, the line under it, a button for each way to reach the shop that is set, and the
   shop's own cover and profile pictures, served from `/media` - only those two files. A link
   must be `https://` and a phone Israeli, or the server refuses to start, naming the setting.
+- **The contact buttons stand at the foot of the page**, above the links to the accessibility
+  statement and the privacy policy (`/privacy`). The policy says only what the code does - what
+  is kept, why, for how long (codes a day, failed sign-ins a quarter hour, sign-ups an hour) -
+  so a change to what is stored or for how long changes `app/static/privacy.html` too.
 - **The poles, the scissors and every icon are decoration**: `aria-hidden`, and still under
   `prefers-reduced-motion`. Each contact button has a Hebrew name of its own.
 - **A new screen starts at its top**, and on a phone nothing the page scrolls to may land under

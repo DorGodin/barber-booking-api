@@ -115,20 +115,24 @@ def header_html(identity: Identity) -> str:
         if identity.profile
         else ""
     )
+    line = under_brand(identity)
+    return (
+        f'{cover}{profile}<h1 class="brand" lang="en" dir="ltr" data-testid="shop-brand">{e(identity.brand)}</h1>'
+        f'<p class="tagline" lang="en" dir="ltr">{e(identity.tagline)}</p>'
+        + (f'<p class="since" data-testid="shop-line">{e(line)}</p>' if line else "")
+    )
+
+
+def contact_html(identity: Identity) -> str:
+    """The round buttons to reach the shop, for the foot of the page."""
+    e = html.escape
     buttons = "".join(
         f'<a class="action" data-testid="shop-{kind}" href="{e(url)}" aria-label="{e(NAMES[kind])}"'
         f'{"" if kind == "phone" else " target=\"_blank\" rel=\"noopener noreferrer\""}>'
         f'<svg viewBox="0 0 24 24" aria-hidden="true">{ICONS[kind]}</svg></a>'
         for kind, url in identity.links.items()
     )
-    actions = f'<nav class="actions" aria-label="יצירת קשר עם המספרה">{buttons}</nav>' if buttons else ""
-    line = under_brand(identity)
-    return (
-        f'{cover}{profile}<h1 class="brand" lang="en" dir="ltr" data-testid="shop-brand">{e(identity.brand)}</h1>'
-        f'<p class="tagline" lang="en" dir="ltr">{e(identity.tagline)}</p>'
-        + (f'<p class="since" data-testid="shop-line">{e(line)}</p>' if line else "")
-        + actions
-    )
+    return f'<nav class="actions" aria-label="יצירת קשר עם המספרה">{buttons}</nav>' if buttons else ""
 
 
 def media_file(directory: Path, identity: Identity, name: str) -> Path | None:

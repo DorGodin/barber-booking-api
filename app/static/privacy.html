@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מדיניות פרטיות · {{shop_brand}}</title>
+<style>
+  :root { --ink:#111; --mut:#5c574d; --line:#dedad2; --bg:#fff; --gold:#8a6a1f; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background:var(--bg); color:var(--ink); line-height:1.7; }
+  header { text-align:center; padding:24px 16px 8px; border-bottom:2px dashed var(--ink); max-width:760px; margin:0 auto; }
+  header h1 { margin:0; font-size:22px; }
+  header p { margin:4px 0 0; color:var(--gold); font-weight:600; }
+  main { max-width:760px; margin:20px auto; padding:0 16px; }
+  section { border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:14px; }
+  h2 { margin:0 0 8px; font-size:17px; }
+  ul { margin:0; padding-inline-start:20px; }
+  a { color:var(--ink); }
+  a:focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
+  .muted { color:var(--mut); font-size:14px; }
+  [dir="ltr"] { unicode-bidi:isolate; }
+</style>
+</head>
+<body>
+<header>
+  <h1>מדיניות פרטיות</h1>
+  <p><span lang="en" dir="ltr">{{shop_brand}}</span>{{shop_address_line}}</p>
+</header>
+<main>
+  <section data-testid="what">
+    <h2>איזה מידע נשמר</h2>
+    <ul>
+      <li>השם המלא ומספר הטלפון שמסרת בכניסה הראשונה.</li>
+      <li>התורים שלך: המועד, השירות, הספר והמחיר, וכן ביטולים ושינויי מועד.</li>
+      <li>כתובת הרשת (IP) שממנה פנית, לצורכי אבטחה בלבד: כדי להגביל ניסיונות כניסה ושליחת קודים חוזרת.</li>
+      <li>קוד האימות שנשלח אליך ב־SMS נשמר רק כטביעת אצבע מוצפנת, ולא כקוד עצמו.</li>
+    </ul>
+  </section>
+  <section data-testid="why">
+    <h2>למה</h2>
+    <p>כדי לקבוע את התורים שלך ולנהל אותם, לאמת שאת/ה בעל/ת מספר הטלפון כשנכנסים, ולהגן על המערכת מפני ניצול לרעה. המידע לא משמש לפרסום ולא נמכר.</p>
+  </section>
+  <section data-testid="who">
+    <h2>עם מי המידע משותף</h2>
+    <p>מספר הטלפון וקוד האימות מועברים לספק שירות ה־SMS, רק כדי לשלוח את ההודעה. המידע לא מועבר לאף גורם אחר, אלא אם החוק מחייב זאת.</p>
+  </section>
+  <section data-testid="how-long">
+    <h2>כמה זמן הוא נשמר</h2>
+    <ul>
+      <li>החשבון והתורים - כל עוד החשבון קיים.</li>
+      <li>קודי אימות - יום אחד לכל היותר.</li>
+      <li>רישומי ניסיונות כניסה שגויים - כרבע שעה, ורישומי פתיחת חשבון - כשעה.</li>
+    </ul>
+  </section>
+  <section data-testid="storage">
+    <h2>מה נשמר בדפדפן</h2>
+    <p>הכניסה שלך נשמרת בלשונית הדפדפן בלבד, ונמחקת כשסוגרים אותה או כשיוצאים. אין באתר עוגיות מעקב או פרסום.</p>
+  </section>
+  <section data-testid="rights">
+    <h2>הזכויות שלך</h2>
+    <p>לפי חוק הגנת הפרטיות, התשמ"א-1981, אפשר לעיין במידע שנשמר עליך, לבקש לתקן אותו או למחוק אותו. לפנייה:</p>
+    <ul>
+      <li>טלפון: <span dir="ltr">{{contact_phone}}</span></li>
+      <li>דוא"ל: <span dir="ltr">{{contact_email}}</span></li>
+    </ul>
+  </section>
+  <p class="muted">עודכן לאחרונה: {{updated}}</p>
+  <p><a href="/">חזרה לקביעת תור</a></p>
+</main>
+</body>
+</html>

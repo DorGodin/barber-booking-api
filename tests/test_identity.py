@@ -145,3 +145,26 @@ def test_the_tests_default_settings_still_build_a_page(client):
     page = client.get("/").text
 
     assert 'data-testid="shop-brand">TomGoldin</h1>' in page
+
+
+def test_the_privacy_policy_is_a_page_of_its_own_with_the_shops_details_escaped(tmp_path, monkeypatch):
+    with shop(tmp_path, monkeypatch, {"SHOP_ADDRESS": "<b>שביט 8</b>"}, brand="TomGoldin") as client:
+        page = client.get("/privacy")
+        booking_page = client.get("/").text
+
+    assert page.status_code == 200
+    assert "מדיניות פרטיות" in page.text and "חוק הגנת הפרטיות" in page.text
+    assert "<b>שביט 8</b>" not in page.text and "&lt;b&gt;שביט 8&lt;/b&gt;" in page.text
+    assert "{{" not in page.text, "a placeholder was left on the privacy page"
+    assert "script-src" in page.headers["content-security-policy"]
+    assert 'href="/privacy"' in booking_page and 'href="/accessibility"' in booking_page
+
+
+def test_the_ways_to_reach_the_shop_stand_at_the_foot_of_the_page(tmp_path, monkeypatch):
+    with shop(tmp_path, monkeypatch, FULL) as client:
+        page = client.get("/").text
+
+    footer = page[page.index("<footer>") :]
+    assert 'data-testid="shop-whatsapp"' in footer
+    assert footer.index('data-testid="shop-whatsapp"') < footer.index('data-testid="privacy-link"')
+    assert 'data-testid="shop-whatsapp"' not in page[: page.index("<footer>")]
