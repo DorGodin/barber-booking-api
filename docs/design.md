@@ -59,6 +59,11 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
 - **Refusal window**: a black band with the reason (`השעה כבר תפוסה`), the Hebrew sentence,
   and `בחירת שעה אחרת`.
 - **Nothing booked**: a chair icon, `עוד אין תורים`, `הכיסא מחכה לך`.
+- **Greeting** (approved 2026-10-03): a customer is greeted `שלום` and their first name; the
+  account keeps the full name. The staff keep their name and role (`· בעלים`, `· ספר`).
+- **Booked**: the popup's band is black, like the page's buttons; only a refusal is coloured,
+  red. The popup alone announces it - no second line `נקבע: …` under the list (approved
+  2026-10-03, for a booking, an owner's booking for a caller, and a moved booking alike).
 - **Computer**: one screen split in two - the choice on the right, my bookings and the book
   button on the left.
 

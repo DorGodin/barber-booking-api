@@ -139,7 +139,8 @@
   dialog { border:0; border-radius:14px; padding:0; width:min(420px, 92vw); box-shadow:0 18px 50px #0004; }
   dialog::backdrop { background:#1f293399; }
   dialog .band { padding:18px 22px; color:#fff; font-size:18px; font-weight:700; }
-  dialog[data-kind="ok"] .band { background:var(--ok); }
+  /* Black, as the page's buttons; only a refusal is coloured, red. */
+  dialog[data-kind="ok"] .band { background:var(--ink); }
   dialog[data-kind="error"] .band { background:var(--bad); }
   dialog .body { padding:18px 22px; line-height:1.6; }
   dialog .actions { padding:0 22px 20px; text-align:left; }
@@ -475,6 +476,7 @@ function addDays(isoDate, days) {
 // browser itself is set to.
 const money = (minor, currency) => new Intl.NumberFormat("he-IL", { style: "currency", currency }).format(minor / 100);
 const ROLE = { customer: "לקוח", barber: "ספר", owner: "בעלים" };
+const firstName = (name) => name.trim().split(/\s+/)[0];
 const STATUS = { confirmed: "מאושר", cancelled: "בוטל" };
 const barberName = (id) => (barbers.find((b) => b.id === id) || {}).display_name || "?";
 const serviceOf = (id) => services.find((s) => s.id === id) || {};
@@ -674,7 +676,11 @@ async function start() {
   // A new screen starts at its top. The sign-in form sits low on a phone, and
   // the screen after it opened scrolled to where the form had been.
   window.scrollTo(0, 0);
-  $("display-name").textContent = `${isolate(me.display_name)} · ${ROLE[me.role]}`;
+  // A customer is greeted by first name. The staff see their role: the shop's
+  // own screen can be signed in by any of them.
+  $("display-name").textContent = me.role === "customer"
+    ? `שלום ${isolate(firstName(me.display_name))}`
+    : `${isolate(me.display_name)} · ${ROLE[me.role]}`;
 
   fillBarberChoice();
   fillServiceChoice();
@@ -1061,7 +1067,9 @@ async function bookSelected() {
   $("book").disabled = false;
   if (r.ok) {
     const booked = `${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${isolate(r.data.service_name)} אצל ${isolate(r.data.barber_name)}`;
-    say(`נקבע: ${booked}`, "ok");
+    // The popup says it, and the list shows it; a third copy under the list
+    // only repeated them. An earlier refusal is cleared.
+    say("", "ok");
     afterPopup = () => document.querySelector(`[data-testid="booking-row"][data-id="${r.data.id}"]`);
     popup("✓ התור נקבע", `${booked} · ${money(r.data.price_minor, r.data.currency)}`, "ok");
   } else {
@@ -1089,7 +1097,7 @@ async function bookGuest() {
   if (r.ok) {
     const booked = `${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${isolate(r.data.service_name)} אצל ${isolate(r.data.barber_name)}`;
     $("guest-name").value = "";
-    say(`נקבע בשם ${isolate(r.data.guest_name)}: ${booked}`, "ok");
+    say("", "ok");
     afterPopup = () => document.querySelector(`[data-testid="booking-row"][data-id="${r.data.id}"]`);
     popup("✓ התור נקבע", `${booked} · בשם ${isolate(r.data.guest_name)}`, "ok");
   } else {
@@ -1136,7 +1144,7 @@ async function moveSelected() {
   if (r.ok) {
     const moved = `${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${isolate(r.data.service_name)} אצל ${isolate(r.data.barber_name)}`;
     stopMoving();
-    say(`התור הוזז: ${moved}`, "ok");
+    say("", "ok");
     afterPopup = () => document.querySelector(`[data-testid="booking-row"][data-id="${r.data.id}"]`);
     popup("✓ התור הוזז", moved, "ok");
   } else {
