@@ -42,6 +42,7 @@ def server(tmp_path_factory):
         **os.environ,
         "DATABASE_URL": f"sqlite:///{tmp_path_factory.mktemp('race') / 'race.db'}",
         "SECRET_KEY": secrets.token_hex(32),
+        "SMS_URL": "console",
         **{f"SEED_{role.upper()}_PASSWORD": pw for role, pw in PASSWORDS.items()},
     }
     proc = subprocess.Popen(
@@ -62,12 +63,12 @@ def server(tmp_path_factory):
         stderr=subprocess.DEVNULL,
     )
     base = f"http://127.0.0.1:{port}"
-    for _ in range(100):
+    for _ in range(20):
         try:
-            if httpx.get(f"{base}/health").status_code == 200:
+            if httpx.get(f"{base}/health", timeout=1).status_code == 200:
                 break
         except httpx.TransportError:
-            time.sleep(0.1)
+            time.sleep(1)
     else:
         proc.kill()
         pytest.fail("the server did not start")

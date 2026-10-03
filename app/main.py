@@ -18,6 +18,7 @@ from app.errors import DomainError, domain_error_handler
 from app.migrate import migrate
 from app.routers import auth, barbers, bookings, services
 from app.seed import seed_if_empty
+from app.sms import SmsSender, sender_from
 
 SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
@@ -108,7 +109,7 @@ def prepare_database(engine, make_session, config: Settings) -> None:
         seed_if_empty(session, config)
 
 
-def create_app(config: Settings | None = None) -> FastAPI:
+def create_app(config: Settings | None = None, sms: SmsSender | None = None) -> FastAPI:
     config = config or Settings.from_env()
     engine = make_engine(config.database_url)
 
@@ -120,6 +121,7 @@ def create_app(config: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="Barber Booking API", version="1.0.0", lifespan=lifespan)
     app.state.settings = config
+    app.state.sms = sms or sender_from(config.sms_url, config.sms_token)
     app.state.sessionmaker = make_sessionmaker(engine)
     app.add_exception_handler(DomainError, domain_error_handler)
 

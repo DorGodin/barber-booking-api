@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 
 import httpx
+import pytest
 
 from tests.conftest import login
 
@@ -36,6 +37,7 @@ def test_workers_starting_together_on_an_empty_database_seed_it_once_and_none_di
         **os.environ,
         "DATABASE_URL": f"sqlite:///{tmp_path / 'fresh.db'}",
         "SECRET_KEY": secrets.token_hex(32),
+        "SMS_URL": "console",
         **{f"SEED_{role.upper()}_PASSWORD": pw for role, pw in passwords.items()},
     }
     with log.open("w") as out:
@@ -58,12 +60,17 @@ def test_workers_starting_together_on_an_empty_database_seed_it_once_and_none_di
         )
         try:
             base = f"http://127.0.0.1:{port}"
-            for _ in range(100):
+            for _ in range(20):
                 try:
-                    if httpx.get(f"{base}/health").status_code == 200:
+                    if httpx.get(f"{base}/health", timeout=1).status_code == 200:
                         break
                 except httpx.TransportError:
-                    time.sleep(0.1)
+                    time.sleep(1)
+            else:
+                # Fail now, with the reason, rather than wait on a server that
+                # will never answer.
+                out.flush()
+                pytest.fail("the server did not start:\n" + log.read_text()[-1500:])
             time.sleep(2)  # let every worker finish its startup, or fail it
             owners = httpx.get(
                 f"{base}/barbers", headers=login(httpx.Client(base_url=base), "owner", passwords["owner"])

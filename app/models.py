@@ -50,17 +50,40 @@ class UTCDateTime(TypeDecorator):
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (UniqueConstraint("phone", name="uq_users_phone"),)
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=lambda: new_id("usr"))
     username: Mapped[str] = mapped_column(String(64), unique=True)
     password_hash: Mapped[str] = mapped_column(String(256))
     role: Mapped[str] = mapped_column(String(16))
     display_name: Mapped[str] = mapped_column(String(80))
+    # The person's mobile, 0501234567: who they are when they sign in with a
+    # code. Unique - two people may share a name, never a phone.
+    phone: Mapped[str | None] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=now_utc)
     # A barber who left: kept, with every booking they had, but offered to no
     # one and signed in nowhere. server_default so the rows that exist when the
     # column arrives are active too.
     active: Mapped[bool] = mapped_column(default=True, server_default=true())
+
+
+class OtpCode(Base):
+    """A sign-in code sent by SMS. Only its HMAC is kept - like a password, the
+    code itself is never stored. The full name waits here for the first sign-in,
+    which opens the account."""
+
+    __tablename__ = "otp_codes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    phone: Mapped[str] = mapped_column(String(10), index=True)
+    full_name: Mapped[str] = mapped_column(String(80))
+    code_hash: Mapped[str] = mapped_column(String(64))
+    ip: Mapped[str] = mapped_column(String(64), index=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, index=True, default=now_utc)
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    # Set when the code signed someone in, or when a newer code replaced it.
+    used_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
 
 class RevokedToken(Base):

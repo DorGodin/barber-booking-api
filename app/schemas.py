@@ -15,6 +15,17 @@ class LoginIn(BaseModel):
     password: str
 
 
+class CodeRequestIn(BaseModel):
+    full_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=80)]
+    # Checked and normalised by app.phones, which says what is wrong with it.
+    phone: str = Field(max_length=20)
+
+
+class CodeVerifyIn(BaseModel):
+    phone: str = Field(max_length=20)
+    code: str = Field(pattern=r"^\d{4}$")
+
+
 class AccountIn(BaseModel):
     username: str = Field(pattern=USERNAME)
     password: str = Field(min_length=8, max_length=128)

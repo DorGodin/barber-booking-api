@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import secrets
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -13,6 +14,7 @@ from app.config import Settings
 from app.db import make_engine, make_sessionmaker
 from app.main import create_app, prepare_database
 from app.seed import MENU
+from app.sms import SmsFailed
 
 # The seeded menu by duration, read from the seed itself, so renaming a service
 # there never breaks a test here.
@@ -21,6 +23,24 @@ HAIRCUT, TRIM, COMBO = (name for name, _minutes, _price in MENU)
 TZ = ZoneInfo("Asia/Jerusalem")
 PASSWORDS = {role: secrets.token_urlsafe(12) for role in ("owner", "barber", "customer")}
 ALL_WEEK = dict.fromkeys(("mon", "tue", "wed", "thu", "fri", "sat", "sun"), ["00:00", "24:00"])
+
+
+class SentTexts:
+    """The SMS provider, for the product's own tests: every message kept, and
+    told to fail when a test needs it to."""
+
+    def __init__(self) -> None:
+        self.messages: list[tuple[str, str]] = []
+        self.failing = False
+
+    def send(self, phone: str, text: str) -> None:
+        if self.failing:
+            raise SmsFailed("the provider is down")
+        self.messages.append((phone, text))
+
+    def code_for(self, phone: str) -> str:
+        [code] = re.findall(r"\b\d{4}\b", next(t for p, t in reversed(self.messages) if p == phone))
+        return code
 
 
 @pytest.fixture
@@ -38,8 +58,13 @@ def client(tmp_path: Path, monkeypatch) -> TestClient:
         # limit itself is tested with its real value in test_signup_limits.py.
         signups_per_address=1000,
     )
-    with TestClient(create_app(config)) as test_client:
+    with TestClient(create_app(config, sms=SentTexts())) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def texts(client) -> SentTexts:
+    return client.app.state.sms
 
 
 def login(client: TestClient, username: str, password: str) -> dict:

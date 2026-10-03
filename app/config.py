@@ -22,6 +22,17 @@ class Settings:
     max_future_bookings: int = 2
     signups_per_address: int = 5
     signup_window_minutes: int = 60
+    # Where a text message is posted: a provider's URL, or "console" to print it
+    # (development only). No default - a server that cannot send codes cannot
+    # sign anyone in, and must say so at startup, not at the first sign-in.
+    sms_url: str = "console"
+    sms_token: str = ""
+    shop_brand: str = "TomGoldin"
+    otp_ttl_seconds: int = 300
+    otp_attempts: int = 3
+    otp_resend_seconds: int = 60
+    otp_per_phone_per_hour: int = 5
+    otp_per_address_per_hour: int = 20
     # Empty: a backups folder next to the database.
     backup_dir: str = ""
     backups_kept: int = 10
@@ -38,7 +49,20 @@ class Settings:
             # No default. A default signing key is a key everyone who has read
             # this repository knows.
             raise RuntimeError("SECRET_KEY must be set to at least 32 characters. See .env.example.")
+        sms_url = os.environ.get("SMS_URL", "")
+        if not sms_url:
+            raise RuntimeError(
+                "SMS_URL must be set: a provider's URL, or console for development. See .env.example."
+            )
         return cls(
+            sms_url=sms_url,
+            sms_token=os.environ.get("SMS_TOKEN", ""),
+            shop_brand=os.environ.get("SHOP_BRAND", "TomGoldin"),
+            otp_ttl_seconds=int(os.environ.get("OTP_TTL_SECONDS", "300")),
+            otp_attempts=int(os.environ.get("OTP_ATTEMPTS", "3")),
+            otp_resend_seconds=int(os.environ.get("OTP_RESEND_SECONDS", "60")),
+            otp_per_phone_per_hour=int(os.environ.get("OTP_PER_PHONE_PER_HOUR", "5")),
+            otp_per_address_per_hour=int(os.environ.get("OTP_PER_ADDRESS_PER_HOUR", "20")),
             database_url=os.environ.get("DATABASE_URL", "sqlite:///./barber.db"),
             secret_key=secret,
             shop_tz=ZoneInfo(os.environ.get("SHOP_TZ", "Asia/Jerusalem")),

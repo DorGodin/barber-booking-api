@@ -9,10 +9,15 @@ from app.config import Settings
 from app.errors import DomainError
 from app.models import RevokedToken, User
 from app.security import read_token
+from app.sms import SmsSender
 
 
 def settings(request: Request) -> Settings:
     return request.app.state.settings
+
+
+def sms(request: Request) -> SmsSender:
+    return request.app.state.sms
 
 
 def db(request: Request) -> Iterator[Session]:
