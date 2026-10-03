@@ -8,7 +8,7 @@
   :root { --ink:#111; --mut:#5c574d; --line:#dedad2; --bg:#fff; --gold:#8a6a1f; }
   * { box-sizing: border-box; }
   body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background:var(--bg); color:var(--ink); line-height:1.7; }
-  header { text-align:center; padding:24px 16px 8px; border-bottom:2px dashed var(--ink); max-width:760px; margin:0 auto; }
+  header { text-align:center; padding:24px 16px 0; max-width:760px; margin:0 auto; }
   header h1 { margin:0; font-size:22px; }
   header p { margin:4px 0 0; color:var(--gold); font-weight:600; }
   main { max-width:760px; margin:20px auto; padding:0 16px; }
@@ -19,6 +19,16 @@
   a:focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
   .muted { color:var(--mut); font-size:14px; }
   [dir="ltr"] { unicode-bidi:isolate; }
+  /* The same cut line as the booking page, above the content and at its foot. */
+  .cut { display:flex; align-items:center; gap:6px; max-width:760px; margin:8px auto 14px; padding:0 16px; }
+  .cut span { flex:1; border-top:2px dashed var(--ink); }
+  .cut svg { width:18px; height:18px; fill:none; stroke:var(--ink); stroke-width:1.8; transform:scaleX(-1); animation:snip 1.6s ease-in-out infinite; }
+  @keyframes snip { 50% { transform:scaleX(-1) rotate(-14deg); } }
+  @media (prefers-reduced-motion: reduce) { .cut svg { animation:none; } }
+  footer { max-width:760px; margin:24px auto; text-align:center; font-size:14px; }
+  footer .legal { display:flex; justify-content:center; align-items:center; gap:12px; flex-wrap:wrap; }
+  footer .legal a { display:inline-flex; align-items:center; min-height:44px; }
+  footer .snips { width:16px; height:16px; fill:none; stroke:var(--ink); stroke-width:1.8; transform:scaleX(-1); }
 </style>
 </head>
 <body>
@@ -26,6 +36,7 @@
   <h1>מדיניות פרטיות</h1>
   <p><span lang="en" dir="ltr">{{shop_brand}}</span>{{shop_address_line}}</p>
 </header>
+<div class="cut" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.5 8.5L20 18M8.5 15.5L20 6"/></svg><span></span></div>
 <main>
   <section data-testid="what">
     <h2>איזה מידע נשמר</h2>
@@ -67,5 +78,13 @@
   <p class="muted">עודכן לאחרונה: {{updated}}</p>
   <p><a href="/">חזרה לקביעת תור</a></p>
 </main>
+<footer>
+  <div class="cut" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.5 8.5L20 18M8.5 15.5L20 6"/></svg><span></span></div>
+  <nav class="legal" aria-label="מידע על האתר">
+    <a href="/accessibility" data-testid="accessibility-link">הצהרת נגישות</a>
+    <svg class="snips" data-testid="legal-scissors" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.5 8.5L20 18M8.5 15.5L20 6"/></svg>
+    <a href="/privacy" data-testid="privacy-link">מדיניות פרטיות</a>
+  </nav>
+</footer>
 </body>
 </html>

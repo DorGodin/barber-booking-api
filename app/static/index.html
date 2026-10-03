@@ -497,6 +497,8 @@ const otp = { name: "", phone: "", rejected: null, lockedOut: false, timer: null
 function showCodeStep(last4, waitSeconds) {
   $("code-request-form").hidden = true;
   $("code-form").hidden = false;
+  // Under the code there is nothing else to do: no password sign-in.
+  $("password-sign-in").hidden = true;
   $("code-sent-to").textContent = `שלחנו קוד בן 4 ספרות למספר שמסתיים ב־${last4}`;
   $("code").value = "";
   setCodeState(null);
@@ -584,6 +586,7 @@ function resetCodeSignIn() {
   Object.assign(otp, { name: "", phone: "", rejected: null, lockedOut: false });
   $("code-form").hidden = true;
   $("code-request-form").hidden = false;
+  $("password-sign-in").hidden = false;
   for (const id of ["code-request-error", "code-error", "code-locked-hint"]) $(id).hidden = true;
   $("code-request-form").reset();
   $("code").value = "";
@@ -1206,6 +1209,7 @@ $("change-phone").addEventListener("click", () => {
   clearInterval(otp.timer);
   $("code-form").hidden = true;
   $("code-request-form").hidden = false;
+  $("password-sign-in").hidden = false;
   $("phone").focus();
 });
 $("login-form").addEventListener("submit", (e) => {

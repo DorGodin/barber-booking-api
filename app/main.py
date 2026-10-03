@@ -192,6 +192,7 @@ def create_app(config: Settings | None = None, sms: SmsSender | None = None) -> 
         """The accessibility statement Israeli law asks of a public site, with the
         shop's own contact and premises from its settings - escaped, they are text."""
         values = {
+            "shop_brand": identity.brand,
             "contact_name": config.accessibility_contact_name,
             "contact_phone": config.accessibility_contact_phone,
             "contact_email": config.accessibility_contact_email,
