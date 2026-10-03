@@ -4,6 +4,8 @@ import os
 from dataclasses import dataclass
 from zoneinfo import ZoneInfo
 
+from app.identity import Identity, identity_from
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -28,6 +30,11 @@ class Settings:
     sms_url: str = "console"
     sms_token: str = ""
     shop_brand: str = "TomGoldin"
+    # The shop's tagline, address, links and pictures (app/identity.py). None:
+    # the brand alone, as in the tests that do not need the rest.
+    identity: Identity | None = None
+    # Empty: a media folder next to the database, for the shop's pictures.
+    media_dir: str = ""
     otp_ttl_seconds: int = 300
     otp_attempts: int = 3
     otp_resend_seconds: int = 60
@@ -58,6 +65,8 @@ class Settings:
             sms_url=sms_url,
             sms_token=os.environ.get("SMS_TOKEN", ""),
             shop_brand=os.environ.get("SHOP_BRAND", "TomGoldin"),
+            identity=identity_from(dict(os.environ), os.environ.get("SHOP_BRAND", "TomGoldin")),
+            media_dir=os.environ.get("MEDIA_DIR", ""),
             otp_ttl_seconds=int(os.environ.get("OTP_TTL_SECONDS", "300")),
             otp_attempts=int(os.environ.get("OTP_ATTEMPTS", "3")),
             otp_resend_seconds=int(os.environ.get("OTP_RESEND_SECONDS", "60")),

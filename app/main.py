@@ -9,12 +9,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 from app import backup
 from app.config import Settings
 from app.db import IMMEDIATE, make_engine, make_sessionmaker
-from app.errors import DomainError, domain_error_handler
+from app.errors import DomainError, domain_error_handler, not_found
+from app.identity import IMAGE_TYPES, header_html, identity_from, media_file, under_brand
 from app.migrate import migrate
 from app.routers import auth, barbers, bookings, services
 from app.seed import seed_if_empty
@@ -59,7 +60,8 @@ def page_policy(html: str) -> str:
         f"script-src {hashes('script')}; "
         f"style-src {hashes('style')}; "
         # The select's arrow is an inline SVG.
-        "img-src data:; "
+        # The shop's own pictures, served by this server under /media.
+        "img-src 'self' data:; "
         "connect-src 'self'; "
         "form-action 'none'; base-uri 'none'; frame-ancestors 'none'"
     )
@@ -109,6 +111,12 @@ def prepare_database(engine, make_session, config: Settings) -> None:
         seed_if_empty(session, config)
 
 
+def _media_next_to(database_url: str) -> Path:
+    if database_url.startswith("sqlite:///"):
+        return Path(database_url.removeprefix("sqlite:///")).parent / "media"
+    return Path("media")
+
+
 def create_app(config: Settings | None = None, sms: SmsSender | None = None) -> FastAPI:
     config = config or Settings.from_env()
     engine = make_engine(config.database_url)
@@ -121,6 +129,8 @@ def create_app(config: Settings | None = None, sms: SmsSender | None = None) -> 
 
     app = FastAPI(title="Barber Booking API", version="1.0.0", lifespan=lifespan)
     app.state.settings = config
+    identity = config.identity or identity_from({}, config.shop_brand)
+    media_dir = Path(config.media_dir) if config.media_dir else _media_next_to(config.database_url)
     app.state.sms = sms or sender_from(config.sms_url, config.sms_token)
     app.state.sessionmaker = make_sessionmaker(engine)
     app.add_exception_handler(DomainError, domain_error_handler)
@@ -141,6 +151,9 @@ def create_app(config: Settings | None = None, sms: SmsSender | None = None) -> 
         """The shop's own clock and rules, for a client that must not guess them.
         A browser in another time zone would otherwise compute a different today."""
         return {
+            "brand": identity.brand,
+            "under_brand": under_brand(identity),
+            "links": identity.links,
             "timezone": config.shop_tz.key,
             "today": datetime.now(UTC).astimezone(config.shop_tz).date().isoformat(),
             "booking_window_days": config.booking_window_days,
@@ -153,8 +166,24 @@ def create_app(config: Settings | None = None, sms: SmsSender | None = None) -> 
         # Read on every request, and hashed from the same bytes it serves: a
         # policy computed once at startup would block the page the moment the
         # file changed under a running server.
-        html = PAGE.read_text(encoding="utf-8")
+        html = (
+            PAGE.read_text(encoding="utf-8")
+            .replace("{{shop_header}}", header_html(identity))
+            .replace("{{shop_title}}", html_text.escape(f"{identity.brand} {identity.tagline.title()}"))
+        )
         return HTMLResponse(html, headers={"Content-Security-Policy": page_policy(html)})
+
+    @app.get("/media/{name}", include_in_schema=False)
+    def media(name: str):
+        """The shop's cover and profile pictures - those two files, nothing else."""
+        path = media_file(media_dir, identity, name)
+        if path is None:
+            raise not_found("picture")
+        return FileResponse(
+            path,
+            media_type=IMAGE_TYPES[path.suffix.lstrip(".").lower()],
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
 
     @app.get("/accessibility", include_in_schema=False)
     def accessibility_statement():

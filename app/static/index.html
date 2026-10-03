@@ -3,18 +3,45 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>תורים למספרה</title>
+<title>{{shop_title}}</title>
 <style>
-  :root { --ink:#1f2933; --mut:#6b7280; --line:#e4e7eb; --bg:#f6f5f2; --brand:#1d4e5f; --ok:#0e7c66; --bad:#b4232c; }
+  /* White, black buttons, a dark gold for the line under the brand; the barber
+     pole's red and blue are the only other colours. Every pair passes WCAG AA. */
+  :root { --ink:#111; --mut:#6b655a; --line:#dedad2; --bg:#fff; --brand:#111; --gold:#8a6a1f; --ok:#1f5a2c; --bad:#a8323a; --pole-red:#a8323a; --pole-blue:#2f4a7a; --pole:12px; }
+  @media (min-width: 761px) { :root { --pole:22px; } }
   * { box-sizing: border-box; }
   /* An element's own display rule beats the browser's [hidden] rule, so a
      hidden grid or flex box stays on screen. This puts hidden back in charge. */
   [hidden] { display: none !important; }
   body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background:var(--bg); color:var(--ink); }
-  header { background:var(--brand); color:#fff; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; }
-  header h1 { margin:0; font-size:20px; white-space:nowrap; }
+  /* A barber pole down each side, turning in opposite directions. Decoration:
+     hidden from screen readers, and still for anyone who asked for less motion. */
+  .pole { position:fixed; top:0; bottom:0; width:var(--pole); z-index:10; pointer-events:none;
+    background:repeating-linear-gradient(-45deg, var(--pole-red) 0 7px, #fff 7px 10px, var(--pole-blue) 10px 17px, #fff 17px 20px);
+    animation:pole 2.6s linear infinite; }
+  .pole.right { right:0; border-left:2px solid var(--ink); }
+  .pole.left { left:0; border-right:2px solid var(--ink); animation-direction:reverse; }
+  @keyframes pole { to { background-position:0 28px; } }
+  body { padding:0 calc(var(--pole) + 2px); }
+  header { position:relative; text-align:center; padding:0 16px 4px; }
+  header .cover { display:block; width:calc(100% + 32px); margin:0 -16px; height:150px; object-fit:cover; }
+  header .profile { display:block; width:76px; height:76px; border-radius:50%; object-fit:cover; border:3px solid #fff; margin:-38px auto 0; position:relative; }
+  header .brand { margin:14px 0 0; font-size:30px; line-height:1; letter-spacing:.5px; }
+  header .tagline { margin:4px 0 0; font-size:11px; font-weight:700; letter-spacing:5px; }
+  header .since { margin:4px 0 0; font-size:13px; font-weight:600; color:var(--gold); }
+  header .actions { display:flex; justify-content:center; gap:10px; margin-top:10px; }
+  header .action { width:44px; height:44px; border-radius:50%; border:1.5px solid var(--ink); display:flex; align-items:center; justify-content:center; color:var(--ink); }
+  header .action svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .cut { display:flex; align-items:center; gap:6px; max-width:1000px; margin:8px auto 14px; padding:0 16px; }
+  .cut span { flex:1; border-top:2px dashed var(--ink); }
+  .cut svg { width:18px; height:18px; fill:none; stroke:var(--ink); stroke-width:1.8; transform:scaleX(-1); transform-origin:center; animation:snip 1.6s ease-in-out infinite; }
+  @keyframes snip { 50% { transform:scaleX(-1) rotate(-14deg); } }
+  @media (prefers-reduced-motion: reduce) { .pole, .cut svg { animation:none; } }
+  .bar { display:flex; justify-content:flex-end; align-items:center; gap:8px; max-width:1000px; margin:0 auto; padding:8px 16px 0; min-height:44px; }
+  /* Only when someone is signed in: signed out, it was an empty strip over the cover. */
+  .bar:has(> [data-testid="whoami"][hidden]) { display:none; }
   [data-testid="whoami"] { display:flex; align-items:center; gap:8px; text-align:left; }
-  header button { background:transparent; color:#fff; border:1px solid #fff8; }
+  .bar button { background:#fff; color:var(--ink); border:1.5px solid var(--ink); }
   main { max-width:1000px; margin:24px auto; padding:0 16px; }
   /* minmax(0, 1fr), not 1fr: a 1fr track grows to its widest content, so one
      wide table pushed the whole column past the edge of a phone. */
@@ -122,7 +149,10 @@
     [data-testid="display-name"] { font-size:13px; }
     .owner-nav a { font-size:13px; white-space:nowrap; padding:0 4px; }
   }
-  @media (max-width: 760px) { [data-section] { scroll-margin-top:72px; } }
+  /* On a phone the owner's menu stays on top. Whatever the page scrolls to - a
+     section from the menu, a field the keyboard reaches - lands below it, never
+     under it (WCAG 2.4.11, focus not obscured). */
+  @media (max-width: 760px) { html { scroll-padding-top:72px; } [data-section] { scroll-margin-top:72px; } }
   footer { max-width:1000px; margin:0 auto 24px; padding:0 16px; font-size:14px; }
   footer a { color:var(--brand); display:inline-flex; align-items:center; min-height:44px; }
   .moving { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:12px; padding:8px 12px; border:1px solid var(--brand); border-radius:6px; }
@@ -132,13 +162,16 @@
 </style>
 </head>
 <body>
-<header>
-  <h1>✂ תורים למספרה</h1>
+<div class="pole right" aria-hidden="true"></div>
+<div class="pole left" aria-hidden="true"></div>
+<div class="bar">
   <div data-testid="whoami" hidden>
     <span data-testid="display-name"></span>
     <button data-testid="logout" type="button">יציאה</button>
   </div>
-</header>
+</div>
+<header>{{shop_header}}</header>
+<div class="cut" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.5 8.5L20 18M8.5 15.5L20 6"/></svg><span></span></div>
 
 <main>
   <section class="auth" data-testid="auth">
@@ -596,6 +629,9 @@ async function start() {
   $("auth").hidden = true;
   $("app").hidden = false;
   $("whoami").hidden = false;
+  // A new screen starts at its top. The sign-in form sits low on a phone, and
+  // the screen after it opened scrolled to where the form had been.
+  window.scrollTo(0, 0);
   $("display-name").textContent = `${isolate(me.display_name)} · ${ROLE[me.role]}`;
 
   fillBarberChoice();

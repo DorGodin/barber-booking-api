@@ -82,6 +82,14 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **`aria-busy` on the app section is true while the page fetches** and false once the
   screen is current. Screen readers use it, and so do the outside UI tests — keep it
   accurate when adding anything that fetches.
+- **The shop's header is written into the page by the server** (`app/identity.py`), escaped:
+  the brand, the line under it, a button for each way to reach the shop that is set, and the
+  shop's own cover and profile pictures, served from `/media` - only those two files. A link
+  must be `https://` and a phone Israeli, or the server refuses to start, naming the setting.
+- **The poles, the scissors and every icon are decoration**: `aria-hidden`, and still under
+  `prefers-reduced-motion`. Each contact button has a Hebrew name of its own.
+- **A new screen starts at its top**, and on a phone nothing the page scrolls to may land under
+  the owner's menu (`scroll-padding-top`, WCAG 2.4.11).
 - **The owner books from the same panel, with a name field** (`guest-field`); a barber gets
   no booking panel. **The service choice offers active services only** - the owner's list
   holds withdrawn ones to manage, and offering one made the times fail and replace the
