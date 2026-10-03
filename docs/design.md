@@ -69,6 +69,8 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
   opens on the first free day of the month when today has none. Counts come from
   `GET /barbers/{id}/days?month=YYYY-MM&service_id=…`, computed by the same rule as the day's
   own times, so a day called free always has a time.
+- **Times** (approved 2026-10-03): pills, four to a row on a phone, still 44px tall for a
+  finger.
 - **Greeting** (approved 2026-10-03): a customer is greeted `שלום` and their first name; the
   account keeps the full name. The staff keep their name and role (`· בעלים`, `· ספר`).
 - **Booked**: the popup's band is black, like the page's buttons; only a refusal is coloured,

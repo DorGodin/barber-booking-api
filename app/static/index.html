@@ -100,8 +100,11 @@
   table.cal td[aria-selected="true"] > span { background:var(--ink); border-color:var(--ink); color:#fff; }
   table.cal td[aria-selected="true"] > span::after { background:#fff; }
   table.cal td:focus-visible { outline:3px solid var(--ink); outline-offset:-1px; border-radius:10px; }
+  /* The times as pills - four to a row on a phone, where three rows of wide
+     boxes made a long scroll (approved 2026-10-03). */
   .slots { display:grid; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap:8px; margin:12px 0; }
-  .slots button { background:#fff; color:var(--brand); padding:8px 0; direction:ltr; }
+  @media (max-width: 760px) { .slots { grid-template-columns: repeat(4, minmax(0, 1fr)); gap:6px; } }
+  .slots button { background:#fff; color:var(--brand); padding:8px 0; direction:ltr; border-radius:999px; font-size:14px; }
   .slots button[aria-checked="true"] { background:var(--brand); color:#fff; }
   /* One visible ring for every engine's focus, offset so it shows on a dark
      button as well as a light one. A keyboard user has to see where they are. */
