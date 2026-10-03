@@ -59,6 +59,16 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
 - **Refusal window**: a black band with the reason (`השעה כבר תפוסה`), the Hebrew sentence,
   and `בחירת שעה אחרת`.
 - **Nothing booked**: a chair icon, `עוד אין תורים`, `הכיסא מחכה לך`.
+- **The month's calendar** (approved 2026-10-03, replaces the date field): one month, Sunday
+  first, with the previous and next month buttons - only inside the booking window. A day with
+  a free time is framed and has a gold dot; a full day says `מלא`; a day the barber does not
+  work, or outside the window, is struck through. Only a free day can be chosen; the chosen day
+  is black. A screen reader hears each day's date and its state - `7 שעות פנויות`, `מלא`,
+  `הספר לא עובד ביום הזה`, `לא ניתן לקבוע`. The keyboard follows the WAI-ARIA date picker
+  (arrows, left is the next day; Page Up/Down a month; Enter or Space chooses). The screen
+  opens on the first free day of the month when today has none. Counts come from
+  `GET /barbers/{id}/days?month=YYYY-MM&service_id=…`, computed by the same rule as the day's
+  own times, so a day called free always has a time.
 - **Greeting** (approved 2026-10-03): a customer is greeted `שלום` and their first name; the
   account keeps the full name. The staff keep their name and role (`· בעלים`, `· ספר`).
 - **Booked**: the popup's band is black, like the page's buttons; only a refusal is coloured,

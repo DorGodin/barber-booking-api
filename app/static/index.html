@@ -78,6 +78,28 @@
   button { font:inherit; font-size:14px; padding:8px 14px; border-radius:6px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; }
   button:disabled { opacity:.5; cursor:wait; }
   button.ghost { background:#fff; color:var(--brand); }
+  /* The month: a day with a free time has a gold dot; a full one says so; a day
+     the barber does not work, or out of the booking window, is greyed and
+     cannot be chosen. The chosen day is black. 44px tall; as wide as a seventh
+     of the panel - 31px on the narrowest phone, above WCAG's 24px. */
+  .calendar .label { display:block; font-size:13px; color:var(--mut); }
+  .cal-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:4px 0 6px; }
+  .cal-head h3 { margin:0; font-size:15px; color:var(--ink); }
+  .cal-nav { width:44px; height:44px; padding:0; display:flex; align-items:center; justify-content:center; }
+  .cal-nav svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  table.cal { width:100%; border-collapse:collapse; table-layout:fixed; }
+  table.cal th { font-size:12px; font-weight:600; color:var(--mut); padding:0 0 6px; }
+  table.cal td { height:44px; padding:2px; text-align:center; color:var(--mut); }
+  table.cal td > span { display:flex; flex-direction:column; align-items:center; justify-content:center; height:40px; border:1.5px solid transparent; border-radius:8px; font-size:15px; line-height:1; }
+  table.cal td small { font-size:10px; margin-top:3px; }
+  table.cal td.free { color:var(--ink); cursor:pointer; }
+  table.cal td.free > span { border-color:var(--line); font-weight:700; }
+  table.cal td.free > span::after { content:""; width:5px; height:5px; margin-top:3px; border-radius:50%; background:var(--gold); }
+  table.cal td.full, table.cal td.closed, table.cal td.out { cursor:default; }
+  table.cal td.out > span, table.cal td.closed > span { text-decoration:line-through; }
+  table.cal td[aria-selected="true"] > span { background:var(--ink); border-color:var(--ink); color:#fff; }
+  table.cal td[aria-selected="true"] > span::after { background:#fff; }
+  table.cal td:focus-visible { outline:3px solid var(--ink); outline-offset:-1px; border-radius:10px; }
   .slots { display:grid; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap:8px; margin:12px 0; }
   .slots button { background:#fff; color:var(--brand); padding:8px 0; direction:ltr; }
   .slots button[aria-checked="true"] { background:var(--brand); color:#fff; }
@@ -275,7 +297,21 @@
             <button data-testid="stop-moving" type="button" class="ghost">השארת המועד הקיים</button>
           </div>
           <div class="field"><label for="service">שירות</label><select id="service" data-testid="service"></select></div>
-          <div class="field"><label for="date">תאריך</label><input id="date" type="date" data-testid="date"></div>
+          <div class="field calendar" data-testid="calendar">
+            <span class="label" id="date-label">תאריך</span>
+            <input type="hidden" id="date" data-testid="date">
+            <div class="cal-head">
+              <button type="button" class="ghost cal-nav" data-testid="prev-month" aria-label="החודש הקודם"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+              <h3 id="month-title" data-testid="month-title" aria-live="polite"></h3>
+              <button type="button" class="ghost cal-nav" data-testid="next-month" aria-label="החודש הבא"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+            </div>
+            <table class="cal" role="grid" aria-labelledby="date-label month-title" data-testid="days">
+              <thead><tr>
+                <th scope="col" abbr="ראשון">א׳</th><th scope="col" abbr="שני">ב׳</th><th scope="col" abbr="שלישי">ג׳</th><th scope="col" abbr="רביעי">ד׳</th><th scope="col" abbr="חמישי">ה׳</th><th scope="col" abbr="שישי">ו׳</th><th scope="col" abbr="שבת">ש׳</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
           <div class="slots" data-testid="slots" role="radiogroup" aria-label="שעות פנויות"></div>
           <div class="field" data-testid="guest-field" hidden><label for="guest-name">שם הלקוח</label><input id="guest-name" data-testid="guest-name" maxlength="80" autocomplete="off"></div>
           <p class="muted" data-testid="no-slots" hidden>אין שעות פנויות ביום הזה.</p>
@@ -684,9 +720,8 @@ async function start() {
 
   fillBarberChoice();
   fillServiceChoice();
-  $("date").min = shop.today;
-  $("date").max = addDays(shop.today, shop.booking_window_days);
   $("date").value = shop.today;
+  shownMonth = shop.today.slice(0, 7);
 
   const customer = me.role === "customer";
   // The owner books too - by name, for whoever phoned or walked in - into the
@@ -698,10 +733,14 @@ async function start() {
   $("bookings-title").textContent = { customer: "התורים שלי", barber: "היומן שלי", owner: "תורים" }[me.role];
   say("", "ok");
   await refresh();
+  // Today may be closed, or full: the screen opens on the first day of the
+  // month that has a time to offer.
+  const firstFree = Object.values(monthDays).find((d) => d.free > 0);
+  if (firstFree && !(monthDays[$("date").value]?.free > 0)) await chooseDay(firstFree.date);
 }
 
 async function refresh() {
-  await Promise.all([refreshSlots(), refreshBookings(), refreshOwner()]);
+  await Promise.all([refreshSlots(), refreshDays(), refreshBookings(), refreshOwner()]);
 }
 
 // ---- The owner's screen -------------------------------------------------------
@@ -1007,6 +1046,121 @@ function select(slot, button) {
   $("confirm").hidden = false;
 }
 
+// ---- The month's calendar ------------------------------------------------------
+// The chosen day lives in the hidden #date, as it did in the date field; the
+// calendar shows one month and sets it. A grid, as in the WAI-ARIA date picker:
+// one Tab stop, the arrows move between days - left is the next day, the page
+// reads right to left - Page Up and Page Down change the month, Enter or Space
+// chooses.
+let shownMonth = null, monthDays = {};
+const lastDay = () => addDays(shop.today, shop.booking_window_days);
+function addMonths(month, n) {
+  const [y, m] = month.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + n, 1));
+  return d.toISOString().slice(0, 7);
+}
+const monthTitle = (month) => new Date(`${month}-01T00:00:00Z`).toLocaleDateString("he-IL", { month: "long", year: "numeric", timeZone: "UTC" });
+
+async function refreshDays(focusDay = null) {
+  const barber = $("barber").value, service = $("service").value;
+  if (!me || me.role === "barber" || !barber || !service || !shownMonth) return;
+  const params = new URLSearchParams({ month: shownMonth, service_id: service });
+  if (moving) params.set("moving", moving.id);
+  const current = ticket("days");
+  monthDays = {};
+  const left = barberOf(barber).active === false;
+  const r = left ? null : await api("GET", `/barbers/${barber}/days?${params}`);
+  if (!current()) return;
+  if (r && r.ok) for (const d of r.data.days) monthDays[d.date] = d;
+  const keep = focusDay || ($("days").contains(document.activeElement) ? document.activeElement.dataset.date : null);
+  drawMonth();
+  if (keep) dayCell(keep)?.focus();
+}
+
+function showMonth(month, focusDay = null) {
+  if (month < shop.today.slice(0, 7) || month > lastDay().slice(0, 7)) return;
+  shownMonth = month;
+  return busyWhile(() => refreshDays(focusDay));
+}
+
+const dayCell = (iso) => $("days").querySelector(`td[data-date="${iso}"]`);
+const DAY_STATE = { free: (d) => `${d.free === 1 ? "שעה אחת פנויה" : `${d.free} שעות פנויות`}`, full: () => "מלא", closed: () => "הספר לא עובד ביום הזה", out: () => "לא ניתן לקבוע" };
+
+function drawMonth() {
+  $("month-title").textContent = monthTitle(shownMonth);
+  $("prev-month").disabled = shownMonth <= shop.today.slice(0, 7);
+  $("next-month").disabled = shownMonth >= lastDay().slice(0, 7);
+  const [y, m] = shownMonth.split("-").map(Number);
+  const first = new Date(Date.UTC(y, m - 1, 1));
+  const length = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const rows = [];
+  let row = document.createElement("tr");
+  for (let i = 0; i < first.getUTCDay(); i++) row.append(document.createElement("td"));
+  for (let n = 1; n <= length; n++) {
+    const iso = `${shownMonth}-${String(n).padStart(2, "0")}`;
+    const d = monthDays[iso];
+    const state = !d ? "out" : !d.works ? "closed" : d.free === 0 ? "full" : "free";
+    const cell = document.createElement("td");
+    cell.className = state;
+    cell.dataset.date = iso;
+    cell.dataset.testid = "day";
+    cell.tabIndex = -1;
+    cell.setAttribute("aria-selected", String(iso === $("date").value));
+    if (state !== "free") cell.setAttribute("aria-disabled", "true");
+    cell.setAttribute("aria-label", `${dayLabel(iso)}, ${DAY_STATE[state](d)}`);
+    const face = document.createElement("span");
+    face.textContent = String(n);
+    if (state === "full") face.append(Object.assign(document.createElement("small"), { textContent: "מלא" }));
+    cell.append(face);
+    cell.addEventListener("click", () => chooseDay(iso));
+    row.append(cell);
+    if (row.children.length === 7) { rows.push(row); row = document.createElement("tr"); }
+  }
+  if (row.children.length) rows.push(row);
+  $("days").tBodies[0].replaceChildren(...rows);
+  const stop = dayCell($("date").value) || $("days").querySelector("td.free") || $("days").querySelector("td[data-date]");
+  stop.tabIndex = 0;
+}
+
+function chooseDay(iso) {
+  const cell = dayCell(iso);
+  if (!cell || cell.getAttribute("aria-disabled") === "true") return;
+  $("date").value = iso;
+  for (const other of $("days").querySelectorAll("td[data-date]")) {
+    other.setAttribute("aria-selected", String(other === cell));
+    other.tabIndex = other === cell ? 0 : -1;
+  }
+  return busyWhile(refresh);
+}
+
+const DAY_STEP = { ArrowLeft: 1, ArrowRight: -1, ArrowDown: 7, ArrowUp: -7 };
+$("days").addEventListener("keydown", (e) => {
+  const from = document.activeElement.dataset && document.activeElement.dataset.date;
+  if (!from) return;
+  let to = null;
+  if (e.key in DAY_STEP) to = addDays(from, DAY_STEP[e.key]);
+  else if (e.key === "Home") to = addDays(from, -new Date(`${from}T00:00:00Z`).getUTCDay());
+  else if (e.key === "End") to = addDays(from, 6 - new Date(`${from}T00:00:00Z`).getUTCDay());
+  else if (e.key === "PageUp" || e.key === "PageDown") {
+    e.preventDefault();
+    const month = addMonths(shownMonth, e.key === "PageUp" ? -1 : 1);
+    const day = Math.min(Number(from.slice(8)), new Date(Date.UTC(...month.split("-").map(Number), 0)).getUTCDate());
+    showMonth(month, `${month}-${String(day).padStart(2, "0")}`);
+    return;
+  } else if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    chooseDay(from);
+    return;
+  }
+  if (to === null) return;
+  e.preventDefault();
+  if (to.slice(0, 7) !== shownMonth) { showMonth(to.slice(0, 7), to); return; }
+  document.activeElement.tabIndex = -1;
+  const cell = dayCell(to);
+  cell.tabIndex = 0;
+  cell.focus();
+});
+
 // The arrows move through the times, and moving chooses - as in any radio
 // group. The page reads right to left, so the left arrow is the next time.
 const STEP = { ArrowLeft: 1, ArrowDown: 1, ArrowRight: -1, ArrowUp: -1 };
@@ -1046,7 +1200,7 @@ function refused(r, slot, failedTitle, context = {}) {
   const reason = explain(r, { time: clock(slot.start_local), ...context });
   say(reason, "error");
   const taken = r.data && r.data.code === "slot_taken";
-  afterPopup = () => $("slots").querySelector('[tabindex="0"]') || $("date");
+  afterPopup = () => $("slots").querySelector('[tabindex="0"]') || $("days").querySelector('td[tabindex="0"]');
   popup(taken ? "השעה כבר תפוסה" : failedTitle, reason, "error");
 }
 
@@ -1115,6 +1269,7 @@ function startMoving(b) {
     $("service").value = b.service_id;
     $("barber").disabled = $("service").disabled = true;
     $("date").value = b.start_local.slice(0, 10);
+    shownMonth = $("date").value.slice(0, 7);
     $("left-title").textContent = "שינוי מועד";
     $("moving-text").textContent = `שינוי מועד לתור של ${dayLabel(b.start_local)} ${clock(b.start_local)} · ${isolate(b.service_name)} אצל ${isolate(b.barber_name)}. בוחרים מועד חדש:`;
     $("moving").hidden = false;
@@ -1272,7 +1427,9 @@ $("barber-active-toggle").addEventListener("click", toggleBarberActive);
 $("add-dayoff").addEventListener("click", addDayOff);
 $("add-barber").addEventListener("click", addBarber);
 $("add-service").addEventListener("click", addService);
-for (const id of ["barber", "service", "date"]) $(id).addEventListener("change", () => busyWhile(refresh));
+for (const id of ["barber", "service"]) $(id).addEventListener("change", () => busyWhile(refresh));
+$("prev-month").addEventListener("click", () => showMonth(addMonths(shownMonth, -1)));
+$("next-month").addEventListener("click", () => showMonth(addMonths(shownMonth, 1)));
 // The slim bar comes in once the brand has gone under where it stands, and
 // leaves when the brand is back.
 new IntersectionObserver(([brand]) =>

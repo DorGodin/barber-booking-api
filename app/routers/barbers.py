@@ -23,7 +23,7 @@ from app.config import Settings
 from app.db import write_lock
 from app.deps import current_user, db, require, settings
 from app.errors import DomainError
-from app.models import BarberHours, TimeOff, User
+from app.models import BarberHours, Service, TimeOff, User
 from app.scheduling import available_starts
 from app.schemas import AccountIn, BarberPatch, HoursIn, TimeOffIn
 from app.security import hash_password
@@ -134,6 +134,31 @@ def remove_time_off(
         session.execute(delete(TimeOff).where(TimeOff.barber_id == barber_id, TimeOff.day == day.isoformat()))
 
 
+def free_starts(
+    session: Session,
+    config: Settings,
+    user: User,
+    barber_id: str,
+    service: Service,
+    day: date,
+    now: datetime,
+    moving: str | None,
+) -> tuple[bool, list[datetime]]:
+    """Whether the barber works that day, and the starts still free on it. One
+    rule for the day's times and the month's counts: a day the calendar calls
+    free always has a time to offer."""
+    window = day_window(session, config, barber_id, day)
+    if window is None:
+        return False, []
+    taken = busy(session, window, barber_id=barber_id, excluding=moving)
+    # A customer is never offered a slot that clashes with their own booking
+    # at another barber - the booking would refuse it.
+    if user.role == "customer":
+        taken += busy(session, window, customer_id=user.id, excluding=moving)
+    duration = timedelta(minutes=service.duration_minutes)
+    return True, available_starts(window, duration, taken, now, latest_start(config, now))
+
+
 @router.get("/barbers/{barber_id}/availability")
 def availability(
     barber_id: str,
@@ -153,18 +178,7 @@ def availability(
     if moving is not None:
         visible_booking_or_404(session, moving, user)
 
-    window = day_window(session, config, barber_id, day)
-    taken = []
-    if window is not None:
-        taken = busy(session, window, barber_id=barber_id, excluding=moving)
-        # A customer is never offered a slot that clashes with their own
-        # booking at another barber - the booking would refuse it.
-        if user.role == "customer":
-            taken += busy(session, window, customer_id=user.id, excluding=moving)
-
-    starts = available_starts(
-        window, timedelta(minutes=service.duration_minutes), taken, now, latest_start(config, now)
-    )
+    _, starts = free_starts(session, config, user, barber_id, service, day, now, moving)
     return {
         "barber_id": barber_id,
         "service_id": service_id,
@@ -173,3 +187,45 @@ def availability(
             {"start": iso_utc(s), "start_local": s.astimezone(config.shop_tz).isoformat()} for s in starts
         ],
     }
+
+
+@router.get("/barbers/{barber_id}/days")
+def days_of_month(
+    barber_id: str,
+    month: str = Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$", description="YYYY-MM, on the shop's calendar"),
+    service_id: str = Query(),
+    moving: str | None = Query(
+        default=None, description="a booking being moved: its own time counts as free"
+    ),
+    user: User = Depends(current_user),
+    session: Session = Depends(db),
+    config: Settings = Depends(settings),
+):
+    """For the month's calendar: each bookable day of the month - from today to
+    the end of the booking window - whether the barber works it, and how many
+    times are free."""
+    bookable_barber_or_error(session, barber_id)
+    service = active_service_or_error(session, service_id)
+    now = datetime.now(UTC)
+    if moving is not None:
+        visible_booking_or_404(session, moving, user)
+
+    year, number = map(int, month.split("-"))
+    first = date(year, number, 1)
+    after = date(year + number // 12, number % 12 + 1, 1)
+    today = now.astimezone(config.shop_tz).date()
+    last = latest_start(config, now).astimezone(config.shop_tz).date()
+    if after <= today:
+        raise DomainError(422, "in_past", f"{month} has already passed")
+    if first > last:
+        raise DomainError(
+            422, "beyond_window", f"bookings open {config.booking_window_days} days ahead, until {last}"
+        )
+
+    days = []
+    day = max(first, today)
+    while day < after and day <= last:
+        works, starts = free_starts(session, config, user, barber_id, service, day, now, moving)
+        days.append({"date": day.isoformat(), "works": works, "free": len(starts)})
+        day += timedelta(days=1)
+    return {"barber_id": barber_id, "service_id": service_id, "month": month, "days": days}
