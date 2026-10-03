@@ -272,7 +272,7 @@
         <div data-testid="book-panel">
           <div class="moving" data-testid="moving" hidden>
             <p data-testid="moving-text" tabindex="-1"></p>
-            <button data-testid="stop-moving" type="button" class="ghost">ביטול ההזזה</button>
+            <button data-testid="stop-moving" type="button" class="ghost">השארת המועד הקיים</button>
           </div>
           <div class="field"><label for="service">שירות</label><select id="service" data-testid="service"></select></div>
           <div class="field"><label for="date">תאריך</label><input id="date" type="date" data-testid="date"></div>
@@ -420,7 +420,7 @@ const FRIENDLY = {
   wrong_code: (_, data) => data.attempts_left > 0 ? `הקוד לא נכון. ${data.attempts_left === 1 ? "נשאר ניסיון אחד" : `נשארו ${data.attempts_left} ניסיונות`}.` : "הקוד לא נכון, והוא ננעל. אפשר לבקש קוד חדש.",
   in_past: () => "השעה הזו כבר עברה.",
   beyond_window: () => `אפשר לקבוע תור עד ${shop.booking_window_days} ימים קדימה.`,
-  late_move: () => `אפשר להזיז תור עד ${shop.move_cutoff_hours} שעות לפני. כדי לשנות עכשיו צריך להתקשר למספרה.`,
+  late_move: () => `אפשר לשנות מועד עד ${shop.move_cutoff_hours} שעות לפני. כדי לשנות עכשיו צריך להתקשר למספרה.`,
   late_cancellation: () => `אפשר לבטל תור עד ${shop.cancel_cutoff_hours} שעות לפני. כדי לבטל עכשיו צריך להתקשר למספרה.`,
   already_cancelled: () => "התור הזה כבר בוטל.",
   already_started: () => "התור הזה כבר התחיל.",
@@ -1115,10 +1115,10 @@ function startMoving(b) {
     $("service").value = b.service_id;
     $("barber").disabled = $("service").disabled = true;
     $("date").value = b.start_local.slice(0, 10);
-    $("left-title").textContent = "הזזת תור";
-    $("moving-text").textContent = `הזזת התור של ${dayLabel(b.start_local)} ${clock(b.start_local)} · ${isolate(b.service_name)} אצל ${isolate(b.barber_name)}. בוחרים שעה חדשה:`;
+    $("left-title").textContent = "שינוי מועד";
+    $("moving-text").textContent = `שינוי מועד לתור של ${dayLabel(b.start_local)} ${clock(b.start_local)} · ${isolate(b.service_name)} אצל ${isolate(b.barber_name)}. בוחרים מועד חדש:`;
     $("moving").hidden = false;
-    $("book").textContent = "הזזת התור";
+    $("book").textContent = "אישור המועד החדש";
     await refresh();
     // On a phone the panel is above the list: the focus - and the screen - go to it.
     $("moving-text").focus();
@@ -1146,9 +1146,9 @@ async function moveSelected() {
     stopMoving();
     say("", "ok");
     afterPopup = () => document.querySelector(`[data-testid="booking-row"][data-id="${r.data.id}"]`);
-    popup("✓ התור הוזז", moved, "ok");
+    popup("✓ המועד עודכן", moved, "ok");
   } else {
-    refused(r, slot, "לא הצלחנו להזיז את התור");
+    refused(r, slot, "לא הצלחנו לשנות את המועד");
   }
   await refresh();
 }
@@ -1187,8 +1187,8 @@ async function refreshBookings() {
       move.type = "button";
       move.className = "ghost";
       move.dataset.testid = "move";
-      move.textContent = "הזזה";
-      move.setAttribute("aria-label", `הזזת התור של ${when.textContent}`);
+      move.textContent = "שינוי מועד";
+      move.setAttribute("aria-label", `שינוי המועד של התור של ${when.textContent}`);
       move.addEventListener("click", () => startMoving(b));
       row.append(move);
     }
