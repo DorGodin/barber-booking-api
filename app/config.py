@@ -78,7 +78,7 @@ class Settings:
             database_url=os.environ.get("DATABASE_URL", "sqlite:///./barber.db"),
             secret_key=secret,
             shop_tz=ZoneInfo(os.environ.get("SHOP_TZ", "Asia/Jerusalem")),
-            booking_window_days=int(os.environ.get("BOOKING_WINDOW_DAYS", "60")),
+            booking_window_days=int(os.environ.get("BOOKING_WINDOW_DAYS", "30")),
             cancel_cutoff_hours=int(os.environ.get("CANCEL_CUTOFF_HOURS", "24")),
             move_cutoff_hours=int(os.environ.get("MOVE_CUTOFF_HOURS", "12")),
             token_hours=int(os.environ.get("TOKEN_HOURS", "12")),

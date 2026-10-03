@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from app.config import Settings
 from app.db import write_lock
 from app.models import BarberHours, Booking, Service, User
-from app.routers.barbers import SHOP_CLOSE, SHOP_OPEN
+from app.routers.barbers import shop_hours
 from app.scheduling import WEEKDAYS, local_instant, parse_hhmm
 from app.security import hash_password
 
@@ -27,10 +27,10 @@ OWNER = ("owner", "בעל המספרה")
 CUSTOMERS = (("customer", "דנה"), ("yael", "יעל"))
 MENU = (("תספורת", 30, 8000), ("סידור זקן", 15, 4000), ("תספורת וזקן", 45, 11000))
 
-# Who works which days. Avi is in every day the shop is open; the others take
-# turns, so each day has a different line-up.
+# Who works which days. Avi is in every day the shop is open - Friday's short
+# day included; the others take turns, so each day has a different line-up.
 BARBERS = (
-    ("barber", "אבי", ("sun", "mon", "tue", "wed", "thu")),
+    ("barber", "אבי", ("sun", "mon", "tue", "wed", "thu", "fri")),
     ("barber.yossi", "יוסי", ("sun", "tue", "thu")),
     ("barber.moran", "מורן", ("mon", "wed")),
     ("barber.ron", "רון", ("sun", "mon", "tue")),
@@ -66,7 +66,6 @@ def _seed_bookings(
 ) -> int:
     """`customers` hands out who holds each booking - two each, the rule's limit."""
     today = datetime.now(UTC).astimezone(config.shop_tz).date()
-    opening, closing = parse_hhmm(SHOP_OPEN), parse_hhmm(SHOP_CLOSE)
     made = 0
     for index, (barber, days) in enumerate(barbers):
         worked, day = 0, today
@@ -75,6 +74,8 @@ def _seed_bookings(
             if WEEKDAYS[day.weekday()] not in days:
                 continue
             worked += 1
+            # Each day its own hours: Friday closes at two.
+            opening, closing = map(parse_hhmm, shop_hours(WEEKDAYS[day.weekday()]))
             start = local_instant(day, opening, config.shop_tz) + timedelta(minutes=30 * index)
             end_of_day = local_instant(day, closing, config.shop_tz)
             while start + timedelta(minutes=service.duration_minutes) <= end_of_day:
@@ -133,7 +134,7 @@ def _seed(session: Session, config: Settings) -> None:
     barbers = []
     for username, name, days in BARBERS:
         barber = _account(session, username, name, "barber", barber_password)
-        hours = {day: ([SHOP_OPEN, SHOP_CLOSE] if day in days else None) for day in WEEKDAYS}
+        hours = {day: (shop_hours(day) if day in days else None) for day in WEEKDAYS}
         session.add(BarberHours(barber_id=barber.id, hours_json=json.dumps(hours)))
         barbers.append((barber, days))
     services = [

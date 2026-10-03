@@ -27,7 +27,7 @@ def times_offered(client, headers, barber_id, service_id, day) -> list[str]:
     return [s["start_local"][11:16] for s in slots]
 
 
-def test_the_shop_is_open_sunday_to_thursday_ten_to_seven(client, owner):
+def test_the_shop_is_open_sunday_to_thursday_ten_to_seven_and_friday_ten_to_two(client, owner):
     created = client.post(
         "/barbers",
         headers=owner,
@@ -35,8 +35,23 @@ def test_the_shop_is_open_sunday_to_thursday_ten_to_seven(client, owner):
     ).json()
     hours = client.get(f"/barbers/{created['id']}/hours", headers=owner).json()["hours"]
 
-    assert {day for day, span in hours.items() if span} == {"sun", "mon", "tue", "wed", "thu"}
-    assert {tuple(span) for span in hours.values() if span} == {("10:00", "19:00")}
+    assert {day: tuple(span) for day, span in hours.items() if span} == {
+        **dict.fromkeys(("sun", "mon", "tue", "wed", "thu"), ("10:00", "19:00")),
+        "fri": ("10:00", "14:00"),
+    }
+    assert hours["sat"] is None
+
+
+def test_on_friday_the_last_time_offered_ends_by_two(client, owner, customer, services):
+    avi = barber_ids(client, owner)["אבי"]
+
+    offered = times_offered(client, customer, avi, services[HAIRCUT]["id"], next_local("fri"))
+
+    assert offered, "the shop is open on Friday"
+    assert min(offered) >= "10:00", f"offered {min(offered)}, before the shop opens"
+    assert (
+        max(offered) == "13:30"
+    ), f"the last 30 minute haircut ending by two starts 13:30, not {max(offered)}"
 
 
 def test_the_seeded_barbers_take_turns(client, owner, customer, services):
@@ -44,7 +59,7 @@ def test_the_seeded_barbers_take_turns(client, owner, customer, services):
     haircut = services[HAIRCUT]["id"]
 
     for _username, name, days in BARBERS:
-        for weekday in ("sun", "mon", "tue", "wed", "thu"):
+        for weekday in ("sun", "mon", "tue", "wed", "thu", "fri"):
             offered = times_offered(client, customer, ids[name], haircut, next_local(weekday))
             if weekday in days:
                 assert offered, f"{name} works {weekday} but offers nothing"

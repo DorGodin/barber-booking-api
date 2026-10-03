@@ -31,14 +31,20 @@ from app.views import barber_view, iso_utc, page
 
 router = APIRouter(tags=["barbers"])
 
-# The shop is open Sunday to Thursday, ten to seven. A new barber starts on
-# those hours; the owner changes them per barber.
+# The shop is open Sunday to Thursday, ten to seven, and Friday ten to two. A
+# new barber starts on those hours; the owner changes them per barber.
 SHOP_DAYS = ("sun", "mon", "tue", "wed", "thu")
 SHOP_OPEN, SHOP_CLOSE = "10:00", "19:00"
-DEFAULT_HOURS = {
-    day: ([SHOP_OPEN, SHOP_CLOSE] if day in SHOP_DAYS else None)
-    for day in ("sun", "mon", "tue", "wed", "thu", "fri", "sat")
-}
+FRIDAY_CLOSE = "14:00"
+
+
+def shop_hours(day: str) -> list[str] | None:
+    if day in SHOP_DAYS:
+        return [SHOP_OPEN, SHOP_CLOSE]
+    return [SHOP_OPEN, FRIDAY_CLOSE] if day == "fri" else None
+
+
+DEFAULT_HOURS = {day: shop_hours(day) for day in ("sun", "mon", "tue", "wed", "thu", "fri", "sat")}
 
 
 @router.get("/barbers")

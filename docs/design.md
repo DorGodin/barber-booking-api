@@ -69,6 +69,12 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
   opens on the first free day of the month when today has none. Counts come from
   `GET /barbers/{id}/days?month=YYYY-MM&service_id=…`, computed by the same rule as the day's
   own times, so a day called free always has a time.
+- **How far ahead** (approved 2026-10-03): a month at most - `BOOKING_WINDOW_DAYS=30` - and
+  never a day already over; the calendar neither offers nor turns to either.
+- **Friday** (approved 2026-10-03): the shop opens Friday ten to two. A new barber starts on
+  Sunday to Thursday 10:00-19:00 and Friday 10:00-14:00; the owner changes it per barber. An
+  existing database keeps each barber's saved hours - the owner opens Friday from the hours
+  table.
 - **Times** (approved 2026-10-03): pills, four to a row on a phone, still 44px tall for a
   finger.
 - **Greeting** (approved 2026-10-03): a customer is greeted `שלום` and their first name; the
