@@ -70,6 +70,11 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
    owner's settings; a button with no value is not shown. Each button has a Hebrew name for a
    screen reader (`וואטסאפ`, `התקשרות`, `אינסטגרם`, `טיקטוק`, `ניווט ב־Waze`). The images are the
    shop's own, supplied by the owner - never copied from the old page.
+   Scrolled, the header shrinks to a **slim bar** at the top - 52px, white as the page, with no
+   line under it, the brand alone - so the round picture slides under it instead of being cut in
+   half. It slides in and out; it never fades, and it stands still for reduced motion. The owner's
+   sticky menu stands under it (approved 2026-10-03; a black top band and a fully sticky header
+   were both turned down - the second took two thirds of the screen above the keyboard).
 2. **Services in categories** (`תספורות`, `זקן וגילוח`, `מיוחדים` - the owner names them), as
    pill tabs; each service a card with its name, a short description, its length and its price,
    or `החל מ־` before a price that can grow. The selected one has a black frame.

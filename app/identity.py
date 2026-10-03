@@ -116,8 +116,11 @@ def header_html(identity: Identity) -> str:
         else ""
     )
     line = under_brand(identity)
+    # The slim bar the brand shrinks to once it has scrolled away. A copy of
+    # the h1, so a screen reader never meets it.
+    mini = f'<div class="mini" lang="en" dir="ltr" aria-hidden="true" data-testid="mini-brand">{e(identity.brand)}</div>'
     return (
-        f'{cover}{profile}<h1 class="brand" lang="en" dir="ltr" data-testid="shop-brand">{e(identity.brand)}</h1>'
+        f'{mini}{cover}{profile}<h1 class="brand" lang="en" dir="ltr" data-testid="shop-brand">{e(identity.brand)}</h1>'
         f'<p class="tagline" lang="en" dir="ltr">{e(identity.tagline)}</p>'
         + (f'<p class="since" data-testid="shop-line">{e(line)}</p>' if line else "")
     )

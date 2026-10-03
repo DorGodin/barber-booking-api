@@ -141,6 +141,14 @@ def test_the_shop_endpoint_tells_a_client_how_to_reach_the_shop(tmp_path, monkey
     assert info["links"]["phone"] == "tel:+972501234567"
 
 
+def test_the_slim_bar_carries_the_brand_and_is_hidden_from_a_screen_reader(tmp_path, monkeypatch):
+    with shop(tmp_path, monkeypatch, {}, brand="Tom & Goldin") as client:
+        page = client.get("/").text
+
+    assert 'aria-hidden="true" data-testid="mini-brand">Tom &amp; Goldin</div>' in page
+    assert page.count('data-testid="mini-brand"') == 1
+
+
 def test_the_tests_default_settings_still_build_a_page(client):
     page = client.get("/").text
 

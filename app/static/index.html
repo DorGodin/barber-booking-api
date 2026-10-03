@@ -29,6 +29,18 @@
   header .brand { margin:14px 0 0; font-size:30px; line-height:1; letter-spacing:.5px; }
   header .tagline { margin:4px 0 0; font-size:11px; font-weight:700; letter-spacing:5px; }
   header .since { margin:4px 0 0; font-size:13px; font-weight:600; color:var(--gold); }
+  /* Once the brand has scrolled away, a slim bar carries its name, and the
+     round picture slides under it instead of being cut in half at the top of
+     the screen. White as the page, no line under it: the apps it is meant to
+     feel like have none. Under the poles, which run the whole height. */
+  .mini { position:fixed; top:0; left:0; right:0; z-index:9; height:52px; display:flex; align-items:center; justify-content:center; background:var(--bg); font-size:20px; font-weight:700; letter-spacing:.5px;
+    visibility:hidden; transform:translateY(-100%); transition:transform .2s, visibility .2s; }
+  /* It slides, it never fades: half see-through, its name would fail contrast. */
+  .mini.on { visibility:visible; transform:none; }
+  @media (prefers-reduced-motion: reduce) { .mini { transition:none; } }
+  /* Whatever the page scrolls to - a field the keyboard reaches, a section -
+     lands below the bar, never under it (WCAG 2.4.11, focus not obscured). */
+  html { scroll-padding-top:64px; }
   .cut { display:flex; align-items:center; gap:6px; max-width:1000px; margin:8px auto 14px; padding:0 16px; }
   .cut span { flex:1; border-top:2px dashed var(--ink); }
   .cut svg { width:18px; height:18px; fill:none; stroke:var(--ink); stroke-width:1.8; transform:scaleX(-1); transform-origin:center; animation:snip 1.6s ease-in-out infinite; }
@@ -144,7 +156,7 @@
   /* The owner's screen is four long sections stacked on a phone. A menu that
      stays on top jumps to each; scroll-margin keeps a section's title from
      landing underneath it. */
-  .owner-nav { position:sticky; top:0; z-index:5; display:flex; gap:8px; margin:0 -16px 16px; padding:8px 16px; background:var(--bg); border-bottom:1px solid var(--line); }
+  .owner-nav { position:sticky; top:52px; z-index:5; display:flex; gap:8px; margin:0 -16px 16px; padding:8px 16px; background:var(--bg); border-bottom:1px solid var(--line); }
   .owner-nav a { flex:1; display:flex; align-items:center; justify-content:center; padding:0 8px; border:1px solid var(--brand); border-radius:6px; background:#fff; color:var(--brand); text-decoration:none; font-size:14px; }
   @media (min-width: 761px) { .owner-nav { display:none; } }
   @media (max-width: 420px) {
@@ -158,6 +170,11 @@
      section from the menu, a field the keyboard reaches - lands below it, never
      under it (WCAG 2.4.11, focus not obscured). */
   @media (max-width: 760px) { html { scroll-padding-top:72px; } [data-section] { scroll-margin-top:72px; } }
+  /* The menu stands under the slim bar: the two together are 113px tall. */
+  @media (max-width: 760px) {
+    html:has([data-testid="owner-nav"]:not([hidden])) { scroll-padding-top:124px; }
+    html:has([data-testid="owner-nav"]:not([hidden])) [data-section] { scroll-margin-top:124px; }
+  }
   /* Opened by the same cut line as the top of the page. */
   footer { max-width:1000px; margin:24px auto; padding:0 0 0; font-size:14px; text-align:center; }
   footer .cut { margin:0 auto 14px; }
@@ -1248,6 +1265,11 @@ $("add-dayoff").addEventListener("click", addDayOff);
 $("add-barber").addEventListener("click", addBarber);
 $("add-service").addEventListener("click", addService);
 for (const id of ["barber", "service", "date"]) $(id).addEventListener("change", () => busyWhile(refresh));
+// The slim bar comes in once the brand has gone under where it stands, and
+// leaves when the brand is back.
+new IntersectionObserver(([brand]) =>
+  $("mini-brand").classList.toggle("on", !brand.isIntersecting && brand.boundingClientRect.top < 52),
+  { rootMargin: "-52px 0px 0px 0px" }).observe($("shop-brand"));
 resume();
 </script>
 </body>
