@@ -103,7 +103,8 @@
   /* The real field, over the boxes: it takes the taps, the keyboard and the
      autofill; the boxes only show what is in it. */
   .code-wrap input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; font-size:16px; }
-  .code-wrap.bad .code-boxes span { border-color:var(--bad); color:var(--bad); }
+  /* After a wrong code every box is red - the one the next digit goes to included. */
+  .code-wrap.bad .code-boxes span, .code-wrap.bad:focus-within .code-boxes span.now { border-color:var(--bad); color:var(--bad); }
   details.legacy { grid-column:1 / -1; text-align:center; }
   details.legacy summary { color:var(--brand); cursor:pointer; padding:10px; min-height:44px; }
   details.legacy[open] { text-align:start; }
