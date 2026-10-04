@@ -75,6 +75,9 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
   Sunday to Thursday 10:00-19:00 and Friday 10:00-14:00; the owner changes it per barber. An
   existing database keeps each barber's saved hours - the owner opens Friday from the hours
   table.
+- **Barbers** (built 2026-10-04): pills by full name, a radio group - one Tab stop, the
+  arrows move and choose. Black when chosen; in the owner's list a barber who left is dashed
+  and marked `(לא פעיל)`. Locked while a booking's time is being changed.
 - **Times** (approved 2026-10-03): pills, four to a row on a phone, still 44px tall for a
   finger.
 - **Greeting** (approved 2026-10-03): a customer is greeted `שלום` and their first name; the

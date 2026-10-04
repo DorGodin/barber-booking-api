@@ -82,7 +82,14 @@
      the barber does not work, or out of the booking window, is greyed and
      cannot be chosen. The chosen day is black. 44px tall; as wide as a seventh
      of the panel - 31px on the narrowest phone, above WCAG's 24px. */
-  .calendar .label { display:block; font-size:13px; color:var(--mut); }
+  .calendar .label, .field > .label { display:block; font-size:13px; color:var(--mut); }
+  /* The barbers as pills, by full name - not initials: גולדה and גולדין share
+     four letters. A radio group, like the times: one Tab stop, the arrows move. */
+  .pills { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+  .pills button { border-radius:999px; background:#fff; color:var(--ink); border:1.5px solid var(--line); padding:8px 18px; font-size:15px; min-height:44px; }
+  .pills button[aria-checked="true"] { background:var(--ink); border-color:var(--ink); color:#fff; }
+  .pills button.left { color:var(--mut); border-style:dashed; }
+  .pills button.left[aria-checked="true"] { background:var(--mut); border-color:var(--mut); color:#fff; }
   .cal-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:4px 0 6px; }
   .cal-head h3 { margin:0; font-size:15px; color:var(--ink); }
   .cal-nav { width:44px; height:44px; padding:0; display:flex; align-items:center; justify-content:center; }
@@ -293,7 +300,11 @@
     <div class="grid">
       <div class="panel" data-testid="left-panel">
         <h2 data-testid="left-title">קביעת תור</h2>
-        <div class="field"><label for="barber">ספר</label><select id="barber" data-testid="barber"></select></div>
+        <div class="field">
+          <span class="label" id="barber-label">ספר</span>
+          <input type="hidden" id="barber" data-testid="barber">
+          <div class="pills" role="radiogroup" aria-labelledby="barber-label" data-testid="barbers"></div>
+        </div>
         <div data-testid="book-panel">
           <div class="moving" data-testid="moving" hidden>
             <p data-testid="moving-text" tabindex="-1"></p>
@@ -904,7 +915,7 @@ function addBarber() {
     }
     barbers = (await api("GET", "/barbers")).data.content;
     fillBarberChoice();
-    $("barber").value = r.data.id;
+    setBarber(r.data.id);
     for (const id of ["new-barber-name", "new-barber-username", "new-barber-password"]) $(id).value = "";
     say(`הספר ${isolate(r.data.display_name)} נוסף, בשעות העבודה של המספרה.`, "ok");
     await refresh();
@@ -980,12 +991,51 @@ function addService() {
 }
 
 // The owner's list holds barbers who left, marked, to manage them and their
-// diary; nobody else's does.
+// diary; nobody else's does. The chosen one lives in the hidden #barber.
 function fillBarberChoice() {
-  const chosen = $("barber").value;
-  $("barber").replaceChildren(...barbers.map((b) => option(b.id, b.active ? b.display_name : `${b.display_name} (לא פעיל)`)));
-  if (barbers.some((b) => b.id === chosen)) $("barber").value = chosen;
+  const box = $("barbers");
+  box.replaceChildren(...barbers.map((b) => {
+    const pill = document.createElement("button");
+    pill.type = "button";
+    pill.dataset.testid = "barber-pill";
+    pill.dataset.id = b.id;
+    pill.setAttribute("role", "radio");
+    pill.textContent = b.active ? b.display_name : `${b.display_name} (לא פעיל)`;
+    if (!b.active) pill.classList.add("left");
+    pill.addEventListener("click", () => chooseBarber(b.id));
+    return pill;
+  }));
+  setBarber(barbers.some((b) => b.id === $("barber").value) ? $("barber").value : (barbers[0] || {}).id || "");
 }
+
+function setBarber(id) {
+  $("barber").value = id;
+  for (const pill of $("barbers").children) {
+    const on = pill.dataset.id === id;
+    pill.setAttribute("aria-checked", String(on));
+    pill.tabIndex = on ? 0 : -1;
+  }
+}
+
+function chooseBarber(id) {
+  setBarber(id);
+  return busyWhile(refresh);
+}
+
+// While a booking's time is being changed its barber is fixed.
+function lockBarber(locked) {
+  for (const pill of $("barbers").children) pill.disabled = locked;
+}
+
+$("barbers").addEventListener("keydown", (e) => {
+  const pills = [...$("barbers").children];
+  const at = pills.indexOf(document.activeElement);
+  if (at < 0 || !(e.key in STEP || e.key === "Home" || e.key === "End")) return;
+  e.preventDefault();
+  const to = e.key === "Home" ? 0 : e.key === "End" ? pills.length - 1 : Math.min(pills.length - 1, Math.max(0, at + STEP[e.key]));
+  pills[to].focus();
+  chooseBarber(pills[to].dataset.id);
+});
 const barberOf = (id) => barbers.find((b) => b.id === id) || {};
 
 async function refreshSlots() {
@@ -1268,9 +1318,10 @@ async function bookGuest() {
 function startMoving(b) {
   return busyWhile(async () => {
     moving = b;
-    $("barber").value = b.barber_id;
+    setBarber(b.barber_id);
     $("service").value = b.service_id;
-    $("barber").disabled = $("service").disabled = true;
+    lockBarber(true);
+    $("service").disabled = true;
     $("date").value = b.start_local.slice(0, 10);
     shownMonth = $("date").value.slice(0, 7);
     $("left-title").textContent = "שינוי מועד";
@@ -1285,7 +1336,8 @@ function startMoving(b) {
 
 function stopMoving() {
   moving = null;
-  $("barber").disabled = $("service").disabled = false;
+  lockBarber(false);
+  $("service").disabled = false;
   $("moving").hidden = true;
   $("moving-text").textContent = "";
   $("left-title").textContent = "קביעת תור";
@@ -1430,7 +1482,7 @@ $("barber-active-toggle").addEventListener("click", toggleBarberActive);
 $("add-dayoff").addEventListener("click", addDayOff);
 $("add-barber").addEventListener("click", addBarber);
 $("add-service").addEventListener("click", addService);
-for (const id of ["barber", "service"]) $(id).addEventListener("change", () => busyWhile(refresh));
+$("service").addEventListener("change", () => busyWhile(refresh));
 $("prev-month").addEventListener("click", () => showMonth(addMonths(shownMonth, -1)));
 $("next-month").addEventListener("click", () => showMonth(addMonths(shownMonth, 1)));
 // The slim bar comes in once the brand has gone under where it stands, and
