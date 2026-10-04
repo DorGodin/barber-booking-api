@@ -747,10 +747,17 @@ async function start() {
   $("bookings-title").textContent = { customer: "התורים שלי", barber: "היומן שלי", owner: "תורים" }[me.role];
   say("", "ok");
   await refresh();
-  // Today may be closed, or full: the screen opens on the first day of the
-  // month that has a time to offer.
+  // Today may be closed, or full: the screen opens on a day with a time.
+  await keepAFreeDay();
+}
+
+// The day chosen may have no time to offer - today on a Saturday, or after a
+// change to a barber who does not work it. Then the first free day of the month
+// shown is chosen instead, never an empty list of times.
+async function keepAFreeDay() {
+  if (monthDays[$("date").value]?.free > 0) return;
   const firstFree = Object.values(monthDays).find((d) => d.free > 0);
-  if (firstFree && !(monthDays[$("date").value]?.free > 0)) await chooseDay(firstFree.date);
+  if (firstFree) await chooseDay(firstFree.date);
 }
 
 async function refresh() {
@@ -1019,7 +1026,10 @@ function setBarber(id) {
 
 function chooseBarber(id) {
   setBarber(id);
-  return busyWhile(refresh);
+  return busyWhile(async () => {
+    await refresh();
+    await keepAFreeDay();
+  });
 }
 
 // While a booking's time is being changed its barber is fixed.
@@ -1482,7 +1492,10 @@ $("barber-active-toggle").addEventListener("click", toggleBarberActive);
 $("add-dayoff").addEventListener("click", addDayOff);
 $("add-barber").addEventListener("click", addBarber);
 $("add-service").addEventListener("click", addService);
-$("service").addEventListener("change", () => busyWhile(refresh));
+$("service").addEventListener("change", () => busyWhile(async () => {
+  await refresh();
+  await keepAFreeDay();
+}));
 $("prev-month").addEventListener("click", () => showMonth(addMonths(shownMonth, -1)));
 $("next-month").addEventListener("click", () => showMonth(addMonths(shownMonth, 1)));
 // The slim bar comes in once the brand has gone under where it stands, and
