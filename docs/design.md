@@ -12,7 +12,7 @@ yet. Every Hebrew string below is the exact text on the screen.
 | Under the brand | `מאז 1991 · שביט 8, נס ציונה` in dark gold `#8a6a1f`. |
 | Divider | A dashed black line with small scissors at its start (the right edge). The scissors open and close gently. |
 | Decoration | A turning barber pole (red `#a8323a`, white, blue `#2f4a7a`) down **both** sides of every screen, turning in opposite directions. 12px on a phone, 22px on a computer. |
-| Settings | Brand, tagline, year and address come from `.env` (`SHOP_BRAND`, `SHOP_TAGLINE`, `SHOP_SINCE`, `SHOP_ADDRESS`), never hard-coded. The tab title is `TomGoldin Hair Design`, and the accessibility statement uses the same values. |
+| Settings | Brand, tagline, year and address come from `.env` (`SHOP_BRAND`, `SHOP_TAGLINE`, `SHOP_SINCE`, `SHOP_ADDRESS`), never hard-coded. The tab title is `TomGoldin Hair Design`, and the accessibility statement uses the same values. A value with spaces - the address - is set in the server's environment (`SHOP_ADDRESS='שביט 8, נס ציונה' make run`), not in `.env`, which `make` reads as shell. |
 
 ## Colour and type
 
@@ -49,6 +49,11 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
   `מספר טלפון` (digits only, written `0501234567`; spaces and dashes typed in are removed),
   the button `שולחים קוד`, and under it `קוד קצר ב־SMS, ואת/ה כבר בדרך לכיסא.` The first
   sign-in opens the account; there is no separate sign-up.
+- **The password form** (approved 2026-10-04): `כניסה עם שם משתמש וסיסמה`, folded under the
+  code form, stays for the accounts that already have one - the owner, the barbers, the seeded
+  and the test accounts. The `פעם ראשונה כאן?` form (name, username, password, `יצירת חשבון`)
+  is gone from the page: a first-time customer signs in with a code. `POST /customers` stays in
+  the API, with its limit of five accounts an hour from one address.
 - **Verification code** (straight after sign-in): `קוד אימות`, `שלחנו קוד בן 4 ספרות למספר
   שמסתיים ב־4567` (the last four digits only), four boxes, the button `לכיסא` (read to a screen
   reader as `לכיסא, כניסה לחשבון`), `עוד קוד, בבקשה` with a countdown until it is allowed, and
@@ -94,6 +99,11 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
   2026-10-03, for a booking, an owner's booking for a caller, and a moved booking alike).
 - **Computer**: one screen split in two - the choice on the right, my bookings and the book
   button on the left.
+- **The foot of the page** (approved 2026-10-04): the cut line, the shop's contact buttons and
+  the links `הצהרת נגישות` and `מדיניות פרטיות` stand at the bottom of the screen when the page
+  is shorter than the screen, never in the middle of it; on a longer page they follow the
+  content. On a customer's phone the foot is not shown on `התורים שלי`, where the tab bar
+  stands under a short list; it is on `קביעת תור` and on the signed-out screens.
 
 ## From the shop's Calmark page (approved 2026-10-03)
 
