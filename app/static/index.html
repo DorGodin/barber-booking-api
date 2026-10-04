@@ -7,7 +7,7 @@
 <style>
   /* White, black buttons, a dark gold for the line under the brand; the barber
      pole's red and blue are the only other colours. Every pair passes WCAG AA. */
-  :root { --ink:#111; --mut:#6b655a; --line:#dedad2; --bg:#fff; --brand:#111; --gold:#8a6a1f; --ok:#1f5a2c; --bad:#a8323a; --pole-red:#a8323a; --pole-blue:#2f4a7a; --pole:12px; --off:#bdb7ac; }
+  :root { --ink:#111; --mut:#6b655a; --line:#dedad2; --bg:#fff; --brand:#111; --gold:#8a6a1f; --ok:#1f5a2c; --bad:#a8323a; --pole-red:#a8323a; --pole-blue:#2f4a7a; --pole:12px; --off:#bdb7ac; --soft:#f3f1ec; }
   @media (min-width: 761px) { :root { --pole:22px; } }
   * { box-sizing: border-box; }
   /* An element's own display rule beats the browser's [hidden] rule, so a
@@ -49,8 +49,12 @@
   .bar { display:flex; justify-content:flex-end; align-items:center; gap:8px; max-width:1000px; margin:0 auto; padding:8px 16px 0; min-height:44px; }
   /* Only when someone is signed in: signed out, it was an empty strip over the cover. */
   .bar:has(> [data-testid="whoami"][hidden]) { display:none; }
-  [data-testid="whoami"] { display:flex; align-items:center; gap:8px; text-align:left; }
-  .bar button { background:#fff; color:var(--ink); border:1.5px solid var(--ink); }
+  /* The greeting on the right, where a Hebrew line starts; the way out on the
+     left, a quiet pill - there when wanted, never the loudest thing on the
+     screen (approved 2026-10-04). */
+  [data-testid="whoami"] { flex:1; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  [data-testid="display-name"] { font-size:15px; font-weight:600; }
+  .bar button { background:var(--soft); color:var(--ink); border:0; border-radius:999px; padding:6px 16px; font-size:13px; }
   main { max-width:1000px; margin:24px auto; padding:0 16px; }
   /* minmax(0, 1fr), not 1fr: a 1fr track grows to its widest content, so one
      wide table pushed the whole column past the edge of a phone. */
@@ -551,6 +555,15 @@ function addDays(isoDate, days) {
 const money = (minor, currency) => new Intl.NumberFormat("he-IL", { style: "currency", currency }).format(minor / 100);
 const ROLE = { customer: "לקוח", barber: "ספר", owner: "בעלים" };
 const firstName = (name) => name.trim().split(/\s+/)[0];
+// The hour on the shop's clock, not the phone's: a customer abroad at night is
+// still greeted for the shop's morning.
+function greetingNow() {
+  const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: shop.timezone }).format(new Date()));
+  if (hour >= 5 && hour < 12) return "בוקר טוב";
+  if (hour >= 12 && hour < 17) return "צהריים טובים";
+  if (hour >= 17 && hour < 21) return "ערב טוב";
+  return "לילה טוב";
+}
 const STATUS = { confirmed: "מאושר", cancelled: "בוטל" };
 const barberName = (id) => (barbers.find((b) => b.id === id) || {}).display_name || "?";
 const serviceOf = (id) => services.find((s) => s.id === id) || {};
@@ -750,10 +763,10 @@ async function start() {
   // A new screen starts at its top. The sign-in form sits low on a phone, and
   // the screen after it opened scrolled to where the form had been.
   window.scrollTo(0, 0);
-  // A customer is greeted by first name. The staff see their role: the shop's
-  // own screen can be signed in by any of them.
+  // A customer is greeted for the hour, by first name. The staff see their
+  // role: the shop's own screen can be signed in by any of them.
   $("display-name").textContent = me.role === "customer"
-    ? `שלום ${isolate(firstName(me.display_name))}`
+    ? `${greetingNow()}, ${isolate(firstName(me.display_name))}`
     : `${isolate(me.display_name)} · ${ROLE[me.role]}`;
 
   fillBarberChoice();

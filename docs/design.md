@@ -87,8 +87,10 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
   and marked `(לא פעיל)`. Locked while a booking's time is being changed.
 - **Times** (approved 2026-10-04): pills, five to a row and 36px tall on a phone - below
   Apple's 44px for a finger, above WCAG 2.5.8's 24px, chosen so a day's times fit the screen.
-- **Greeting** (approved 2026-10-03): a customer is greeted `שלום` and their first name; the
-  account keeps the full name. The staff keep their name and role (`· בעלים`, `· ספר`).
+- **Greeting** (approved 2026-10-04): a customer is greeted for the hour on the shop's clock -
+  `בוקר טוב` 05-12, `צהריים טובים` 12-17, `ערב טוב` 17-21, `לילה טוב` after - and their first
+  name; the account keeps the full name. The staff keep their name and role (`· בעלים`,
+  `· ספר`). The greeting stands on the right; `יציאה` on the left, a quiet grey pill.
 - **Booked**: the popup's band is black, like the page's buttons; only a refusal is coloured,
   red. The popup alone announces it - no second line `נקבע: …` under the list (approved
   2026-10-03, for a booking, an owner's booking for a caller, and a moved booking alike).
