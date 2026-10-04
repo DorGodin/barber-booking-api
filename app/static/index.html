@@ -212,6 +212,22 @@
     html:has([data-testid="owner-nav"]:not([hidden])) { scroll-padding-top:124px; }
     html:has([data-testid="owner-nav"]:not([hidden])) [data-section] { scroll-margin-top:124px; }
   }
+  /* A customer's phone: two tabs at the foot of the screen - booking, and the
+     bookings - one at a time instead of one long, crowded page (approved
+     2026-10-04). A computer has room for both, side by side, and no tabs. */
+  .tabbar { display:none; }
+  @media (max-width: 760px) {
+    [data-testid="app"][data-role="customer"] .tabbar { display:flex; position:fixed; left:0; right:0; bottom:0; z-index:9; gap:8px; padding:4px 24px calc(4px + env(safe-area-inset-bottom)); background:var(--bg); border-top:1px solid var(--line); }
+    .tabbar button { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-height:52px; background:none; border:0; color:var(--mut); font-size:12px; }
+    .tabbar button svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+    .tabbar button[aria-current="page"] { color:var(--ink); font-weight:700; }
+    [data-role="customer"][data-tab="book"] [data-testid="right-panel"],
+    [data-role="customer"][data-tab="mine"] [data-testid="left-panel"] { display:none; }
+    /* The page ends above the tabs, and whatever the keyboard reaches stays
+       above them too (WCAG 2.4.11). */
+    body:has([data-testid="app"][data-role="customer"]:not([hidden])) { padding-bottom:72px; }
+    html:has([data-testid="app"][data-role="customer"]:not([hidden])) { scroll-padding-bottom:80px; }
+  }
   /* Opened by the same cut line as the top of the page. */
   footer { max-width:1000px; margin:24px auto; padding:0 0 0; font-size:14px; text-align:center; }
   footer .cut { margin:0 auto 14px; }
@@ -376,6 +392,10 @@
       </div>
     </div>
     <p data-testid="message" role="status" aria-live="polite"></p>
+    <nav class="tabbar" data-testid="tabbar" aria-label="ניווט">
+      <button type="button" data-testid="tab-book" data-tab="book"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>קביעת תור</button>
+      <button type="button" data-testid="tab-mine" data-tab="mine"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="5" cy="6" r="1"/><circle cx="5" cy="12" r="1"/><circle cx="5" cy="18" r="1"/></svg>התורים שלי</button>
+    </nav>
   </section>
 
   <!-- The outcome of a booking, success or refusal, in a real modal dialog:
@@ -420,7 +440,7 @@ async function busyWhile(work) {
       const find = focusWhenSettled;
       focusWhenSettled = null;
       const target = find && find();
-      if (target) target.focus();
+      if (target) focusOn(target);
     }
   }
 }
@@ -742,6 +762,8 @@ async function start() {
   shownMonth = shop.today.slice(0, 7);
 
   const customer = me.role === "customer";
+  $("app").dataset.role = me.role;
+  showTab("book");
   // The owner books too - by name, for whoever phoned or walked in - into the
   // same diary the site books into. A barber only reads their own.
   $("book-panel").hidden = me.role === "barber";
@@ -1256,9 +1278,33 @@ $("popup").addEventListener("close", () => {
   afterPopup = null;
   if (!find) return;
   const target = find();
-  if (target) target.focus();
+  if (target) focusOn(target);
   else if (inFlight > 0) focusWhenSettled = find;
 });
+
+// On a customer's phone the target may be on the other tab: a new booking is
+// in the list, a refusal sends back to the times. The tab comes first.
+function focusOn(target) {
+  showTab($("right-panel").contains(target) ? "mine" : "book");
+  target.focus();
+}
+
+function showTab(tab) {
+  $("app").dataset.tab = tab;
+  for (const button of $("tabbar").children) {
+    if (button.dataset.tab === tab) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  }
+}
+for (const button of $("tabbar").children) {
+  button.addEventListener("click", () => {
+    // A tab the customer pressed wins over a focus still waiting for the list
+    // to load - it would have pulled them back to the tab they just left.
+    focusWhenSettled = null;
+    showTab(button.dataset.tab);
+    window.scrollTo(0, 0);
+  });
+}
 
 // A refused booking, guest booking or move: the reason in Hebrew, a popup that
 // tells a time just taken from any other refusal, and the focus back to the times.
@@ -1331,6 +1377,7 @@ async function bookGuest() {
 function startMoving(b) {
   return busyWhile(async () => {
     moving = b;
+    showTab("book");
     setBarber(b.barber_id);
     $("service").value = b.service_id;
     lockBarber(true);

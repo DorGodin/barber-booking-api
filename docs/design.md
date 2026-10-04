@@ -35,6 +35,11 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
   not initials: גולדה and גולדין share four letters) · days as a list with the number free
   (`מלא` when none) · times · a black `קביעת התור` bar fixed at the bottom with day, time and
   price.
+- **Tabs** (approved 2026-10-04): on a customer's phone, two tabs fixed at the foot of the
+  screen - `קביעת תור` and `התורים שלי` - one at a time instead of one long page. A new booking
+  or a changed time opens `התורים שלי` with the focus on it; `שינוי מועד` goes back to booking.
+  A tab the customer presses wins over a focus still waiting for the list. A computer keeps the
+  two side by side with no tabs; the owner and the barbers have no tabs.
 - **My bookings** (`התורים שלי`): one card per booking, `שינוי מועד` and `ביטול` under it; a
   cancelled one faded and struck through.
 - **Changing a booking's time**: a banner `שינוי מועד לתור של …` with `השארת המועד הקיים`; the
