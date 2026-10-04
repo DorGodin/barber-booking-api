@@ -7,7 +7,7 @@
 <style>
   /* White, black buttons, a dark gold for the line under the brand; the barber
      pole's red and blue are the only other colours. Every pair passes WCAG AA. */
-  :root { --ink:#111; --mut:#6b655a; --line:#dedad2; --bg:#fff; --brand:#111; --gold:#8a6a1f; --ok:#1f5a2c; --bad:#a8323a; --pole-red:#a8323a; --pole-blue:#2f4a7a; --pole:12px; }
+  :root { --ink:#111; --mut:#6b655a; --line:#dedad2; --bg:#fff; --brand:#111; --gold:#8a6a1f; --ok:#1f5a2c; --bad:#a8323a; --pole-red:#a8323a; --pole-blue:#2f4a7a; --pole:12px; --off:#bdb7ac; }
   @media (min-width: 761px) { :root { --pole:22px; } }
   * { box-sizing: border-box; }
   /* An element's own display rule beats the browser's [hidden] rule, so a
@@ -98,21 +98,25 @@
   table.cal th { font-size:12px; font-weight:600; color:var(--mut); padding:0 0 6px; }
   table.cal td { height:44px; padding:2px; text-align:center; color:var(--mut); }
   table.cal td > span { display:flex; flex-direction:column; align-items:center; justify-content:center; height:40px; border:1.5px solid transparent; border-radius:8px; font-size:15px; line-height:1; }
-  table.cal td small { font-size:10px; margin-top:3px; }
   table.cal td.free { color:var(--ink); cursor:pointer; }
   table.cal td.free > span { border-color:var(--line); font-weight:700; }
   table.cal td.free > span::after { content:""; width:5px; height:5px; margin-top:3px; border-radius:50%; background:var(--gold); }
-  table.cal td.full, table.cal td.closed, table.cal td.out { cursor:default; }
-  table.cal td.out > span, table.cal td.closed > span { text-decoration:line-through; }
+  /* A day with no time to offer - full, not worked, or out of the window - is
+     grey and cannot be chosen (approved 2026-10-04). Its name still says why. */
+  table.cal td.full, table.cal td.closed, table.cal td.out { cursor:default; color:var(--off); }
   table.cal td[aria-selected="true"] > span { background:var(--ink); border-color:var(--ink); color:#fff; }
   table.cal td[aria-selected="true"] > span::after { background:#fff; }
   table.cal td:focus-visible { outline:3px solid var(--ink); outline-offset:-1px; border-radius:10px; }
-  /* The times as pills - four to a row on a phone, where three rows of wide
-     boxes made a long scroll (approved 2026-10-03). */
+  /* The times as pills - five to a row and 36px tall on a phone, where wide
+     boxes made a long, crowded scroll (approved 2026-10-04). Below Apple's 44px
+     for a finger, above WCAG 2.5.8's 24px; a choice made for the screen. */
   .slots { display:grid; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap:8px; margin:12px 0; }
-  @media (max-width: 760px) { .slots { grid-template-columns: repeat(4, minmax(0, 1fr)); gap:6px; } }
   .slots button { background:#fff; color:var(--brand); padding:8px 0; direction:ltr; border-radius:999px; font-size:14px; }
   .slots button[aria-checked="true"] { background:var(--brand); color:#fff; }
+  @media (max-width: 760px) {
+    .slots { grid-template-columns: repeat(5, minmax(0, 1fr)); gap:6px; }
+    .slots button { min-height:36px; height:36px; min-width:0; padding:0; font-size:13px; }
+  }
   /* One visible ring for every engine's focus, offset so it shows on a dark
      button as well as a light one. A keyboard user has to see where they are. */
   :focus-visible { outline:3px solid var(--brand); outline-offset:2px; }
@@ -1173,7 +1177,6 @@ function drawMonth() {
     cell.setAttribute("aria-label", `${dayLabel(iso)}, ${DAY_STATE[state](d)}`);
     const face = document.createElement("span");
     face.textContent = String(n);
-    if (state === "full") face.append(Object.assign(document.createElement("small"), { textContent: "מלא" }));
     cell.append(face);
     cell.addEventListener("click", () => chooseDay(iso));
     row.append(cell);

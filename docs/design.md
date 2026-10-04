@@ -61,8 +61,8 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
 - **Nothing booked**: a chair icon, `עוד אין תורים`, `הכיסא מחכה לך`.
 - **The month's calendar** (approved 2026-10-03, replaces the date field): one month, Sunday
   first, with the previous and next month buttons - only inside the booking window. A day with
-  a free time is framed and has a gold dot; a full day says `מלא`; a day the barber does not
-  work, or outside the window, is struck through. Only a free day can be chosen; the chosen day
+  a free time is framed and has a gold dot; a day with none - full, not worked, or outside the
+  window - is grey (approved 2026-10-04), and its name tells a screen reader which. Only a free day can be chosen; the chosen day
   is black. A screen reader hears each day's date and its state - `7 שעות פנויות`, `מלא`,
   `הספר לא עובד ביום הזה`, `לא ניתן לקבוע`. The keyboard follows the WAI-ARIA date picker
   (arrows, left is the next day; Page Up/Down a month; Enter or Space chooses). The screen
@@ -80,8 +80,8 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
 - **Barbers** (built 2026-10-04): pills by full name, a radio group - one Tab stop, the
   arrows move and choose. Black when chosen; in the owner's list a barber who left is dashed
   and marked `(לא פעיל)`. Locked while a booking's time is being changed.
-- **Times** (approved 2026-10-03): pills, four to a row on a phone, still 44px tall for a
-  finger.
+- **Times** (approved 2026-10-04): pills, five to a row and 36px tall on a phone - below
+  Apple's 44px for a finger, above WCAG 2.5.8's 24px, chosen so a day's times fit the screen.
 - **Greeting** (approved 2026-10-03): a customer is greeted `שלום` and their first name; the
   account keeps the full name. The staff keep their name and role (`· בעלים`, `· ספר`).
 - **Booked**: the popup's band is black, like the page's buttons; only a refusal is coloured,
