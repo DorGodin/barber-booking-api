@@ -22,7 +22,8 @@
   .pole.right { right:0; border-left:2px solid var(--ink); }
   .pole.left { left:0; border-right:2px solid var(--ink); animation-direction:reverse; }
   @keyframes pole { to { background-position:0 28px; } }
-  body { padding:0 calc(var(--pole) + 2px); }
+  body { padding:0 calc(var(--pole) + 2px); min-height:100vh; min-height:100dvh; display:flex; flex-direction:column; }
+  .bar, main, footer, body > .cut { width:100%; }
   header { position:relative; text-align:center; padding:0 16px 4px; }
   header .cover { display:block; width:calc(100% + 32px); margin:0 -16px; height:150px; object-fit:cover; }
   header .profile { display:block; width:76px; height:76px; border-radius:50%; object-fit:cover; border:3px solid #fff; margin:-38px auto 0; position:relative; }
@@ -51,7 +52,7 @@
   .bar:has(> [data-testid="whoami"][hidden]) { display:none; }
   [data-testid="whoami"] { display:flex; align-items:center; gap:8px; text-align:left; }
   .bar button { background:#fff; color:var(--ink); border:1.5px solid var(--ink); }
-  main { max-width:1000px; margin:24px auto; padding:0 16px; }
+  main { max-width:1000px; margin:10px auto 24px; padding:0 16px; }
   /* minmax(0, 1fr), not 1fr: a 1fr track grows to its widest content, so one
      wide table pushed the whole column past the edge of a phone. */
   .grid { display:grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap:18px; }
@@ -227,9 +228,10 @@
        above them too (WCAG 2.4.11). */
     body:has([data-testid="app"][data-role="customer"]:not([hidden])) { padding-bottom:72px; }
     html:has([data-testid="app"][data-role="customer"]:not([hidden])) { scroll-padding-bottom:80px; }
+    body:has([data-testid="app"][data-role="customer"][data-tab="mine"]:not([hidden])) footer { display:none; }
   }
   /* Opened by the same cut line as the top of the page. */
-  footer { max-width:1000px; margin:24px auto; padding:0 0 0; font-size:14px; text-align:center; }
+  footer { max-width:1000px; margin:auto auto 24px; padding:0 0 0; font-size:14px; text-align:center; }
   footer .cut { margin:0 auto 14px; }
   footer .actions { display:flex; justify-content:center; gap:10px; margin-bottom:6px; }
   footer .action { width:44px; height:44px; border-radius:50%; border:1.5px solid var(--ink); display:flex; align-items:center; justify-content:center; color:var(--ink); }
@@ -298,14 +300,6 @@
       <div class="field"><label for="login-password">סיסמה</label><input id="login-password" data-testid="password" type="password" autocomplete="current-password" required></div>
       <button data-testid="login" type="submit">כניסה</button>
       <p data-testid="login-error" class="error" role="alert" hidden></p>
-    </form>
-    <form class="panel" data-testid="signup-form">
-      <h2>פעם ראשונה כאן?</h2>
-      <div class="field"><label for="signup-name">השם שלך</label><input id="signup-name" data-testid="signup-name" maxlength="80" required></div>
-      <div class="field"><label for="signup-username">שם משתמש</label><input id="signup-username" data-testid="signup-username" autocomplete="username" required></div>
-      <div class="field"><label for="signup-password">סיסמה</label><input id="signup-password" data-testid="signup-password" type="password" autocomplete="new-password" minlength="8" required></div>
-      <button data-testid="signup" type="submit">יצירת חשבון</button>
-      <p data-testid="signup-error" class="error" role="alert" hidden></p>
     </form>
       </div>
     </details>
@@ -501,7 +495,6 @@ const FRIENDLY = {
   username_taken: () => "שם המשתמש הזה תפוס.",
   bad_credentials: () => "שם משתמש או סיסמה שגויים.",
   too_many_bookings: (_, data) => `אפשר להחזיק עד ${data.limit} תורים קדימה. כדי לקבוע תור נוסף צריך לבטל אחד מהם.`,
-  too_many_signups: (_, data) => `נפתחו יותר מדי חשבונות מהחיבור הזה. אפשר לנסות שוב בעוד ${Math.max(1, Math.ceil(data.retry_after_seconds / 60))} דקות.`,
   too_many_attempts: (_, data) => `יותר מדי ניסיונות כניסה שגויים. אפשר לנסות שוב בעוד ${Math.max(1, Math.ceil(data.retry_after_seconds / 60))} דקות.`,
   unauthorized: () => "צריך להתחבר מחדש.",
   forbidden: () => "אין לך הרשאה לפעולה הזו.",
@@ -734,8 +727,8 @@ function signOut() {
 
 function clearForms() {
   resetCodeSignIn();
-  for (const form of [$("login-form"), $("signup-form")]) form.reset();
-  for (const id of ["login-error", "signup-error"]) $(id).hidden = true;
+  $("login-form").reset();
+  $("login-error").hidden = true;
 }
 
 async function start() {
@@ -1516,19 +1509,6 @@ $("change-phone").addEventListener("click", () => {
 $("login-form").addEventListener("submit", (e) => {
   e.preventDefault();
   signIn($("username").value, $("password").value, $("login-error"));
-});
-$("signup-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const username = $("signup-username").value, password = $("signup-password").value;
-  const r = await api("POST", "/customers", { username, password, display_name: $("signup-name").value });
-  if (!r.ok) {
-    $("signup-error").textContent = explain(r, {
-      invalid: "כדאי לבדוק את הפרטים: שם משתמש באנגלית, באותיות קטנות, 3 עד 64 תווים, וסיסמה של 8 תווים לפחות.",
-    });
-    $("signup-error").hidden = false;
-    return;
-  }
-  await signIn(username, password, $("signup-error"));
 });
 $("logout").addEventListener("click", signOut);
 $("book").addEventListener("click", book);
