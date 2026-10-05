@@ -72,9 +72,14 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
   a configurable provider; a fake provider outside the product serves development and the
   tests until a real one is chosen.
 - **Refusal window** (approved 2026-10-05, replaces the red band): a small white card, modal, with
-  a red mark, the title (`השעה כבר תפוסה`), the reason in grey, and the way on. Too many
-  bookings: a black `התורים שלי` over a grey `סגירה`. A taken time: one black button,
-  `בחירת שעה אחרת`. The reason is not repeated in red behind the card.
+  a red mark, a title, the reason in grey, and the way on. Too many bookings - `נראה שכבר קבעת
+  מספיק`, `אפשר להחזיק עד 2 תורים קדימה. כדי לפנות מקום, אפשר לבטל אחד מהם.` - a black
+  `התורים שלי` over a grey `סגירה`. A taken time - `מישהו הקדים אותך`, `14:00 נתפסה לפני
+  רגע. אפשר לבחור שעה אחרת.` - one black button, `בחירת שעה אחרת`. A reason the page knows
+  but has no title of its own for keeps `לא הצלחנו לקבוע את התור`; one nobody planned for is
+  `אוי, משהו השתבש`, `לא הצלחנו להשלים את הפעולה. אפשר לנסות שוב בעוד רגע.` The wording is
+  neutral between a man and a woman, as the rest of the page is. The reason is not repeated
+  in red behind the card.
 - **Nothing booked**: a chair icon, `עוד אין תורים`, `הכיסא מחכה לך`.
 - **The month's calendar** (approved 2026-10-03, replaces the date field): one month, Sunday
   first, with the previous and next month buttons - only inside the booking window. A day with
