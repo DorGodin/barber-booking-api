@@ -94,6 +94,10 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
   Apple's 44px for a finger, above WCAG 2.5.8's 24px, chosen so a day's times fit the screen.
 - **Greeting** (approved 2026-10-03): a customer is greeted `שלום` and their first name; the
   account keeps the full name. The staff keep their name and role (`· בעלים`, `· ספר`).
+- **Signing out** (approved 2026-10-05): `יציאה` is a small, faded pill beside the greeting - a
+  light grey `#f1efea` with the page's muted text colour (5.0:1), no border, 13px - not a framed
+  button. It is painted 34px tall inside a 44px target, so it is quiet to look at and still a
+  finger's size to press. The same for the owner and the barbers.
 - **Booked**: the popup's band is black, like the page's buttons; only a refusal is coloured,
   red. The popup alone announces it - no second line `נקבע: …` under the list (approved
   2026-10-03, for a booking, an owner's booking for a caller, and a moved booking alike).
