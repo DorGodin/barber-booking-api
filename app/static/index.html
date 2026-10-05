@@ -229,6 +229,8 @@
     body:has([data-testid="app"][data-role="customer"]:not([hidden])) { padding-bottom:72px; }
     html:has([data-testid="app"][data-role="customer"]:not([hidden])) { scroll-padding-bottom:80px; }
     body:has([data-testid="app"][data-role="customer"][data-tab="mine"]:not([hidden])) footer { display:none; }
+    body:has([data-testid="app"][data-role="customer"]:not([hidden])) footer .legal { display:none; }
+    body:has([data-testid="app"][data-role="customer"]:not([hidden])) footer:not(:has(.actions)) { display:none; }
   }
   /* Opened by the same cut line as the top of the page. */
   footer { max-width:1000px; margin:auto auto 24px; padding:0 0 0; font-size:14px; text-align:center; }
