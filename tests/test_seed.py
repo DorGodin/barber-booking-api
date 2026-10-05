@@ -17,6 +17,15 @@ def next_local(weekday: str):
             return day
 
 
+def first_seeded_day(barber_name: str):
+    worked_days = next(days for _, name, days in BARBERS if name == barber_name)
+    day = datetime.now(UTC).astimezone(TZ).date()
+    while True:
+        day += timedelta(days=1)
+        if WEEKDAYS[day.weekday()] in worked_days:
+            return day
+
+
 def barber_ids(client, owner) -> dict[str, str]:
     return {b["display_name"]: b["id"] for b in client.get("/barbers", headers=owner).json()["content"]}
 
@@ -69,7 +78,7 @@ def test_the_seeded_barbers_take_turns(client, owner, customer, services):
 
 def test_the_seeded_week_alternates_free_and_taken_times(client, owner, customer, services):
     avi = barber_ids(client, owner)["אבי"]
-    offered = times_offered(client, customer, avi, services[HAIRCUT]["id"], next_local("mon"))
+    offered = times_offered(client, customer, avi, services[HAIRCUT]["id"], first_seeded_day("אבי"))
 
     assert "10:00" not in offered and "12:00" not in offered, "the seeded bookings are taken"
     assert "10:30" in offered and "11:00" in offered, "the times between them are free"
