@@ -37,7 +37,8 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
   price.
 - **Tabs** (approved 2026-10-04): on a customer's phone, two tabs fixed at the foot of the
   screen - `קביעת תור` and `התורים שלי` - one at a time instead of one long page. A new booking
-  or a changed time opens `התורים שלי` with the focus on it; `שינוי מועד` goes back to booking.
+  or a changed time shows its card, whose `התורים שלי` opens the list with the focus on it;
+  `שינוי מועד` goes back to booking.
   A tab the customer presses wins over a focus still waiting for the list. A computer keeps the
   two side by side with no tabs; the owner and the barbers have no tabs.
 - **My bookings** (`התורים שלי`): one card per booking, `שינוי מועד` and `ביטול` under it; a
@@ -98,9 +99,12 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
   light grey `#f1efea` with the page's muted text colour (5.0:1), no border, 13px - not a framed
   button. It is painted 34px tall inside a 44px target, so it is quiet to look at and still a
   finger's size to press. The same for the owner and the barbers.
-- **Booked**: the popup's band is black, like the page's buttons; only a refusal is coloured,
-  red. The popup alone announces it - no second line `נקבע: …` under the list (approved
-  2026-10-03, for a booking, an owner's booking for a caller, and a moved booking alike).
+- **Booked** (approved 2026-10-05, replaces the popup): a card in the booking panel in place of
+  the form - a green tick, `התור נקבע` (`המועד עודכן` for a moved time), the day and time, the
+  service with the barber and the price, and two buttons: `התורים שלי` (black) and `קביעת תור
+  נוסף` (grey). The focus goes to its heading. The card alone announces it - no second line
+  `נקבע: …` under the list (approved 2026-10-03). A refusal still answers in a modal popup, red;
+  so does the owner's booking for a caller.
 - **Computer**: one screen split in two - the choice on the right, my bookings and the book
   button on the left.
 - **The foot of the page** (approved 2026-10-04): the cut line, the shop's contact buttons and

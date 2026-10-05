@@ -137,9 +137,12 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **Tests read seeded data from `app/seed.py`**, never repeat it, and take the seed
   passwords from the `passwords` fixture - importing them from `tests.conftest` runs that
   file a second time and the random passwords come out different.
-- **The booking outcome is a `<dialog>` opened with `showModal()`**: focus goes to it,
-  Escape closes it, the page behind it is inert. `show()` is not modal and is not
-  acceptable here.
+- **A booking that goes through is answered by a card in the booking panel**
+  (`booking-done`), in place of the form: the focus goes to its heading, its two buttons
+  lead to the list and back to the form, and the booking tab pressed again shows the form.
+  **A refusal, and the owner's booking for a caller, are answered by a `<dialog>` opened
+  with `showModal()`**: focus goes to it, Escape closes it, the page behind it is inert.
+  `show()` is not modal and is not acceptable here.
 
 ### The owner's screen
 
