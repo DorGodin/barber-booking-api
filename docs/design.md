@@ -106,8 +106,11 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
 - **The foot of the page** (approved 2026-10-04): the cut line, the shop's contact buttons and
   the links `הצהרת נגישות` and `מדיניות פרטיות` stand at the bottom of the screen when the page
   is shorter than the screen, never in the middle of it; on a longer page they follow the
-  content. On a customer's phone the foot is not shown on `התורים שלי`, where the tab bar
-  stands under a short list; it is on `קביעת תור` and on the signed-out screens.
+  content. On a customer's phone, signed in (approved 2026-10-05), the two links are not shown
+  on either tab: the shop's contact buttons, if the owner set any, stay at the foot of
+  `קביעת תור`, and with none the foot is gone. `התורים שלי` has no foot at all, the tab bar
+  standing under a short list. A computer and the signed-out screens keep the links - the
+  statement and the policy are one step away from the sign-in screen.
 
 ## From the shop's Calmark page (approved 2026-10-03)
 
