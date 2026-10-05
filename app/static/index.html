@@ -508,7 +508,7 @@ const isolate = (value) => `\u2068${value}\u2069`;
 // never shows the server's English detail: an unmapped refusal still gets a
 // Hebrew sentence.
 const FRIENDLY = {
-  slot_taken: (c) => `מישהו בדיוק קבע את ${c.time}. אפשר לבחור שעה אחרת.`,
+  slot_taken: (c) => `${c.time} נתפסה לפני רגע. אפשר לבחור שעה אחרת.`,
   customer_overlap: () => "כבר יש לך תור בשעה הזו.",
   outside_hours: () => "השירות לא נכנס בשעות העבודה של הספר.",
   barber_off: () => "הספר לא עובד ביום הזה.",
@@ -530,7 +530,7 @@ const FRIENDLY = {
   already_started: () => "התור הזה כבר התחיל.",
   username_taken: () => "שם המשתמש הזה תפוס.",
   bad_credentials: () => "שם משתמש או סיסמה שגויים.",
-  too_many_bookings: (_, data) => `אפשר להחזיק עד ${data.limit} תורים קדימה. כדי לקבוע תור נוסף צריך לבטל אחד מהם.`,
+  too_many_bookings: (_, data) => `אפשר להחזיק עד ${data.limit} תורים קדימה. כדי לפנות מקום, אפשר לבטל אחד מהם.`,
   too_many_attempts: (_, data) => `יותר מדי ניסיונות כניסה שגויים. אפשר לנסות שוב בעוד ${Math.max(1, Math.ceil(data.retry_after_seconds / 60))} דקות.`,
   unauthorized: () => "צריך להתחבר מחדש.",
   forbidden: () => "אין לך הרשאה לפעולה הזו.",
@@ -546,7 +546,7 @@ function explain(resp, context = {}) {
   const code = resp.data && resp.data.code;
   if (code && FRIENDLY[code]) return FRIENDLY[code](context, resp.data);
   if (resp.status === 422 && context.invalid) return context.invalid;
-  return `משהו השתבש (${resp.status}). כדאי לנסות שוב.`;
+  return "לא הצלחנו להשלים את הפעולה. אפשר לנסות שוב בעוד רגע.";
 }
 
 // A refusal can offer its way on: `action` is a button that does it, and
@@ -1368,6 +1368,16 @@ for (const button of $("tabbar").children) {
   });
 }
 
+// What a refusal is called: a few have a name of their own, one the page knows
+// the reason for says it could not do what was asked, and one nobody planned for
+// owns up to going wrong.
+const REFUSAL_TITLE = { too_many_bookings: "נראה שכבר קבעת מספיק", slot_taken: "מישהו הקדים אותך" };
+function refusalTitle(r, failedTitle) {
+  const code = r.data && r.data.code;
+  if (REFUSAL_TITLE[code]) return REFUSAL_TITLE[code];
+  return code && FRIENDLY[code] ? failedTitle : "אוי, משהו השתבש";
+}
+
 // A refused booking, guest booking or move: the reason in Hebrew, a popup that
 // tells a time just taken from any other refusal, and the focus back to the times.
 function refused(r, slot, failedTitle, context = {}) {
@@ -1376,7 +1386,7 @@ function refused(r, slot, failedTitle, context = {}) {
   const taken = r.data && r.data.code === "slot_taken";
   afterPopup = () => $("slots").querySelector('[tabindex="0"]') || $("days").querySelector('td[tabindex="0"]');
   const tooMany = r.data && r.data.code === "too_many_bookings";
-  popup(taken ? "השעה כבר תפוסה" : failedTitle, reason, "error", {
+  popup(refusalTitle(r, failedTitle), reason, "error", {
     action: tooMany ? { label: "התורים שלי", run: () => { showTab("mine"); window.scrollTo(0, 0); } } : null,
     closeLabel: taken ? "בחירת שעה אחרת" : "סגירה",
   });
