@@ -93,6 +93,21 @@ def test_a_customer_cannot_cancel_inside_the_cutoff_but_the_owner_can(
     assert by_owner.status_code == 200 and by_owner.json()["status"] == "cancelled"
 
 
+def test_a_cancelled_booking_says_who_cancelled_it(client, owner, customer, new_customer, barber, services):
+    other = new_customer()
+    mine = book(client, customer, barber, services[HAIRCUT]["id"], at(local_day(6), "11:00")).json()
+    theirs = book(client, other, barber, services[HAIRCUT]["id"], at(local_day(6), "13:00")).json()
+
+    by_customer = client.post(f"/bookings/{mine['id']}/cancel", headers=customer).json()
+    by_owner = client.post(f"/bookings/{theirs['id']}/cancel", headers=owner).json()
+
+    assert mine["cancelled_by"] is None
+    assert by_customer["cancelled_by"] == "customer"
+    assert by_owner["cancelled_by"] == "staff"
+    seen_by_the_customer = client.get("/bookings", headers=other).json()["content"]
+    assert [b["cancelled_by"] for b in seen_by_the_customer if b["id"] == theirs["id"]] == ["staff"]
+
+
 def test_cancelling_gives_the_slot_back(client, customer, barber, services):
     day = local_day(6)
     booking = book(client, customer, barber, services[HAIRCUT]["id"], at(day, "11:00")).json()

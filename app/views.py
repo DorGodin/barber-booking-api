@@ -31,6 +31,12 @@ def service_view(service: Service) -> dict:
     }
 
 
+def cancelled_by_label(booking: Booking) -> str | None:
+    if booking.cancelled_by is None:
+        return None
+    return "customer" if booking.cancelled_by == booking.customer_id else "staff"
+
+
 def booking_view(booking: Booking, service_name: str, barber_name: str, tz: ZoneInfo) -> dict:
     return {
         "id": booking.id,
@@ -52,6 +58,10 @@ def booking_view(booking: Booking, service_name: str, barber_name: str, tz: Zone
         "currency": booking.currency,
         "created_at": iso_utc(booking.created_at),
         "cancelled_at": iso_utc(booking.cancelled_at),
+        # Who ended it - the customer themselves, or the shop - so a customer
+        # can be told a booking was taken from them, and not only one they
+        # cancelled.
+        "cancelled_by": cancelled_by_label(booking),
     }
 
 
