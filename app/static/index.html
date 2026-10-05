@@ -51,7 +51,7 @@
   /* Only when someone is signed in: signed out, it was an empty strip over the cover. */
   .bar:has(> [data-testid="whoami"][hidden]) { display:none; }
   [data-testid="whoami"] { display:flex; align-items:center; gap:8px; text-align:left; }
-  .bar button { background:#fff; color:var(--ink); border:1.5px solid var(--ink); }
+  .bar button { background:#f1efea; color:var(--mut); border:5px solid transparent; background-clip:padding-box; border-radius:999px; min-height:44px; padding:0 11px; font-size:13px; }
   main { max-width:1000px; margin:10px auto 24px; padding:0 16px; }
   /* minmax(0, 1fr), not 1fr: a 1fr track grows to its widest content, so one
      wide table pushed the whole column past the edge of a phone. */
