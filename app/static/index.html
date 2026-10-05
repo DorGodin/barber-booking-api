@@ -126,6 +126,15 @@
   input:focus, select:focus { outline:3px solid var(--brand); outline-offset:2px; }
   .confirm { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px; border:1px dashed var(--brand); border-radius:8px; }
   .confirm button { border-radius:999px; padding-inline:22px; }
+  [data-testid="left-panel"][data-done] > :not(.done) { display:none; }
+  .done { text-align:center; padding:24px 8px 8px; }
+  .done .tick { width:64px; height:64px; border-radius:50%; background:#e6f2e8; color:var(--ok); display:inline-flex; align-items:center; justify-content:center; font-size:32px; font-weight:700; }
+  .done h2 { margin:14px 0 6px; font-size:22px; color:var(--ink); }
+  .done .when { margin:0; font-size:17px; font-weight:600; }
+  .done .muted { margin:4px 0 0; }
+  .done-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:20px; }
+  .done-actions button { border-radius:999px; min-height:44px; padding:0 24px; font-size:15px; }
+  .done-actions .soft { background:#f1efea; color:var(--mut); border:0; padding:0 22px; font-size:14px; }
   ul { list-style:none; padding:0; margin:0; }
   li { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); }
   li:last-child { border-bottom:0; }
@@ -350,6 +359,16 @@
           <div class="confirm" data-testid="confirm" hidden>
             <span data-testid="confirm-text"></span>
             <button data-testid="book" type="button">קביעת התור</button>
+          </div>
+        </div>
+        <div class="done" data-testid="booking-done" hidden>
+          <span class="tick" aria-hidden="true">✓</span>
+          <h2 data-testid="booking-done-title" tabindex="-1"></h2>
+          <p class="when" data-testid="booking-done-when"></p>
+          <p class="muted" data-testid="booking-done-what"></p>
+          <div class="done-actions">
+            <button type="button" data-testid="booking-done-mine">התורים שלי</button>
+            <button type="button" class="soft" data-testid="booking-done-more">קביעת תור נוסף</button>
           </div>
         </div>
       </div>
@@ -719,6 +738,7 @@ function signOut() {
   for (const name of Object.keys(latest)) latest[name] += 1;
   selected = null;
   stopMoving();
+  hideDone();
   for (const id of ["bookings", "slots", "hours", "days-off", "services", "barber", "service"]) $(id).replaceChildren();
   for (const id of ["display-name", "hours-for", "confirm-text"]) $(id).textContent = "";
   $("guest-name").value = "";
@@ -1285,6 +1305,28 @@ function focusOn(target) {
   target.focus();
 }
 
+// A booking, or a moved time, is answered by a card in the booking panel in
+// place of the form: what was booked, and the two ways on. The focus goes to
+// its heading, so a screen reader hears it.
+let doneBookingId = null;
+function showDone(title, made) {
+  doneBookingId = made.id;
+  $("booking-done-title").textContent = title;
+  $("booking-done-when").textContent = `${dayLabel(made.start_local)} · ${clock(made.start_local)}`;
+  $("booking-done-what").textContent = `${isolate(made.service_name)} אצל ${isolate(made.barber_name)} · ${money(made.price_minor, made.currency)}`;
+  $("booking-done").hidden = false;
+  $("left-panel").dataset.done = "";
+  showTab("book");
+  window.scrollTo(0, 0);
+  $("booking-done-title").focus();
+}
+
+function hideDone() {
+  doneBookingId = null;
+  $("booking-done").hidden = true;
+  delete $("left-panel").dataset.done;
+}
+
 function showTab(tab) {
   $("app").dataset.tab = tab;
   for (const button of $("tabbar").children) {
@@ -1297,6 +1339,7 @@ for (const button of $("tabbar").children) {
     // A tab the customer pressed wins over a focus still waiting for the list
     // to load - it would have pulled them back to the tab they just left.
     focusWhenSettled = null;
+    if (button.dataset.tab === "book") hideDone();
     showTab(button.dataset.tab);
     window.scrollTo(0, 0);
   });
@@ -1328,12 +1371,10 @@ async function bookSelected() {
   booking = false;
   $("book").disabled = false;
   if (r.ok) {
-    const booked = `${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${isolate(r.data.service_name)} אצל ${isolate(r.data.barber_name)}`;
-    // The popup says it, and the list shows it; a third copy under the list
-    // only repeated them. An earlier refusal is cleared.
+    // The card in the panel says it, and the list shows it; a third copy under
+    // the list only repeated them. An earlier refusal is cleared.
     say("", "ok");
-    afterPopup = () => document.querySelector(`[data-testid="booking-row"][data-id="${r.data.id}"]`);
-    popup("✓ התור נקבע", `${booked} · ${money(r.data.price_minor, r.data.currency)}`, "ok");
+    showDone("התור נקבע", r.data);
   } else {
     refused(r, slot, "לא הצלחנו לקבוע את התור");
   }
@@ -1373,6 +1414,7 @@ async function bookGuest() {
 function startMoving(b) {
   return busyWhile(async () => {
     moving = b;
+    hideDone();
     showTab("book");
     setBarber(b.barber_id);
     $("service").value = b.service_id;
@@ -1408,11 +1450,9 @@ async function moveSelected() {
   booking = false;
   $("book").disabled = false;
   if (r.ok) {
-    const moved = `${dayLabel(r.data.start_local)} ${clock(r.data.start_local)} · ${isolate(r.data.service_name)} אצל ${isolate(r.data.barber_name)}`;
     stopMoving();
     say("", "ok");
-    afterPopup = () => document.querySelector(`[data-testid="booking-row"][data-id="${r.data.id}"]`);
-    popup("✓ המועד עודכן", moved, "ok");
+    showDone("המועד עודכן", r.data);
   } else {
     refused(r, slot, "לא הצלחנו לשנות את המועד");
   }
@@ -1520,6 +1560,22 @@ $("stop-moving").addEventListener("click", () => busyWhile(async () => {
   await refresh();
 }));
 $("popup-close").addEventListener("click", () => $("popup").close());
+$("booking-done-mine").addEventListener("click", () => {
+  const id = doneBookingId;
+  const find = () => document.querySelector(`[data-testid="booking-row"][data-id="${id}"]`);
+  const row = find();
+  if (row) {
+    focusOn(row);
+    return;
+  }
+  showTab("mine");
+  window.scrollTo(0, 0);
+  focusWhenSettled = find;
+});
+$("booking-done-more").addEventListener("click", () => {
+  hideDone();
+  document.querySelector('[data-testid="barbers"] [aria-checked="true"]')?.focus();
+});
 $("save-hours").addEventListener("click", saveHours);
 $("barber-active-toggle").addEventListener("click", toggleBarberActive);
 $("add-dayoff").addEventListener("click", addDayOff);
