@@ -188,9 +188,19 @@
   dialog .band { padding:18px 22px; color:#fff; font-size:18px; font-weight:700; }
   /* Black, as the page's buttons; only a refusal is coloured, red. */
   dialog[data-kind="ok"] .band { background:var(--ink); }
-  dialog[data-kind="error"] .band { background:var(--bad); }
+  dialog .icon { display:none; }
+  /* A refusal: a small white card with a red mark, the reason, and the way on. */
+  dialog[data-kind="error"] { width:min(340px, 88vw); border-radius:22px; text-align:center; }
+  dialog[data-kind="error"] .icon { display:flex; margin:26px auto 0; width:52px; height:52px; border-radius:50%; background:#fbeaea; color:var(--bad); align-items:center; justify-content:center; font-size:28px; font-weight:700; }
+  dialog[data-kind="error"] .band { background:#fff; color:var(--ink); padding:12px 22px 0; font-size:19px; }
   dialog .body { padding:18px 22px; line-height:1.6; }
+  dialog[data-kind="error"] .body { padding:8px 24px 6px; color:var(--mut); }
   dialog .actions { padding:0 22px 20px; text-align:left; }
+  dialog[data-kind="error"] .actions { padding:12px 24px 24px; display:flex; flex-direction:column; gap:8px; text-align:center; }
+  dialog[data-kind="error"] .actions button { border-radius:999px; min-height:44px; font-size:15px; width:100%; }
+  dialog[data-kind="error"] [data-testid="popup-close"] { background:#f1efea; color:var(--mut); border:0; }
+  dialog[data-kind="error"] [data-testid="popup-action"] { background:var(--ink); color:#fff; border:0; }
+  dialog[data-kind="error"] [data-testid="popup-action"][hidden] + [data-testid="popup-close"] { background:var(--ink); color:#fff; }
   /* On a touch screen everything pressable gets at least 44px - Apple's
      minimum for a finger - and a checkbox the 24px WCAG minimum. A mouse is
      precise; a thumb is not, and a near miss on a phone cancels the wrong
@@ -256,7 +266,7 @@
   .moving { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:12px; padding:8px 12px; border:1px solid var(--brand); border-radius:6px; }
   .moving p { flex:1 1 220px; margin:0; }
   [data-testid="message"][data-kind="ok"] { color:var(--ok); }
-  [data-testid="message"][data-kind="error"], .error { color:var(--bad); }
+  [data-testid="message"][data-kind="error"], [data-testid="message"][data-kind="cancelled"], .error { color:var(--bad); }
 </style>
 </head>
 <body>
@@ -417,9 +427,13 @@
   <!-- The outcome of a booking, success or refusal, in a real modal dialog:
        it takes the focus, Escape closes it, and a screen reader announces it. -->
   <dialog data-testid="popup" aria-labelledby="popup-title" aria-describedby="popup-text">
+    <div class="icon" aria-hidden="true">!</div>
     <div class="band" id="popup-title" data-testid="popup-title"></div>
     <p class="body" id="popup-text" data-testid="popup-text"></p>
-    <div class="actions"><button data-testid="popup-close" type="button" autofocus>סגירה</button></div>
+    <div class="actions">
+      <button data-testid="popup-action" type="button" hidden></button>
+      <button data-testid="popup-close" type="button" autofocus>סגירה</button>
+    </div>
   </dialog>
 </main>
 <footer>
@@ -535,11 +549,18 @@ function explain(resp, context = {}) {
   return `משהו השתבש (${resp.status}). כדאי לנסות שוב.`;
 }
 
-function popup(title, text, kind) {
+// A refusal can offer its way on: `action` is a button that does it, and
+// `closeLabel` names the button that only closes.
+let popupAction = null;
+function popup(title, text, kind, { action = null, closeLabel = "סגירה" } = {}) {
   const dialog = $("popup");
   dialog.dataset.kind = kind;
   $("popup-title").textContent = title;
   $("popup-text").textContent = text;
+  popupAction = action ? action.run : null;
+  $("popup-action").hidden = !action;
+  $("popup-action").textContent = action ? action.label : "";
+  $("popup-close").textContent = closeLabel;
   if (!dialog.open) dialog.showModal();
 }
 
@@ -737,6 +758,8 @@ function signOut() {
   forget();
   for (const name of Object.keys(latest)) latest[name] += 1;
   selected = null;
+  cancelledHere.clear();
+  clearTimeout(cancelledExpiry);
   stopMoving();
   hideDone();
   for (const id of ["bookings", "slots", "hours", "days-off", "services", "barber", "service"]) $(id).replaceChildren();
@@ -1349,10 +1372,14 @@ for (const button of $("tabbar").children) {
 // tells a time just taken from any other refusal, and the focus back to the times.
 function refused(r, slot, failedTitle, context = {}) {
   const reason = explain(r, { time: clock(slot.start_local), ...context });
-  say(reason, "error");
+  say("", "ok");
   const taken = r.data && r.data.code === "slot_taken";
   afterPopup = () => $("slots").querySelector('[tabindex="0"]') || $("days").querySelector('td[tabindex="0"]');
-  popup(taken ? "השעה כבר תפוסה" : failedTitle, reason, "error");
+  const tooMany = r.data && r.data.code === "too_many_bookings";
+  popup(taken ? "השעה כבר תפוסה" : failedTitle, reason, "error", {
+    action: tooMany ? { label: "התורים שלי", run: () => { showTab("mine"); window.scrollTo(0, 0); } } : null,
+    closeLabel: taken ? "בחירת שעה אחרת" : "סגירה",
+  });
 }
 
 function book() {
@@ -1468,7 +1495,7 @@ async function refreshBookings() {
   if (!current()) return;
   const list = $("bookings");
   list.replaceChildren();
-  const rows = r.ok ? r.data.content : [];
+  const rows = (r.ok ? r.data.content : []).filter((b) => me.role !== "customer" || shownToCustomer(b));
   for (const b of rows) {
     const row = document.createElement("li");
     row.dataset.testid = "booking-row";
@@ -1511,12 +1538,30 @@ async function refreshBookings() {
     list.appendChild(row);
   }
   $("no-bookings").hidden = rows.length > 0;
+  clearTimeout(cancelledExpiry);
+  const left = rows.filter((b) => b.status === "cancelled").map((b) => CANCELLED_SHOWN_MS - cancelledAge(b));
+  if (me.role === "customer" && left.length) {
+    cancelledExpiry = setTimeout(() => refreshBookings(), Math.max(1000, Math.min(...left) + 1000));
+  }
 }
+
+// A customer sees a booking for twelve hours after it was cancelled. One they
+// cancelled themselves answers "did that work?" and then gets out of the way:
+// leaving the app - signing out, closing the tab - clears it. One the shop
+// cancelled stays the twelve hours, however often they come back: it is news.
+const CANCELLED_SHOWN_MS = 12 * 60 * 60 * 1000;
+const cancelledHere = new Set();
+let cancelledExpiry = null;
+const cancelledAge = (b) => Date.now() - Date.parse(b.cancelled_at);
+const shownToCustomer = (b) =>
+  b.status !== "cancelled" ||
+  (cancelledAge(b) < CANCELLED_SHOWN_MS && (b.cancelled_by === "staff" || cancelledHere.has(b.id)));
 
 function cancelBooking(b) {
   return busyWhile(async () => {
     const r = await api("POST", `/bookings/${b.id}/cancel`);
-    say(r.ok ? `התור של ${dayLabel(b.start_local)} ${clock(b.start_local)} בוטל.` : explain(r), r.ok ? "ok" : "error");
+    say(r.ok ? `התור של ${dayLabel(b.start_local)} ${clock(b.start_local)} בוטל.` : explain(r), r.ok ? (me.role === "customer" ? "cancelled" : "ok") : "error");
+    if (r.ok && me.role === "customer") cancelledHere.add(b.id);
     await refresh();
     // The list was drawn again and the button pressed is gone; the focus goes
     // back to the same booking, now marked cancelled, not to the top of the page.
@@ -1560,6 +1605,12 @@ $("stop-moving").addEventListener("click", () => busyWhile(async () => {
   await refresh();
 }));
 $("popup-close").addEventListener("click", () => $("popup").close());
+$("popup-action").addEventListener("click", () => {
+  const run = popupAction;
+  afterPopup = null;
+  $("popup").close();
+  if (run) run();
+});
 $("booking-done-mine").addEventListener("click", () => {
   const id = doneBookingId;
   const find = () => document.querySelector(`[data-testid="booking-row"][data-id="${id}"]`);

@@ -42,7 +42,11 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
   A tab the customer presses wins over a focus still waiting for the list. A computer keeps the
   two side by side with no tabs; the owner and the barbers have no tabs.
 - **My bookings** (`התורים שלי`): one card per booking, `שינוי מועד` and `ביטול` under it; a
-  cancelled one faded and struck through.
+  cancelled one faded and struck through. A cancelled booking is shown for twelve hours after
+  the cancellation (approved 2026-10-05): one the customer cancelled leaves with the app -
+  signing out, closing the tab - and one the shop cancelled stays the twelve hours however
+  often they come back, since it is news to them (the booking says who cancelled it:
+  `cancelled_by`, `customer` or `staff`). The line after cancelling is red.
 - **Changing a booking's time**: a banner `שינוי מועד לתור של …` with `השארת המועד הקיים`; the
   barber locked, the others dimmed; the button `אישור המועד החדש`; success `✓ המועד עודכן`;
   the 12-hour refusal `אפשר לשנות מועד עד 12 שעות לפני`.
@@ -67,8 +71,10 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
   minute, and a cap per phone and per address so nobody can run up the SMS bill. Sent through
   a configurable provider; a fake provider outside the product serves development and the
   tests until a real one is chosen.
-- **Refusal window**: a black band with the reason (`השעה כבר תפוסה`), the Hebrew sentence,
-  and `בחירת שעה אחרת`.
+- **Refusal window** (approved 2026-10-05, replaces the red band): a small white card, modal, with
+  a red mark, the title (`השעה כבר תפוסה`), the reason in grey, and the way on. Too many
+  bookings: a black `התורים שלי` over a grey `סגירה`. A taken time: one black button,
+  `בחירת שעה אחרת`. The reason is not repeated in red behind the card.
 - **Nothing booked**: a chair icon, `עוד אין תורים`, `הכיסא מחכה לך`.
 - **The month's calendar** (approved 2026-10-03, replaces the date field): one month, Sunday
   first, with the previous and next month buttons - only inside the booking window. A day with
