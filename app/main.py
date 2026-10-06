@@ -10,6 +10,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, HTMLResponse
+from sqlalchemy import select
 
 from app import backup
 from app.config import Settings
@@ -17,7 +18,8 @@ from app.db import IMMEDIATE, make_engine, make_sessionmaker
 from app.errors import DomainError, domain_error_handler, not_found
 from app.identity import IMAGE_TYPES, contact_html, header_html, identity_from, media_file, under_brand
 from app.migrate import migrate
-from app.routers import auth, barbers, bookings, services
+from app.models import Course
+from app.routers import auth, barbers, bookings, courses, services
 from app.routers import settings as shop_settings
 from app.seed import seed_if_empty
 from app.sms import SmsSender, sender_from
@@ -133,6 +135,7 @@ def create_app(config: Settings | None = None, sms: SmsSender | None = None) -> 
     app.state.settings = config
     identity = config.identity or identity_from({}, config.shop_brand)
     media_dir = Path(config.media_dir) if config.media_dir else _media_next_to(config.database_url)
+    app.state.media_dir = media_dir
     app.state.sms = sms or sender_from(config.sms_url, config.sms_token)
     app.state.sessionmaker = make_sessionmaker(engine)
     app.add_exception_handler(DomainError, domain_error_handler)
@@ -178,8 +181,10 @@ def create_app(config: Settings | None = None, sms: SmsSender | None = None) -> 
 
     @app.get("/media/{name}", include_in_schema=False)
     def media(name: str):
-        """The shop's cover and profile pictures - those two files, nothing else."""
-        path = media_file(media_dir, identity, name)
+        """The shop's cover and profile pictures and its courses' pictures - nothing else."""
+        with app.state.sessionmaker() as session:
+            course_images = set(session.scalars(select(Course.image).where(Course.image.is_not(None))))
+        path = media_file(media_dir, identity, name, course_images)
         if path is None:
             raise not_found("picture")
         return FileResponse(
@@ -223,6 +228,13 @@ def create_app(config: Settings | None = None, sms: SmsSender | None = None) -> 
             html = html.replace("{{" + name + "}}", html_text.escape(value))
         return HTMLResponse(html, headers={"Content-Security-Policy": page_policy(html)})
 
-    for router in (auth.router, services.router, barbers.router, bookings.router, shop_settings.router):
+    for router in (
+        auth.router,
+        services.router,
+        barbers.router,
+        bookings.router,
+        courses.router,
+        shop_settings.router,
+    ):
         app.include_router(router)
     return app

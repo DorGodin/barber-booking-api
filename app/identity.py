@@ -138,10 +138,10 @@ def contact_html(identity: Identity) -> str:
     return f'<nav class="actions" aria-label="יצירת קשר עם המספרה">{buttons}</nav>' if buttons else ""
 
 
-def media_file(directory: Path, identity: Identity, name: str) -> Path | None:
-    """Only the images the settings name - never any other file in the folder,
-    never a path out of it."""
-    if name not in {identity.cover, identity.profile} - {None}:
+def media_file(directory: Path, identity: Identity, name: str, course_images: set[str]) -> Path | None:
+    """Only the images the settings name and the pictures of the shop's courses -
+    never any other file in the folder, never a path out of it."""
+    if name not in ({identity.cover, identity.profile} - {None}) | course_images:
         return None
     path = directory / name
     return path if path.is_file() else None

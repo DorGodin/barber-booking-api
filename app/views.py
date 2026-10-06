@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 from app.booking_rules import approval_state
@@ -29,6 +30,25 @@ def service_view(service: Service) -> dict:
         "price_minor": service.price_minor,
         "currency": service.currency,
         "active": service.active,
+    }
+
+
+def course_view(course, whatsapp: str | None) -> dict:
+    # The button on the card opens the shop's WhatsApp with the course already
+    # named, so the customer's first message says what they are asking about.
+    link = None
+    if whatsapp:
+        link = f"{whatsapp}?text={quote(f'שלום, אני מעוניין בקורס: {course.title}')}"
+    return {
+        "id": course.id,
+        "title": course.title,
+        "subtitle": course.subtitle,
+        "starts_on": course.starts_on,
+        "price_minor": course.price_minor,
+        "currency": "ILS",
+        "image_url": f"/media/{course.image}" if course.image else None,
+        "active": course.active,
+        "whatsapp_url": link,
     }
 
 

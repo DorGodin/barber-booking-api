@@ -263,7 +263,10 @@
     .tabbar button svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
     .tabbar button[aria-current="page"] { color:var(--ink); font-weight:700; }
     [data-role="customer"][data-tab="book"] [data-testid="right-panel"],
-    [data-role="customer"][data-tab="mine"] [data-testid="left-panel"] { display:none; }
+    [data-role="customer"][data-tab="mine"] [data-testid="left-panel"],
+    [data-role="customer"][data-tab="courses"] [data-testid="left-panel"],
+    [data-role="customer"][data-tab="courses"] [data-testid="right-panel"],
+    [data-role="customer"]:not([data-tab="courses"]) [data-testid="courses-panel"] { display:none; }
     /* The page ends above the tabs, and whatever the keyboard reaches stays
        above them too (WCAG 2.4.11). */
     body:has([data-testid="app"][data-role="customer"]:not([hidden])) { padding-bottom:72px; }
@@ -272,6 +275,20 @@
     body:has([data-testid="app"][data-role="customer"]:not([hidden])) footer .legal { display:none; }
     body:has([data-testid="app"][data-role="customer"]:not([hidden])) footer:not(:has(.actions)) { display:none; }
   }
+  /* The courses: a card each, a picture over its words, and a round button that opens WhatsApp. A
+     customer's panel only; on a computer it runs under the two panels, on a phone it is a tab. */
+  [data-testid="courses-panel"] { grid-column:1 / -1; }
+  [data-role="customer"] [data-testid="courses-panel"] { display:block; }
+  .courses { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:14px; }
+  .course { border:1px solid var(--line); border-radius:16px; overflow:hidden; background:#fff; }
+  .course img { display:block; width:100%; height:130px; object-fit:cover; }
+  .course .course-body { padding:14px 16px; }
+  .course h3 { margin:0; font-size:17px; color:var(--ink); }
+  .course p { margin:4px 0 12px; color:var(--mut); font-size:14px; }
+  .course .course-go { display:inline-flex; align-items:center; border-radius:999px; background:var(--ink); color:#fff; min-height:40px; padding:0 20px; font-size:14px; text-decoration:none; }
+  .course-edit { border:1px solid var(--line); border-radius:12px; padding:12px; margin:0 0 12px; }
+  .course-edit img { display:block; width:100%; height:90px; object-fit:cover; border-radius:8px; margin:0 0 8px; }
+  .course-edit .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:8px 0 0; }
   /* Opened by the same cut line as the top of the page. */
   footer { max-width:1000px; margin:auto auto 24px; padding:0 0 0; font-size:14px; text-align:center; }
   footer .cut { margin:0 auto 14px; }
@@ -408,6 +425,11 @@
         <ul data-testid="bookings"></ul>
         <p class="muted" data-testid="no-bookings" hidden>עוד אין תורים.</p>
       </div>
+      <div class="panel" data-testid="courses-panel" id="courses-section" data-section hidden>
+        <h2>קורסים</h2>
+        <div class="courses" data-testid="courses"></div>
+        <p class="muted" data-testid="no-courses" hidden>עוד אין קורסים. נעדכן כאן כשייפתח קורס חדש.</p>
+      </div>
     </div>
     <div class="grid owner" data-testid="owner" hidden>
       <div class="panel" data-testid="hours-panel" id="hours-section" data-section>
@@ -430,6 +452,17 @@
         <table class="hours"><tbody data-testid="approval-hours"></tbody></table>
         <button data-testid="save-approval" type="button">שמירת אישור הספר</button>
       </div>
+      <div class="panel" data-testid="courses-admin-panel" id="courses-admin-section" data-section>
+        <h2>קורסים</h2>
+        <p class="muted">כל קורס מופיע ללקוחות ככרטיס. הכפתור שבו פותח וואטסאפ של המספרה.</p>
+        <div data-testid="courses-admin"></div>
+        <h3>קורס חדש</h3>
+        <div class="field"><label for="new-course-title">שם הקורס</label><input id="new-course-title" data-testid="new-course-title" maxlength="80"></div>
+        <div class="field"><label for="new-course-subtitle">שורה קצרה (למשל: 8 מפגשים)</label><input id="new-course-subtitle" data-testid="new-course-subtitle" maxlength="120"></div>
+        <div class="field"><label for="new-course-date">תאריך התחלה</label><input id="new-course-date" type="date" data-testid="new-course-date"></div>
+        <div class="field"><label for="new-course-price">מחיר בשקלים</label><input id="new-course-price" data-testid="new-course-price" inputmode="decimal" dir="ltr"></div>
+        <button data-testid="add-course" type="button">הוספת הקורס</button>
+      </div>
       <div class="panel" data-testid="services-panel" id="services-section" data-section>
         <h2>שירותים</h2>
         <ul data-testid="services"></ul>
@@ -449,6 +482,7 @@
     <nav class="tabbar" data-testid="tabbar" aria-label="ניווט">
       <button type="button" data-testid="tab-book" data-tab="book"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>קביעת תור</button>
       <button type="button" data-testid="tab-mine" data-tab="mine"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="5" cy="6" r="1"/><circle cx="5" cy="12" r="1"/><circle cx="5" cy="18" r="1"/></svg>התורים שלי</button>
+      <button type="button" data-testid="tab-courses" data-tab="courses"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg>קורסים</button>
     </nav>
   </section>
 
@@ -567,6 +601,8 @@ const FRIENDLY = {
   not_aligned: () => "תורים מתחילים ברבע שעה עגולה.",
   idempotency_mismatch: () => "משהו השתבש בשליחה. כדאי לנסות שוב.",
   name_taken: () => "כבר יש שירות בשם הזה.",
+  invalid_image: () => "התמונה צריכה להיות קובץ JPEG, PNG או WebP.",
+  image_too_large: () => "התמונה גדולה מדי. אפשר עד 3 מגה־בייט.",
   already_off: () => "הספר כבר בחופש ביום הזה.",
 };
 
@@ -802,7 +838,7 @@ function signOut() {
   clearTimeout(waitingPoll);
   stopMoving();
   hideDone();
-  for (const id of ["bookings", "slots", "hours", "approval-hours", "days-off", "services", "barber", "service"]) $(id).replaceChildren();
+  for (const id of ["bookings", "slots", "hours", "approval-hours", "days-off", "services", "barber", "service", "courses", "courses-admin"]) $(id).replaceChildren();
   for (const id of ["display-name", "hours-for", "confirm-text"]) $(id).textContent = "";
   $("guest-name").value = "";
   for (const id of ["confirm", "no-slots", "no-bookings", "no-days-off", "app", "owner", "owner-nav", "whoami", "guest-field", "barber-left"]) $(id).hidden = true;
@@ -846,6 +882,7 @@ async function start() {
   // The owner books too - by name, for whoever phoned or walked in - into the
   // same diary the site books into. A barber only reads their own.
   $("book-panel").hidden = me.role === "barber";
+  $("courses-panel").hidden = !customer;
   $("guest-field").hidden = me.role !== "owner";
   $("left-title").textContent = customer ? "קביעת תור" : me.role === "owner" ? "התורים וקביעת תור בשם" : "היומן שלך";
   $("barber").parentElement.hidden = me.role === "barber";
@@ -866,7 +903,160 @@ async function keepAFreeDay() {
 }
 
 async function refresh() {
-  await Promise.all([refreshSlots(), refreshDays(), refreshBookings(), refreshOwner()]);
+  await Promise.all([refreshSlots(), refreshDays(), refreshBookings(), refreshOwner(), refreshCourses()]);
+}
+
+// ---- The courses ---------------------------------------------------------------
+// A card each: a picture, the title, a short line - what it is, when it starts,
+// what it costs - and a button that opens the shop's WhatsApp with the course
+// already named. Every word is text.
+let courses = [];
+const startsLabel = (iso) => {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("he-IL", { day: "numeric", month: "short", timeZone: "UTC" });
+};
+// A course costs a round sum: 3,200 ₪, not 3,200.00 ₪.
+const coursePrice = (minor, currency) => {
+  const digits = minor % 100 ? 2 : 0;
+  return new Intl.NumberFormat("he-IL", { style: "currency", currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(minor / 100);
+};
+function courseLine(c) {
+  return [c.subtitle, c.starts_on && `מתחיל ב־${startsLabel(c.starts_on)}`, c.price_minor !== null && (c.price_minor === 0 ? "חינם" : coursePrice(c.price_minor, c.currency))]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+async function refreshCourses() {
+  if (!me || (me.role !== "customer" && me.role !== "owner")) return;
+  const current = ticket("courses");
+  const r = await api("GET", "/courses");
+  if (!current()) return;
+  courses = r.ok ? r.data.content : [];
+  if (me.role === "customer") renderCourses(courses);
+  else renderCourseAdmin(courses);
+}
+
+function renderCourses(list) {
+  const holder = $("courses");
+  holder.replaceChildren();
+  for (const c of list) {
+    const card = control("article", { className: "course", testid: "course" });
+    card.dataset.id = c.id;
+    if (c.image_url) card.append(control("img", { src: c.image_url, alt: "" }));
+    const body = control("div", { className: "course-body" });
+    body.append(control("h3", { textContent: isolate(c.title), testid: "course-title" }), control("p", { textContent: courseLine(c), testid: "course-line" }));
+    if (c.whatsapp_url && c.whatsapp_url.startsWith("https://")) {
+      body.append(control("a", { className: "course-go", testid: "course-whatsapp", href: c.whatsapp_url, target: "_blank", rel: "noopener noreferrer", textContent: "לפרטים", "aria-label": `לפרטים בוואטסאפ על ${c.title}` }));
+    }
+    card.append(body);
+    holder.append(card);
+  }
+  $("no-courses").hidden = list.length > 0;
+}
+
+// The owner keeps them: a form for each, with the picture, and one for a new one.
+function renderCourseAdmin(list) {
+  const holder = $("courses-admin");
+  holder.replaceChildren();
+  for (const c of list) {
+    const box = control("div", { className: "course-edit", testid: "course-edit" });
+    box.dataset.id = c.id;
+    if (c.image_url) box.append(control("img", { src: c.image_url, alt: "" }));
+    const field = (label, input) => {
+      const wrap = control("div", { className: "field" });
+      input.id = `course-${c.id}-${input.dataset.testid}`;
+      wrap.append(control("label", { htmlFor: input.id, textContent: label }), input);
+      return wrap;
+    };
+    const title = control("input", { testid: "course-edit-title", value: c.title, maxLength: 80 });
+    const subtitle = control("input", { testid: "course-edit-subtitle", value: c.subtitle, maxLength: 120 });
+    const date = control("input", { testid: "course-edit-date", type: "date", value: c.starts_on || "" });
+    const price = control("input", { testid: "course-edit-price", value: c.price_minor === null ? "" : shekels(c.price_minor), inputmode: "decimal", dir: "ltr" });
+    const active = control("input", { type: "checkbox", testid: "course-edit-active", checked: c.active });
+    const activeLabel = control("label", { textContent: "מוצג ללקוחות" });
+    active.id = `course-${c.id}-active`;
+    activeLabel.htmlFor = active.id;
+    const save = control("button", { type: "button", testid: "save-course", textContent: "שמירה" });
+    save.addEventListener("click", () => saveCourse(c, { title, subtitle, date, price, active }));
+    const file = control("input", { type: "file", testid: "course-image", accept: "image/jpeg,image/png,image/webp", "aria-label": `תמונה לקורס ${c.title}` });
+    file.addEventListener("change", () => file.files[0] && uploadCourseImage(c, file.files[0]));
+    const row = control("div", { className: "row" });
+    row.append(active, activeLabel, save);
+    box.append(field("שם הקורס", title), field("שורה קצרה", subtitle), field("תאריך התחלה", date), field("מחיר בשקלים", price), row);
+    const pictures = control("div", { className: "row" });
+    pictures.append(file);
+    if (c.image_url) {
+      const remove = control("button", { type: "button", className: "ghost", testid: "remove-course-image", textContent: "הסרת התמונה" });
+      remove.addEventListener("click", () => removeCourseImage(c));
+      pictures.append(remove);
+    }
+    box.append(pictures);
+    holder.append(box);
+  }
+}
+
+function courseBody(title, subtitle, date, priceText) {
+  const price = priceText.trim() === "" ? null : parseShekels(priceText);
+  if (price === null && priceText.trim() !== "") {
+    say("המחיר צריך להיות מספר בשקלים, עם עד שתי ספרות אחרי הנקודה, או ריק.", "error");
+    return null;
+  }
+  return { title: title.trim(), subtitle: subtitle.trim(), starts_on: date || null, price_minor: price };
+}
+
+function saveCourse(course, fields) {
+  return busyWhile(async () => {
+    const body = courseBody(fields.title.value, fields.subtitle.value, fields.date.value, fields.price.value);
+    if (!body) return;
+    if (!body.title) {
+      say("צריך לתת לקורס שם.", "error");
+      return;
+    }
+    const r = await api("PATCH", `/courses/${course.id}`, { ...body, active: fields.active.checked });
+    say(r.ok ? `הקורס ${isolate(body.title)} נשמר.` : explain(r, { invalid: "הקורס לא נשמר. כדאי לבדוק את השדות." }), r.ok ? "ok" : "error");
+    await refreshCourses();
+  });
+}
+
+function addCourse() {
+  return busyWhile(async () => {
+    const body = courseBody($("new-course-title").value, $("new-course-subtitle").value, $("new-course-date").value, $("new-course-price").value);
+    if (!body) return;
+    if (!body.title) {
+      say("צריך לתת לקורס שם.", "error");
+      $("new-course-title").focus();
+      return;
+    }
+    const r = await api("POST", "/courses", body);
+    if (r.ok) for (const id of ["new-course-title", "new-course-subtitle", "new-course-date", "new-course-price"]) $(id).value = "";
+    say(r.ok ? `הקורס ${isolate(body.title)} נוסף.` : explain(r, { invalid: "הקורס לא נוסף. כדאי לבדוק את השדות." }), r.ok ? "ok" : "error");
+    await refreshCourses();
+  });
+}
+
+function uploadCourseImage(course, file) {
+  return busyWhile(async () => {
+    if (file.size > 3_000_000) {
+      say(explain({ data: { code: "image_too_large" } }), "error");
+      return;
+    }
+    const data = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+      reader.readAsDataURL(file);
+    });
+    const r = await api("PUT", `/courses/${course.id}/image`, { data });
+    say(r.ok ? "התמונה נשמרה." : explain(r), r.ok ? "ok" : "error");
+    await refreshCourses();
+  });
+}
+
+function removeCourseImage(course) {
+  return busyWhile(async () => {
+    const r = await api("DELETE", `/courses/${course.id}/image`);
+    say(r.ok ? "התמונה הוסרה." : explain(r), r.ok ? "ok" : "error");
+    await refreshCourses();
+  });
 }
 
 // ---- The owner's screen -------------------------------------------------------
@@ -1809,6 +1999,7 @@ $("booking-done-more").addEventListener("click", () => {
   document.querySelector('[data-testid="barbers"] [aria-checked="true"]')?.focus();
 });
 $("save-hours").addEventListener("click", saveHours);
+$("add-course").addEventListener("click", addCourse);
 $("save-approval").addEventListener("click", saveApproval);
 $("barber-active-toggle").addEventListener("click", toggleBarberActive);
 $("add-dayoff").addEventListener("click", addDayOff);

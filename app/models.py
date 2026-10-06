@@ -191,6 +191,25 @@ class Booking(Base):
     decided_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
+class Course(Base):
+    """A course the shop gives, shown to customers as a card whose button opens
+    WhatsApp. Withdrawn ones are kept, never deleted - like a service."""
+
+    __tablename__ = "courses"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=lambda: new_id("crs"))
+    title: Mapped[str] = mapped_column(String(80))
+    # One short line under the title: "8 מפגשים".
+    subtitle: Mapped[str] = mapped_column(String(120), default="")
+    starts_on: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    price_minor: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # A file name in the media folder, written by the server when the owner
+    # uploads a picture - never a value a client chooses.
+    image: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    active: Mapped[bool] = mapped_column(default=True, server_default=true())
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=now_utc)
+
+
 class ShopSetting(Base):
     """A setting the owner changes from the page, kept as JSON under a name.
     No row: the setting is what the server's own settings say."""

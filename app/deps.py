@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from pathlib import Path
 
 from fastapi import Depends, Header, Request
 from sqlalchemy.orm import Session
@@ -14,6 +15,10 @@ from app.sms import SmsSender
 
 def settings(request: Request) -> Settings:
     return request.app.state.settings
+
+
+def media_dir(request: Request) -> Path:
+    return request.app.state.media_dir
 
 
 def sms(request: Request) -> SmsSender:

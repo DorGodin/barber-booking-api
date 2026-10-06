@@ -203,6 +203,21 @@ its barber. The rule is by the hour only, not by service, and is a setting (`APP
   is kept on the device, so an answer that came while the app was shut is told on opening.
   A push notification to a closed app is a separate step (service worker, VAPID keys, HTTPS).
 
+## Courses (2026-10-06)
+
+A third tab, `קורסים` (a graduation cap), for a signed-in customer; on a computer the same cards
+run under the two panels. Layout chosen by the owner: **a card each** - a picture, the title, one
+short line (what it is · when it starts · the price) and a round black button `לפרטים` that
+opens the shop's WhatsApp with the course already named in the message. No detail page.
+
+- **The owner keeps them** in a panel `קורסים` on the owner's screen: title, a short line, the
+  start date, the price, `מוצג ללקוחות`, and the picture. A withdrawn course is kept, not deleted.
+- **Pictures are uploaded as base64 in a JSON body** (`PUT /courses/{id}/image`), accepted by
+  their first bytes (JPEG, PNG, WebP, at most 3 MB), saved under a name the server makes, and
+  served only from `/media/<that name>` while a course holds it. A replaced picture's file goes.
+- **No WhatsApp number set, no button**: the card then only informs.
+- Nothing is seeded: with no course the tab says so.
+
 ## Kept as it is
 
 Every `data-testid`, the radio-group times, `aria-busy`, `textContent` for every value from a

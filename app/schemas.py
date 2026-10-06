@@ -71,6 +71,28 @@ class HoursIn(BaseModel):
         return hours
 
 
+class CourseIn(BaseModel):
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+    subtitle: Annotated[str, StringConstraints(strip_whitespace=True, max_length=120)] = ""
+    starts_on: date | None = None
+    price_minor: int | None = Field(default=None, ge=0, le=10_000_000)
+
+
+class CoursePatch(BaseModel):
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)] | None = None
+    subtitle: Annotated[str, StringConstraints(strip_whitespace=True, max_length=120)] | None = None
+    starts_on: date | None = None
+    price_minor: int | None = Field(default=None, ge=0, le=10_000_000)
+    active: bool | None = None
+
+
+class ImageIn(BaseModel):
+    """A picture as base64 text: the page reads the file it was given and sends it
+    in a JSON body, so no multipart machinery is needed."""
+
+    data: str = Field(min_length=1, max_length=4_200_000)
+
+
 class ApprovalRulesIn(HoursIn):
     """When a customer's booking waits for its barber: on or off for the shop, and
     per day the hours from and up to (not including), null meaning never that day."""
