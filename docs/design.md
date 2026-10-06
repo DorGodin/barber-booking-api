@@ -190,7 +190,7 @@ its barber. The rule is by the hour only, not by service, and is a setting (`APP
 - **Moving** into those hours makes a customer's booking wait again; out of them ends the wait.
   The owner moving or booking a guest decides it: no wait.
 - **The customer is told in the app, not by text message.** The booking card says
-  `הבקשה נשלחה`, with an amber note and the time it stands by itself; the list says
+  `הבקשה נשלחה`, with a short amber note (`<barber> יאשר או ידחה את התור.`) and nothing about the wait; the list says
   `ממתין לאישור של <barber>`. When the answer comes - the list is read again every 45 seconds
   while one waits, and when the app comes back to the front - a popup says `<barber> אישר את
   התור` or `<barber> לא יכול בשעה הזו`, with `בחירת שעה אחרת`. What the customer last saw waiting
