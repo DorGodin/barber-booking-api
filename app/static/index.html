@@ -140,8 +140,12 @@
   .done-actions .soft { background:#f1efea; color:var(--mut); border:0; padding:0 22px; font-size:14px; }
   ul { list-style:none; padding:0; margin:0; }
   li { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); }
-  [data-testid="booking-row"][data-approval="pending"] { flex-wrap:wrap; }
-  [data-testid="booking-row"][data-approval="pending"] > span { flex:1 1 100%; }
+  /* A booking: the day and time, the service on one line, where it stands - and
+     the buttons small and round underneath, never squeezing the words. */
+  [data-testid="booking-row"] { flex-wrap:wrap; justify-content:flex-start; gap:8px 8px; }
+  [data-testid="booking-row"] > span { flex:1 1 100%; }
+  [data-testid="booking-row"] > button { border-radius:999px; min-height:36px; padding:0 16px; font-size:13px; }
+  [data-testid="booking-when"], [data-testid="booking-detail"] > span { display:block; }
   li:last-child { border-bottom:0; }
   /* A row's button keeps its size; the text beside it wraps instead. */
   li > button { flex-shrink:0; }
@@ -1555,7 +1559,10 @@ async function refreshBookings() {
     // A guest's name is shown: the owner and the barber need to know who is
     // coming. A customer's is not in the booking at all.
     const who = b.guest_name ? ` · ${isolate(b.guest_name)} (בלי חשבון)` : "";
-    detail.textContent = ` · ${isolate(b.service_name)} אצל ${isolate(b.barber_name)}${who} · ${money(b.price_minor, b.currency)} · ${statusText(b)}`;
+    detail.textContent = `${isolate(b.service_name)} אצל ${isolate(b.barber_name)}${who} · ${money(b.price_minor, b.currency)}`;
+    const standing = document.createElement("span");
+    standing.textContent = statusText(b);
+    detail.append(standing);
     text.append(when, detail);
     row.append(text);
     if (b.status === "confirmed" && me.role === "customer") {
