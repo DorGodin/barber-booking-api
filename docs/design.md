@@ -180,6 +180,11 @@ A customer's booking that starts from 14:00 up to 16:00 (not including it; shop 
 its barber. The rule is by the hour only, not by service, and is a setting (`APPROVAL_FROM`,
 `APPROVAL_UNTIL`, `APPROVAL_WAIT_MINUTES`).
 
+- **The owner sets it from the page** (2026-10-06): a panel `אישור ספר` with one switch and, per
+  day, whether it asks and from which hour up to which - the same rows as the working hours.
+  `GET`/`PUT /approval-rules`, owner only, kept in `shop_settings`. Until the owner saves, the
+  server's settings are the rule (every day, 14:00 to 16:00). A change reaches only the bookings
+  made after it: those already waiting keep waiting.
 - **The chair is held at once.** The booking is `confirmed` and `approval` is `pending`; nobody
   else can take the time while the barber decides, and it counts toward the two bookings ahead.
 - **No answer, a yes.** After two hours - or when the booking starts, if that is sooner - a

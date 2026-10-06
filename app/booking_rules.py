@@ -8,28 +8,49 @@ booking product. Everything that decides "is this bookable" lives here, once.
 
 from __future__ import annotations
 
+import json
 from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.errors import DomainError, not_found
-from app.models import BarberHours, Booking, Service, TimeOff, User
-from app.scheduling import Interval, is_aligned, parse_hhmm, working_window
+from app.models import BarberHours, Booking, Service, ShopSetting, TimeOff, User
+from app.scheduling import WEEKDAYS, Interval, is_aligned, parse_hhmm, working_window
 
 
 def latest_start(config: Settings, now: datetime) -> datetime:
     return now + timedelta(days=config.booking_window_days)
 
 
-def needs_approval(config: Settings, start: datetime) -> bool:
-    """A start in the hours that wait for the barber: from approval_from up to
-    approval_until, on the shop's clock."""
-    local = start.astimezone(config.shop_tz)
-    return (
-        parse_hhmm(config.approval_from) <= local.hour * 60 + local.minute < parse_hhmm(config.approval_until)
-    )
+APPROVAL_KEY = "approval_rules"
+
+
+def default_approval_rules(config: Settings) -> dict:
+    """Until the owner sets them: every day, the hours the server's settings name."""
+    return {"enabled": True, "hours": dict.fromkeys(WEEKDAYS, [config.approval_from, config.approval_until])}
+
+
+def approval_rules(session: Session, config: Settings) -> dict:
+    row = session.get(ShopSetting, APPROVAL_KEY)
+    return json.loads(row.value_json) if row else default_approval_rules(config)
+
+
+def in_approval_hours(rules: dict, tz: ZoneInfo, start: datetime) -> bool:
+    """On, and the start falls on a day with hours, from the first up to but not
+    including the last, on the shop's clock."""
+    if not rules["enabled"]:
+        return False
+    local = start.astimezone(tz)
+    span = rules["hours"].get(WEEKDAYS[local.weekday()])
+    return span is not None and parse_hhmm(span[0]) <= local.hour * 60 + local.minute < parse_hhmm(span[1])
+
+
+def needs_approval(session: Session, config: Settings, start: datetime) -> bool:
+    """Whether a customer's booking at this start waits for the barber's yes."""
+    return in_approval_hours(approval_rules(session, config), config.shop_tz, start)
 
 
 def decide_by(config: Settings, asked: datetime, start: datetime) -> datetime:

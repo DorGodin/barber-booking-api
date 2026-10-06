@@ -71,6 +71,13 @@ class HoursIn(BaseModel):
         return hours
 
 
+class ApprovalRulesIn(HoursIn):
+    """When a customer's booking waits for its barber: on or off for the shop, and
+    per day the hours from and up to (not including), null meaning never that day."""
+
+    enabled: bool
+
+
 class TimeOffIn(BaseModel):
     date: date
 

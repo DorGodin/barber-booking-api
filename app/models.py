@@ -191,6 +191,16 @@ class Booking(Base):
     decided_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
+class ShopSetting(Base):
+    """A setting the owner changes from the page, kept as JSON under a name.
+    No row: the setting is what the server's own settings say."""
+
+    __tablename__ = "shop_settings"
+
+    key: Mapped[str] = mapped_column(String(40), primary_key=True)
+    value_json: Mapped[str] = mapped_column(Text)
+
+
 class IdempotencyKey(Base):
     """A double tap on "Book" must not book twice. The client sends the same
     Idempotency-Key with both requests; the second gets the first's booking."""

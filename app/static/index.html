@@ -146,6 +146,8 @@
   [data-testid="booking-row"] > span { flex:1 1 100%; }
   [data-testid="booking-row"] > button { border-radius:999px; min-height:36px; padding:0 16px; font-size:13px; }
   [data-testid="booking-when"], [data-testid="booking-detail"] > span { display:block; }
+  .switch { display:flex; align-items:center; gap:8px; margin:0 0 12px; }
+  .switch input { margin:0; }
   li:last-child { border-bottom:0; }
   /* A row's button keeps its size; the text beside it wraps instead. */
   li > button { flex-shrink:0; }
@@ -350,6 +352,7 @@
     <nav class="owner-nav" data-testid="owner-nav" aria-label="חלקי המסך" hidden>
       <a href="#bookings-section">תורים</a>
       <a href="#hours-section">שעות עבודה</a>
+      <a href="#approval-section">אישור ספר</a>
       <a href="#services-section">שירותים</a>
     </nav>
     <div class="grid">
@@ -421,6 +424,13 @@
         <p class="muted" data-testid="no-days-off" hidden>אין ימי חופש קבועים.</p>
         <div class="field"><label for="dayoff-date">יום חופש חדש</label><input id="dayoff-date" type="date" data-testid="dayoff-date"></div>
         <button data-testid="add-dayoff" type="button" class="ghost">הוספת יום חופש</button>
+      </div>
+      <div class="panel" data-testid="approval-panel" id="approval-section" data-section>
+        <h2>אישור ספר</h2>
+        <p class="muted">בימים ובשעות שנבחרו, תור שלקוח קובע מחכה לאישור של הספר. בלי תשובה, התור נקבע.</p>
+        <div class="switch"><input type="checkbox" id="approval-enabled" data-testid="approval-enabled"><label for="approval-enabled">לבקש אישור מהספר</label></div>
+        <table class="hours"><tbody data-testid="approval-hours"></tbody></table>
+        <button data-testid="save-approval" type="button">שמירת אישור הספר</button>
       </div>
       <div class="panel" data-testid="services-panel" id="services-section" data-section>
         <h2>שירותים</h2>
@@ -794,7 +804,7 @@ function signOut() {
   clearTimeout(waitingPoll);
   stopMoving();
   hideDone();
-  for (const id of ["bookings", "slots", "hours", "days-off", "services", "barber", "service"]) $(id).replaceChildren();
+  for (const id of ["bookings", "slots", "hours", "approval-hours", "days-off", "services", "barber", "service"]) $(id).replaceChildren();
   for (const id of ["display-name", "hours-for", "confirm-text"]) $(id).textContent = "";
   $("guest-name").value = "";
   for (const id of ["confirm", "no-slots", "no-bookings", "no-days-off", "app", "owner", "owner-nav", "whoami", "guest-field", "barber-left"]) $(id).hidden = true;
@@ -895,9 +905,10 @@ async function refreshOwner() {
   const barberId = $("barber").value;
   $("hours-for").textContent = `· ${isolate(barberName(barberId))}`;
   const current = ticket("owner");
-  const [hours, off] = await Promise.all([api("GET", `/barbers/${barberId}/hours`), api("GET", `/barbers/${barberId}/time-off`)]);
+  const [hours, off, approval] = await Promise.all([api("GET", `/barbers/${barberId}/hours`), api("GET", `/barbers/${barberId}/time-off`), api("GET", "/approval-rules")]);
   if (!current()) return;
   renderHours(hours.ok ? hours.data.hours : {});
+  renderApproval(approval.ok ? approval.data : { enabled: false, hours: {} });
   renderBarberActivity(barberId);
   renderDaysOff(off.ok ? off.data.days : []);
   renderServices();
@@ -922,6 +933,55 @@ function renderHours(hours) {
     row.append(...cells);
     body.append(row);
   }
+}
+
+// When a customer's booking waits for its barber: the same rows as the working
+// hours - a day, whether it asks, from and up to - and one switch for all.
+function renderApproval(rules) {
+  $("approval-enabled").checked = rules.enabled;
+  const body = $("approval-hours");
+  body.replaceChildren();
+  for (const [day, name] of DAYS) {
+    const span = rules.hours[day];
+    const row = control("tr", { testid: "approval-row" });
+    row.dataset.day = day;
+    const heading = control("th", { scope: "row", textContent: name });
+    const asks = control("input", { type: "checkbox", testid: "approval-asks", checked: Boolean(span), "aria-label": `אישור ספר ביום ${name}` });
+    const from = control("input", { testid: "approval-from", value: span ? span[0] : "14:00", "aria-label": `מהשעה ביום ${name}`, disabled: !span });
+    const until = control("input", { testid: "approval-until", value: span ? span[1] : "16:00", "aria-label": `עד השעה ביום ${name}`, disabled: !span });
+    asks.addEventListener("change", () => { from.disabled = until.disabled = !asks.checked; });
+    const cells = [heading, control("td", {}), control("td", {}), control("td", {})];
+    cells[1].append(asks);
+    cells[2].append(from);
+    cells[3].append(until);
+    row.append(...cells);
+    body.append(row);
+  }
+}
+
+function saveApproval() {
+  return busyWhile(async () => {
+    const hours = {};
+    for (const row of $("approval-hours").children) {
+      const name = row.querySelector("th").textContent;
+      const asks = row.querySelector('[data-testid="approval-asks"]').checked;
+      const from = row.querySelector('[data-testid="approval-from"]').value.trim();
+      const until = row.querySelector('[data-testid="approval-until"]').value.trim();
+      if (!asks) { hours[row.dataset.day] = null; continue; }
+      if (![from, until].every((t) => HHMM.test(t) && onQuarter(t))) {
+        say(`ביום ${name}: כל שעה צריכה להיות ברבע שעה עגולה, למשל 14:00 או 15:45.`, "error");
+        return;
+      }
+      if (from >= until) {
+        say(`ביום ${name}: השעה האחרונה צריכה להיות אחרי הראשונה.`, "error");
+        return;
+      }
+      hours[row.dataset.day] = [from, until];
+    }
+    const r = await api("PUT", "/approval-rules", { enabled: $("approval-enabled").checked, hours });
+    say(r.ok ? "אישור הספר נשמר. תורים שכבר מחכים ממשיכים לחכות." : explain(r, { invalid: "אישור הספר לא נשמר. כדאי לבדוק כל יום." }), r.ok ? "ok" : "error");
+    await refreshOwner();
+  });
 }
 
 function renderBarberActivity(barberId) {
@@ -1755,6 +1815,7 @@ $("booking-done-more").addEventListener("click", () => {
   document.querySelector('[data-testid="barbers"] [aria-checked="true"]')?.focus();
 });
 $("save-hours").addEventListener("click", saveHours);
+$("save-approval").addEventListener("click", saveApproval);
 $("barber-active-toggle").addEventListener("click", toggleBarberActive);
 $("add-dayoff").addEventListener("click", addDayOff);
 $("add-barber").addEventListener("click", addBarber);

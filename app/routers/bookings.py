@@ -119,7 +119,7 @@ def create_booking(
             price_minor=service.price_minor,
             currency=service.currency,
         )
-        if needs_approval(config, wanted.start):
+        if needs_approval(session, config, wanted.start):
             booking.approval = "pending"
             booking.decide_by = decide_by(config, now, wanted.start)
         session.add(booking)
@@ -288,7 +288,7 @@ def move_booking(
         booking.start_utc, booking.end_utc = wanted.start, wanted.end
         # A customer's new time answers to the same rule as a new booking; the
         # owner moving it has decided it, whatever the hour.
-        if user.role == "customer" and needs_approval(config, wanted.start):
+        if user.role == "customer" and needs_approval(session, config, wanted.start):
             booking.approval, booking.decide_by, booking.decided_by = (
                 "pending",
                 decide_by(config, now, wanted.start),
