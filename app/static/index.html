@@ -132,7 +132,6 @@
   .done h2 { margin:14px 0 6px; font-size:22px; color:var(--ink); }
   .done .when { margin:0; font-size:17px; font-weight:600; }
   .done .muted { margin:4px 0 0; }
-  .done .note { margin:14px 8px 0; padding:10px 14px; border-radius:12px; background:#fbf3df; color:#6b4a00; font-size:14px; }
   .done[data-waiting] .tick { background:#fbf3df; color:#8a5a00; }
   [data-testid="booking-row"][data-approval="pending"] [data-testid="booking-detail"] { color:#8a5a00; }
   .done-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:20px; }
@@ -398,7 +397,6 @@
           <h2 data-testid="booking-done-title" tabindex="-1"></h2>
           <p class="when" data-testid="booking-done-when"></p>
           <p class="muted" data-testid="booking-done-what"></p>
-          <p class="note" data-testid="booking-done-note" hidden></p>
           <div class="done-actions">
             <button type="button" data-testid="booking-done-mine">התורים שלי</button>
             <button type="button" class="soft" data-testid="booking-done-more">קביעת תור נוסף</button>
@@ -1429,13 +1427,9 @@ function showDone(title, made) {
   $("booking-done-title").textContent = title;
   $("booking-done-when").textContent = `${dayLabel(made.start_local)} · ${clock(made.start_local)}`;
   $("booking-done-what").textContent = `${isolate(made.service_name)} אצל ${isolate(made.barber_name)} · ${money(made.price_minor, made.currency)}`;
-  // A booking in the hours that wait for the barber says so: "booked" would
-  // be a promise nobody has made yet.
+  // A booking in the hours that wait for the barber is a request, not yet a
+  // booking: its title says so, and its mark is a pause and not a tick.
   const waiting = made.approval === "pending";
-  $("booking-done-note").hidden = !waiting;
-  $("booking-done-note").textContent = waiting
-    ? `${isolate(made.barber_name)} יאשר או ידחה את התור.`
-    : "";
   $("booking-done").toggleAttribute("data-waiting", waiting);
   $("booking-done").querySelector(".tick").textContent = waiting ? "…" : "✓";
   $("booking-done").hidden = false;
