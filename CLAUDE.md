@@ -108,6 +108,9 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   read at the time and never by a job. The customer is told in the page, not by text message.
   **When it asks is the owner's** (`/approval-rules`, `shop_settings`): a switch, and per day the
   hours. The settings `APPROVAL_*` only say what it is until the owner saves.
+- **A course is a card whose button opens WhatsApp** (`/courses`, `app/routers/courses.py`); the
+  owner keeps them and uploads their pictures. A picture is accepted by its bytes and gets a name
+  the server makes; `/media` serves only the identity pictures and the ones a course holds.
 - **One `refused()` shows every refusal** - booking, guest booking, move. A new way to book
   uses it rather than a copy.
 - **Moving a booking is the booking panel with the barber and the service locked** to the
