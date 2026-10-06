@@ -145,6 +145,8 @@
   [data-testid="booking-row"] > span { flex:1 1 100%; }
   [data-testid="booking-row"] > button { border-radius:999px; min-height:36px; padding:0 16px; font-size:13px; }
   [data-testid="booking-when"], [data-testid="booking-detail"] > span { display:block; }
+  .late-note { flex:1 1 100%; font-size:13px; color:var(--mut); line-height:1.6; }
+  .late-note a { display:inline-flex; align-items:center; min-height:44px; padding:0 16px; margin-top:6px; border-radius:999px; background:#f1efea; color:var(--ink); font-weight:600; text-decoration:none; }
   .switch { display:flex; align-items:center; gap:8px; margin:0 0 12px; }
   .switch input { margin:0; }
   li:last-child { border-bottom:0; }
@@ -1785,6 +1787,31 @@ async function moveSelected() {
   await refresh();
 }
 
+// What a booking too close to cancel or move says, and where to ask instead.
+function lateNote(b, canCancel, canMove, when) {
+  const cancelHours = shop.cancel_cutoff_hours, moveHours = shop.move_cutoff_hours;
+  const text = !canCancel && !canMove
+    ? (cancelHours === moveHours
+      ? `אי אפשר לבטל או לשנות תור פחות מ־${cancelHours} שעות לפני.`
+      : `אי אפשר לבטל תור פחות מ־${cancelHours} שעות לפני, או לשנות מועד פחות מ־${moveHours} שעות לפני.`)
+    : `אי אפשר לבטל תור פחות מ־${cancelHours} שעות לפני.`;
+  const note = document.createElement("div");
+  note.className = "late-note";
+  note.dataset.testid = "late-note";
+  note.append(document.createTextNode(`${text} `));
+  const whatsapp = shop.links && shop.links.whatsapp;
+  if (whatsapp && whatsapp.startsWith("https://")) {
+    const ask = document.createElement("a");
+    ask.href = `${whatsapp}?text=${encodeURIComponent(`שלום, אני רוצה לבטל או לשנות את התור של ${when}`)}`;
+    ask.target = "_blank";
+    ask.rel = "noopener noreferrer";
+    ask.dataset.testid = "late-whatsapp";
+    ask.textContent = "אפשר לפנות אלינו בוואטסאפ";
+    note.append(ask);
+  }
+  return note;
+}
+
 async function refreshBookings() {
   if (!me) return;
   const params = new URLSearchParams({ limit: "100" });
@@ -1819,7 +1846,13 @@ async function refreshBookings() {
     detail.append(standing);
     text.append(when, detail);
     row.append(text);
-    if (b.status === "confirmed" && me.role === "customer") {
+    // A customer cannot cancel or move a booking that is too close: the button is not
+    // offered, and the row says why - with the way to ask the shop, on WhatsApp.
+    const hoursLeft = (Date.parse(b.start) - Date.now()) / 3600000;
+    const canMove = hoursLeft >= shop.move_cutoff_hours;
+    const canCancel = hoursLeft >= shop.cancel_cutoff_hours;
+    if (b.status === "confirmed" && me.role === "customer" && (!canMove || !canCancel)) row.append(lateNote(b, canCancel, canMove, when.textContent));
+    if (b.status === "confirmed" && me.role === "customer" && canMove) {
       const move = document.createElement("button");
       move.type = "button";
       move.className = "ghost";
@@ -1841,7 +1874,7 @@ async function refreshBookings() {
         row.append(answer);
       }
     }
-    if (b.status === "confirmed" && me.role !== "barber") {
+    if (b.status === "confirmed" && me.role !== "barber" && (me.role !== "customer" || canCancel)) {
       const cancel = document.createElement("button");
       cancel.type = "button";
       cancel.className = "ghost";
