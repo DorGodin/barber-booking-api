@@ -183,6 +183,12 @@ class Booking(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=now_utc)
     cancelled_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     cancelled_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # A booking in the hours that need the barber's yes: "pending" until they
+    # answer or decide_by passes, then "approved" or "declined". None: nothing
+    # to approve. "pending" past decide_by reads as approved (booking_rules).
+    approval: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    decide_by: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    decided_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
 class IdempotencyKey(Base):

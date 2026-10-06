@@ -16,11 +16,39 @@ from sqlalchemy.orm import Session
 from app.config import Settings
 from app.errors import DomainError, not_found
 from app.models import BarberHours, Booking, Service, TimeOff, User
-from app.scheduling import Interval, is_aligned, working_window
+from app.scheduling import Interval, is_aligned, parse_hhmm, working_window
 
 
 def latest_start(config: Settings, now: datetime) -> datetime:
     return now + timedelta(days=config.booking_window_days)
+
+
+def needs_approval(config: Settings, start: datetime) -> bool:
+    """A start in the hours that wait for the barber: from approval_from up to
+    approval_until, on the shop's clock."""
+    local = start.astimezone(config.shop_tz)
+    return (
+        parse_hhmm(config.approval_from) <= local.hour * 60 + local.minute < parse_hhmm(config.approval_until)
+    )
+
+
+def decide_by(config: Settings, asked: datetime, start: datetime) -> datetime:
+    """The wait ends after approval_wait_minutes - or when the booking starts,
+    if that comes first: a haircut cannot be approved after it was given."""
+    return min(asked + timedelta(minutes=config.approval_wait_minutes), start)
+
+
+def approval_state(booking: Booking, now: datetime) -> str | None:
+    """None, pending, approved or declined, as of now. A wait that ran out
+    without an answer is approved: the barber's silence is a yes. Only a
+    declined booking keeps its answer once cancelled."""
+    if booking.approval is None:
+        return None
+    if booking.status == "cancelled" and booking.approval != "declined":
+        return None
+    if booking.approval == "pending" and booking.decide_by <= now:
+        return "approved"
+    return booking.approval
 
 
 def barber_or_404(session: Session, barber_id: str) -> User:

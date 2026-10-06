@@ -10,10 +10,13 @@ from sqlalchemy.orm import Session
 
 from app.booking_rules import (
     active_service_or_error,
+    approval_state,
     bookable_barber_or_error,
     busy,
     check_bookable,
     clashes,
+    decide_by,
+    needs_approval,
     visible_booking_or_404,
 )
 from app.config import Settings
@@ -116,6 +119,9 @@ def create_booking(
             price_minor=service.price_minor,
             currency=service.currency,
         )
+        if needs_approval(config, wanted.start):
+            booking.approval = "pending"
+            booking.decide_by = decide_by(config, now, wanted.start)
         session.add(booking)
         session.flush()
         if idempotency_key is not None:
@@ -190,6 +196,58 @@ def cancel_booking(
         return _view(session, booking, config)
 
 
+def _waiting_booking(session: Session, booking_id: str, user: User, now: datetime) -> Booking:
+    booking = visible_booking_or_404(session, booking_id, user)
+    if booking.status == "cancelled" and booking.approval != "declined":
+        raise DomainError(409, "already_cancelled", "that booking is cancelled")
+    if approval_state(booking, now) is None:
+        raise DomainError(409, "nothing_to_approve", "that booking does not wait for anyone's answer")
+    return booking
+
+
+@router.post("/bookings/{booking_id}/approve")
+def approve_booking(
+    booking_id: str,
+    user: User = Depends(require("barber", "owner")),
+    session: Session = Depends(db),
+    config: Settings = Depends(settings),
+):
+    """The barber says yes. The owner may too, for any barber; a barber only
+    for their own - somebody else's is not found. Saying it again, or after the
+    wait ran out and it stood by itself, changes nothing."""
+    now = datetime.now(UTC)
+    with write_lock(session):
+        booking = _waiting_booking(session, booking_id, user, now)
+        state = approval_state(booking, now)
+        if state == "declined":
+            raise DomainError(409, "already_declined", "that booking was declined")
+        if state == "pending":
+            booking.approval, booking.decided_by = "approved", user.id
+        return _view(session, booking, config)
+
+
+@router.post("/bookings/{booking_id}/decline")
+def decline_booking(
+    booking_id: str,
+    user: User = Depends(require("barber", "owner")),
+    session: Session = Depends(db),
+    config: Settings = Depends(settings),
+):
+    """The barber says no: the booking is cancelled and the time is free again.
+    Only while it waits - once it stands, ending it is the owner's cancellation."""
+    now = datetime.now(UTC)
+    with write_lock(session):
+        booking = _waiting_booking(session, booking_id, user, now)
+        state = approval_state(booking, now)
+        if state == "declined":
+            return _view(session, booking, config)
+        if state == "approved":
+            raise DomainError(409, "already_approved", "that booking already stands")
+        booking.approval, booking.decided_by = "declined", user.id
+        booking.status, booking.cancelled_at, booking.cancelled_by = "cancelled", now, user.id
+        return _view(session, booking, config)
+
+
 @router.post("/bookings/{booking_id}/move")
 def move_booking(
     booking_id: str,
@@ -228,6 +286,16 @@ def move_booking(
         _refuse_clashes(session, wanted, booking.barber_id, booking.customer_id, excluding=booking.id)
 
         booking.start_utc, booking.end_utc = wanted.start, wanted.end
+        # A customer's new time answers to the same rule as a new booking; the
+        # owner moving it has decided it, whatever the hour.
+        if user.role == "customer" and needs_approval(config, wanted.start):
+            booking.approval, booking.decide_by, booking.decided_by = (
+                "pending",
+                decide_by(config, now, wanted.start),
+                None,
+            )
+        else:
+            booking.approval, booking.decide_by, booking.decided_by = None, None, None
         return _view(session, booking, config)
 
 

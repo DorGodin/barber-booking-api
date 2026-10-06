@@ -174,6 +174,29 @@ the service, a guest marked `(בטלפון)`. Read only, as now.
    time with them.
 5. **Seed barbers** become טום, גולדה, גולדין, וטר (usernames in English, e.g. `barber.tom`).
 
+## The barber's yes for the afternoon (2026-10-06)
+
+A customer's booking that starts from 14:00 up to 16:00 (not including it; shop time) waits for
+its barber. The rule is by the hour only, not by service, and is a setting (`APPROVAL_FROM`,
+`APPROVAL_UNTIL`, `APPROVAL_WAIT_MINUTES`).
+
+- **The chair is held at once.** The booking is `confirmed` and `approval` is `pending`; nobody
+  else can take the time while the barber decides, and it counts toward the two bookings ahead.
+- **No answer, a yes.** After two hours - or when the booking starts, if that is sooner - a
+  pending booking reads `approved`. Computed when it is read: no background job.
+- **The barber says yes or no** on the booking row (`אישור` / `דחייה`), the owner for any
+  barber. `POST /bookings/{id}/approve` and `/decline`. A no cancels the booking, `cancelled_by`
+  is `staff`, and the time is free again. A yes after the wait, or a no after it, is refused.
+- **Moving** into those hours makes a customer's booking wait again; out of them ends the wait.
+  The owner moving or booking a guest decides it: no wait.
+- **The customer is told in the app, not by text message.** The booking card says
+  `הבקשה נשלחה`, with an amber note and the time it stands by itself; the list says
+  `ממתין לאישור של <barber>`. When the answer comes - the list is read again every 45 seconds
+  while one waits, and when the app comes back to the front - a popup says `<barber> אישר את
+  התור` or `<barber> לא יכול בשעה הזו`, with `בחירת שעה אחרת`. What the customer last saw waiting
+  is kept on the device, so an answer that came while the app was shut is told on opening.
+  A push notification to a closed app is a separate step (service worker, VAPID keys, HTTPS).
+
 ## Kept as it is
 
 Every `data-testid`, the radio-group times, `aria-busy`, `textContent` for every value from a

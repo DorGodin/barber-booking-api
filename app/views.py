@@ -5,7 +5,8 @@ from __future__ import annotations
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from app.models import Booking, Service, User
+from app.booking_rules import approval_state
+from app.models import Booking, Service, User, now_utc
 
 
 def iso_utc(instant: datetime | None) -> str | None:
@@ -37,7 +38,10 @@ def cancelled_by_label(booking: Booking) -> str | None:
     return "customer" if booking.cancelled_by == booking.customer_id else "staff"
 
 
-def booking_view(booking: Booking, service_name: str, barber_name: str, tz: ZoneInfo) -> dict:
+def booking_view(
+    booking: Booking, service_name: str, barber_name: str, tz: ZoneInfo, now: datetime | None = None
+) -> dict:
+    now = now or now_utc()
     return {
         "id": booking.id,
         "customer_id": booking.customer_id,
@@ -62,6 +66,16 @@ def booking_view(booking: Booking, service_name: str, barber_name: str, tz: Zone
         # can be told a booking was taken from them, and not only one they
         # cancelled.
         "cancelled_by": cancelled_by_label(booking),
+        # None: no one's yes was needed. pending: waiting for the barber until
+        # decide_by, then it stands. approved, or declined - which cancels it.
+        "approval": approval_state(booking, now),
+        "decide_by": iso_utc(booking.decide_by) if approval_state(booking, now) == "pending" else None,
+        # The same instant on the shop's clock, for the page to write as it is.
+        "decide_by_local": (
+            booking.decide_by.astimezone(tz).isoformat()
+            if approval_state(booking, now) == "pending"
+            else None
+        ),
     }
 
 

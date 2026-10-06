@@ -102,6 +102,9 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   shop's current lists: a customer's list has no barber who left, and their booking with
   that barber must still say who. The owner's list has them, marked, and the panel offers no
   times for one - asked, the server refuses and the refusal would replace the owner's message.
+- **A customer's booking in the afternoon hours waits for the barber** (`approval`, `decide_by`;
+  `app/booking_rules.py`). It holds the chair from the start; silence for the wait is a yes,
+  read at the time and never by a job. The customer is told in the page, not by text message.
 - **One `refused()` shows every refusal** - booking, guest booking, move. A new way to book
   uses it rather than a copy.
 - **Moving a booking is the booking panel with the barber and the service locked** to the
