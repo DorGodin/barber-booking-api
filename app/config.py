@@ -15,8 +15,8 @@ class Settings:
     booking_window_days: int
     cancel_cutoff_hours: int
     token_hours: int
-    # Shorter than the cancellation cutoff on purpose: a customer who cannot
-    # come may still move, and the time is offered to someone else.
+    # The same 12 hours as the cancellation cutoff, by the owner's decision
+    # (2026-10-06): inside it, a customer asks the shop on WhatsApp.
     move_cutoff_hours: int = 12
     login_max_failures: int = 5
     login_max_failures_per_ip: int = 20
@@ -85,7 +85,7 @@ class Settings:
             secret_key=secret,
             shop_tz=ZoneInfo(os.environ.get("SHOP_TZ", "Asia/Jerusalem")),
             booking_window_days=int(os.environ.get("BOOKING_WINDOW_DAYS", "30")),
-            cancel_cutoff_hours=int(os.environ.get("CANCEL_CUTOFF_HOURS", "24")),
+            cancel_cutoff_hours=int(os.environ.get("CANCEL_CUTOFF_HOURS", "12")),
             move_cutoff_hours=int(os.environ.get("MOVE_CUTOFF_HOURS", "12")),
             token_hours=int(os.environ.get("TOKEN_HOURS", "12")),
             login_max_failures=int(os.environ.get("LOGIN_MAX_FAILURES", "5")),

@@ -218,6 +218,14 @@ opens the shop's WhatsApp with the course already named in the message. No detai
 - **No WhatsApp number set, no button**: the card then only informs.
 - Nothing is seeded: with no course the tab says so.
 
+## Too close to cancel or move (2026-10-06)
+
+A customer is not offered `ביטול` or `שינוי מועד` once the booking is inside that action's cutoff
+(`CANCEL_CUTOFF_HOURS`, `MOVE_CUTOFF_HOURS`): the row says `אי אפשר לבטל תור פחות מ־N שעות לפני`
+(and, when both are closed, the same for moving), with `אפשר לפנות אלינו בוואטסאפ` - a pill link to the
+shop's WhatsApp that names the booking. Without a WhatsApp number the row still says why. The owner is
+not held to the cutoffs and keeps the button. The server still refuses a late request.
+
 ## Kept as it is
 
 Every `data-testid`, the radio-group times, `aria-busy`, `textContent` for every value from a
