@@ -600,7 +600,7 @@ function statusText(b) {
   if (b.approval === "pending") {
     return me.role === "customer"
       ? `ממתין לאישור של ${isolate(b.barber_name)}`
-      : `ממתין לאישור (יאושר מעצמו ב־${clock(b.decide_by_local)})`;
+      : "ממתין לאישור";
   }
   if (b.approval === "declined") return me.role === "customer" ? "הספר לא יכול בשעה הזו" : "נדחה";
   return STATUS[b.status] || b.status;
@@ -1355,12 +1355,12 @@ function showDone(title, made) {
   $("booking-done-title").textContent = title;
   $("booking-done-when").textContent = `${dayLabel(made.start_local)} · ${clock(made.start_local)}`;
   $("booking-done-what").textContent = `${isolate(made.service_name)} אצל ${isolate(made.barber_name)} · ${money(made.price_minor, made.currency)}`;
-  // A booking in the hours that wait for the barber says so, and until when:
-  // "booked" would be a promise nobody has made yet.
+  // A booking in the hours that wait for the barber says so: "booked" would
+  // be a promise nobody has made yet.
   const waiting = made.approval === "pending";
   $("booking-done-note").hidden = !waiting;
   $("booking-done-note").textContent = waiting
-    ? `${isolate(made.barber_name)} יאשר או ידחה את התור. אם לא תהיה תשובה עד ${clock(made.decide_by_local)}, התור נקבע.`
+    ? `${isolate(made.barber_name)} יאשר או ידחה את התור.`
     : "";
   $("booking-done").toggleAttribute("data-waiting", waiting);
   $("booking-done").querySelector(".tick").textContent = waiting ? "…" : "✓";
