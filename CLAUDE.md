@@ -93,7 +93,8 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **The poles, the scissors and every icon are decoration**: `aria-hidden`, and still under
   `prefers-reduced-motion`. Each contact button has a Hebrew name of its own.
 - **A new screen starts at its top**, and on a phone nothing the page scrolls to may land under
-  the owner's menu (`scroll-padding-top`, WCAG 2.4.11).
+  the owner's menu (`scroll-padding-top`, WCAG 2.4.11). The booking card is the one answer
+  that may start below the fold, under the shop's tall header: it is brought up until all of it shows.
 - **The owner books from the same panel, with a name field** (`guest-field`); a barber gets
   no booking panel. **The service choice offers active services only** - the owner's list
   holds withdrawn ones to manage, and offering one made the times fail and replace the

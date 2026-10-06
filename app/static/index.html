@@ -1368,6 +1368,10 @@ function showDone(title, made) {
   $("left-panel").dataset.done = "";
   showTab("book");
   window.scrollTo(0, 0);
+  // With the shop's cover and profile picture the header is tall, and on a
+  // small phone the card starts below the fold with its buttons out of sight:
+  // it is brought up until all of it shows.
+  if ($("booking-done").getBoundingClientRect().bottom > window.innerHeight) $("booking-done").scrollIntoView({ block: "start" });
   $("booking-done-title").focus();
 }
 
