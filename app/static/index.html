@@ -132,11 +132,16 @@
   .done h2 { margin:14px 0 6px; font-size:22px; color:var(--ink); }
   .done .when { margin:0; font-size:17px; font-weight:600; }
   .done .muted { margin:4px 0 0; }
+  .done .note { margin:14px 8px 0; padding:10px 14px; border-radius:12px; background:#fbf3df; color:#6b4a00; font-size:14px; }
+  .done[data-waiting] .tick { background:#fbf3df; color:#8a5a00; }
+  [data-testid="booking-row"][data-approval="pending"] [data-testid="booking-detail"] { color:#8a5a00; }
   .done-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:20px; }
   .done-actions button { border-radius:999px; min-height:44px; padding:0 24px; font-size:15px; }
   .done-actions .soft { background:#f1efea; color:var(--mut); border:0; padding:0 22px; font-size:14px; }
   ul { list-style:none; padding:0; margin:0; }
   li { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); }
+  [data-testid="booking-row"][data-approval="pending"] { flex-wrap:wrap; }
+  [data-testid="booking-row"][data-approval="pending"] > span { flex:1 1 100%; }
   li:last-child { border-bottom:0; }
   /* A row's button keeps its size; the text beside it wraps instead. */
   li > button { flex-shrink:0; }
@@ -376,6 +381,7 @@
           <h2 data-testid="booking-done-title" tabindex="-1"></h2>
           <p class="when" data-testid="booking-done-when"></p>
           <p class="muted" data-testid="booking-done-what"></p>
+          <p class="note" data-testid="booking-done-note" hidden></p>
           <div class="done-actions">
             <button type="button" data-testid="booking-done-mine">התורים שלי</button>
             <button type="button" class="soft" data-testid="booking-done-more">קביעת תור נוסף</button>
@@ -588,6 +594,17 @@ const money = (minor, currency) => new Intl.NumberFormat("he-IL", { style: "curr
 const ROLE = { customer: "לקוח", barber: "ספר", owner: "בעלים" };
 const firstName = (name) => name.trim().split(/\s+/)[0];
 const STATUS = { confirmed: "מאושר", cancelled: "בוטל" };
+// Where a booking stands, in the words of whoever is reading: the customer
+// waits for "the barber"; the barber and the owner are the ones who answer.
+function statusText(b) {
+  if (b.approval === "pending") {
+    return me.role === "customer"
+      ? `ממתין לאישור של ${isolate(b.barber_name)}`
+      : `ממתין לאישור (יאושר מעצמו ב־${clock(b.decide_by_local)})`;
+  }
+  if (b.approval === "declined") return me.role === "customer" ? "הספר לא יכול בשעה הזו" : "נדחה";
+  return STATUS[b.status] || b.status;
+}
 const barberName = (id) => (barbers.find((b) => b.id === id) || {}).display_name || "?";
 const serviceOf = (id) => services.find((s) => s.id === id) || {};
 
@@ -760,6 +777,7 @@ function signOut() {
   selected = null;
   cancelledHere.clear();
   clearTimeout(cancelledExpiry);
+  clearTimeout(waitingPoll);
   stopMoving();
   hideDone();
   for (const id of ["bookings", "slots", "hours", "days-off", "services", "barber", "service"]) $(id).replaceChildren();
@@ -1337,6 +1355,15 @@ function showDone(title, made) {
   $("booking-done-title").textContent = title;
   $("booking-done-when").textContent = `${dayLabel(made.start_local)} · ${clock(made.start_local)}`;
   $("booking-done-what").textContent = `${isolate(made.service_name)} אצל ${isolate(made.barber_name)} · ${money(made.price_minor, made.currency)}`;
+  // A booking in the hours that wait for the barber says so, and until when:
+  // "booked" would be a promise nobody has made yet.
+  const waiting = made.approval === "pending";
+  $("booking-done-note").hidden = !waiting;
+  $("booking-done-note").textContent = waiting
+    ? `${isolate(made.barber_name)} יאשר או ידחה את התור. אם לא תהיה תשובה עד ${clock(made.decide_by_local)}, התור נקבע.`
+    : "";
+  $("booking-done").toggleAttribute("data-waiting", waiting);
+  $("booking-done").querySelector(".tick").textContent = waiting ? "…" : "✓";
   $("booking-done").hidden = false;
   $("left-panel").dataset.done = "";
   showTab("book");
@@ -1411,7 +1438,7 @@ async function bookSelected() {
     // The card in the panel says it, and the list shows it; a third copy under
     // the list only repeated them. An earlier refusal is cleared.
     say("", "ok");
-    showDone("התור נקבע", r.data);
+    showDone(r.data.approval === "pending" ? "הבקשה נשלחה" : "התור נקבע", r.data);
   } else {
     refused(r, slot, "לא הצלחנו לקבוע את התור");
   }
@@ -1489,7 +1516,7 @@ async function moveSelected() {
   if (r.ok) {
     stopMoving();
     say("", "ok");
-    showDone("המועד עודכן", r.data);
+    showDone(r.data.approval === "pending" ? "הבקשה נשלחה" : "המועד עודכן", r.data);
   } else {
     refused(r, slot, "לא הצלחנו לשנות את המועד");
   }
@@ -1506,11 +1533,13 @@ async function refreshBookings() {
   const list = $("bookings");
   list.replaceChildren();
   const rows = (r.ok ? r.data.content : []).filter((b) => me.role !== "customer" || shownToCustomer(b));
+  tellAboutAnswers(r.ok ? r.data.content : []);
   for (const b of rows) {
     const row = document.createElement("li");
     row.dataset.testid = "booking-row";
     row.dataset.id = b.id;
     row.dataset.status = b.status;
+    row.dataset.approval = b.approval || "";
     row.tabIndex = -1;
     const text = document.createElement("span");
     const when = document.createElement("strong");
@@ -1522,7 +1551,7 @@ async function refreshBookings() {
     // A guest's name is shown: the owner and the barber need to know who is
     // coming. A customer's is not in the booking at all.
     const who = b.guest_name ? ` · ${isolate(b.guest_name)} (בלי חשבון)` : "";
-    detail.textContent = ` · ${isolate(b.service_name)} אצל ${isolate(b.barber_name)}${who} · ${money(b.price_minor, b.currency)} · ${STATUS[b.status] || b.status}`;
+    detail.textContent = ` · ${isolate(b.service_name)} אצל ${isolate(b.barber_name)}${who} · ${money(b.price_minor, b.currency)} · ${statusText(b)}`;
     text.append(when, detail);
     row.append(text);
     if (b.status === "confirmed" && me.role === "customer") {
@@ -1534,6 +1563,18 @@ async function refreshBookings() {
       move.setAttribute("aria-label", `שינוי המועד של התור של ${when.textContent}`);
       move.addEventListener("click", () => startMoving(b));
       row.append(move);
+    }
+    if (b.approval === "pending" && me.role !== "customer") {
+      for (const [verb, label, testid] of [["approve", "אישור", "approve"], ["decline", "דחייה", "decline"]]) {
+        const answer = document.createElement("button");
+        answer.type = "button";
+        answer.className = verb === "approve" ? "" : "ghost";
+        answer.dataset.testid = testid;
+        answer.textContent = label;
+        answer.setAttribute("aria-label", `${label} של התור של ${when.textContent}`);
+        answer.addEventListener("click", () => answerBooking(b, verb));
+        row.append(answer);
+      }
     }
     if (b.status === "confirmed" && me.role !== "barber") {
       const cancel = document.createElement("button");
@@ -1566,6 +1607,61 @@ const cancelledAge = (b) => Date.now() - Date.parse(b.cancelled_at);
 const shownToCustomer = (b) =>
   b.status !== "cancelled" ||
   (cancelledAge(b) < CANCELLED_SHOWN_MS && (b.cancelled_by === "staff" || cancelledHere.has(b.id)));
+
+function answerBooking(b, verb) {
+  return busyWhile(async () => {
+    const r = await api("POST", `/bookings/${b.id}/${verb}`);
+    const what = `${dayLabel(b.start_local)} ${clock(b.start_local)}`;
+    say(r.ok ? (verb === "approve" ? `התור של ${what} אושר.` : `התור של ${what} נדחה, והשעה פנויה שוב.`) : explain(r), r.ok ? "ok" : "error");
+    await refresh();
+    const row = document.querySelector(`[data-testid="booking-row"][data-id="${b.id}"]`);
+    if (row && document.activeElement === document.body) row.focus();
+  });
+}
+
+// The customer is told when the barber has answered - here, not by text
+// message. What they last saw waiting is remembered on this device, so an answer
+// that came while the app was closed is told the next time it opens.
+const WAITING_KEY = "waiting-bookings";
+function rememberedWaiting() {
+  try {
+    return JSON.parse(localStorage.getItem(WAITING_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+function tellAboutAnswers(all) {
+  if (me.role !== "customer") return;
+  const known = rememberedWaiting();
+  const news = [];
+  for (const b of all) {
+    if (b.approval === "pending") known[b.id] = true;
+    else if (known[b.id] && (b.approval === "approved" || b.approval === "declined")) news.push(b);
+  }
+  if (news.length && !$("popup").open) {
+    for (const b of news) delete known[b.id];
+    const when = (b) => `${dayLabel(b.start_local)} ${clock(b.start_local)}`;
+    const [only] = news;
+    if (news.length === 1 && only.approval === "approved") {
+      popup(`✓ ${isolate(only.barber_name)} אישר את התור`, `${when(only)} · ${isolate(only.service_name)}`, "ok");
+    } else if (news.length === 1) {
+      popup(`${isolate(only.barber_name)} לא יכול בשעה הזו`, `התור של ${when(only)} לא נקבע. אפשר לבחור שעה אחרת.`, "ok", {
+        action: { label: "בחירת שעה אחרת", run: () => { hideDone(); showTab("book"); window.scrollTo(0, 0); } },
+      });
+    } else {
+      popup("יש עדכון על התורים שלך", news.map((b) => `${when(b)}: ${b.approval === "approved" ? "אושר" : "לא נקבע"}`).join(" · "), "ok");
+    }
+  }
+  try {
+    localStorage.setItem(WAITING_KEY, JSON.stringify(known));
+  } catch {}
+  clearTimeout(waitingPoll);
+  if (all.some((b) => b.approval === "pending")) waitingPoll = setTimeout(() => refreshBookings(), 45000);
+}
+let waitingPoll = null;
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && me && me.role === "customer") refreshBookings();
+});
 
 function cancelBooking(b) {
   return busyWhile(async () => {
