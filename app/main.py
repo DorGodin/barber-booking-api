@@ -18,6 +18,7 @@ from app.errors import DomainError, domain_error_handler, not_found
 from app.identity import IMAGE_TYPES, contact_html, header_html, identity_from, media_file, under_brand
 from app.migrate import migrate
 from app.routers import auth, barbers, bookings, services
+from app.routers import settings as shop_settings
 from app.seed import seed_if_empty
 from app.sms import SmsSender, sender_from
 
@@ -222,6 +223,6 @@ def create_app(config: Settings | None = None, sms: SmsSender | None = None) -> 
             html = html.replace("{{" + name + "}}", html_text.escape(value))
         return HTMLResponse(html, headers={"Content-Security-Policy": page_policy(html)})
 
-    for router in (auth.router, services.router, barbers.router, bookings.router):
+    for router in (auth.router, services.router, barbers.router, bookings.router, shop_settings.router):
         app.include_router(router)
     return app

@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from app.booking_rules import approval_state, decide_by, needs_approval
+from app.booking_rules import approval_state, decide_by, default_approval_rules, in_approval_hours
 from app.config import Settings
 from app.models import Booking
 from tests.conftest import HAIRCUT, TZ, a_second_barber, at, book, local_day, move
@@ -20,6 +20,10 @@ CONFIG = Settings(
     cancel_cutoff_hours=24,
     token_hours=1,
 )
+
+
+def needs_approval(config: Settings, start: datetime) -> bool:
+    return in_approval_hours(default_approval_rules(config), config.shop_tz, start)
 
 
 def local(hhmm: str, days: int = 3) -> datetime:
@@ -292,3 +296,91 @@ def test_the_hours_can_be_set_by_the_shop():
     assert needs_approval(shop, local("09:30")) and not needs_approval(shop, local("15:00"))
     asked = local("08:00")
     assert decide_by(shop, asked, local("09:30")) == asked + timedelta(minutes=30)
+
+
+def rules_with(**days) -> dict:
+    hours = dict.fromkeys(("mon", "tue", "wed", "thu", "fri", "sat", "sun"), None)
+    hours.update(days)
+    return {"enabled": True, "hours": hours}
+
+
+def test_rules_name_the_days_and_hours_one_by_one():
+    thursday_noon = datetime(2026, 10, 8, 12, 0, tzinfo=TZ).astimezone(UTC)
+    rules = rules_with(thu=["11:00", "13:00"])
+
+    assert in_approval_hours(rules, TZ, thursday_noon)
+    assert not in_approval_hours(rules, TZ, thursday_noon + timedelta(hours=1))
+    assert not in_approval_hours(rules, TZ, thursday_noon + timedelta(days=1)), "friday has none"
+
+
+def test_rules_turned_off_ask_for_nothing_whatever_the_hours():
+    thursday_noon = datetime(2026, 10, 8, 12, 0, tzinfo=TZ).astimezone(UTC)
+
+    assert not in_approval_hours({**rules_with(thu=["00:00", "24:00"]), "enabled": False}, TZ, thursday_noon)
+
+
+def put_rules(client, owner, rules):
+    return client.put("/approval-rules", headers=owner, json=rules)
+
+
+def test_until_the_owner_sets_them_the_rules_are_the_servers(client, owner):
+    assert client.get("/approval-rules", headers=owner).json() == default_approval_rules(
+        client.app.state.settings
+    )
+
+
+def test_the_owner_turns_the_barbers_yes_off_and_new_bookings_stop_waiting(
+    client, owner, customer, barber, services
+):
+    saved = put_rules(client, owner, {**default_approval_rules(CONFIG), "enabled": False})
+    assert saved.status_code == 200 and saved.json()["enabled"] is False
+
+    made = book(client, customer, barber, services[HAIRCUT]["id"], at(local_day(3), "15:00")).json()
+
+    assert made["approval"] is None
+
+
+def test_the_owner_asks_for_the_yes_only_on_the_days_and_hours_chosen(
+    client, owner, new_customer, barber, services
+):
+    day = local_day(3)
+    weekday = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")[day.weekday()]
+    put_rules(client, owner, rules_with(**{weekday: ["09:00", "11:00"]}))
+    haircut = services[HAIRCUT]["id"]
+
+    inside = book(client, new_customer(), barber, haircut, at(day, "10:00")).json()
+    after = book(client, new_customer(), barber, haircut, at(day, "15:00")).json()
+    next_day = book(client, new_customer(), barber, haircut, at(day + timedelta(days=1), "10:00")).json()
+
+    assert (inside["approval"], after["approval"], next_day["approval"]) == ("pending", None, None)
+
+
+def test_changing_the_rules_leaves_bookings_already_waiting_to_wait(
+    client, owner, customer, barber, services
+):
+    made = book(client, customer, barber, services[HAIRCUT]["id"], at(local_day(3), "15:00")).json()
+
+    put_rules(client, owner, {**default_approval_rules(CONFIG), "enabled": False})
+
+    assert client.get(f"/bookings/{made['id']}", headers=customer).json()["approval"] == "pending"
+
+
+def test_only_the_owner_reads_or_changes_the_rules(client, customer):
+    assert client.get("/approval-rules", headers=customer).status_code == 403
+    assert put_rules(client, customer, default_approval_rules(CONFIG)).status_code == 403
+    assert client.get("/approval-rules").status_code == 401
+
+
+def test_rules_that_make_no_sense_are_refused(client, owner):
+    good = default_approval_rules(CONFIG)
+
+    assert put_rules(client, owner, {**good, "hours": {"mon": ["14:00", "16:00"]}}).status_code == 422
+    assert (
+        put_rules(client, owner, {**good, "hours": {**good["hours"], "mon": ["16:00", "14:00"]}}).status_code
+        == 422
+    )
+    assert (
+        put_rules(client, owner, {**good, "hours": {**good["hours"], "mon": ["14:10", "16:00"]}}).status_code
+        == 422
+    )
+    assert put_rules(client, owner, {"hours": good["hours"]}).status_code == 422
