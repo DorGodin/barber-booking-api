@@ -203,6 +203,16 @@
   dialog[data-kind="error"] .icon { display:flex; margin:26px auto 0; width:52px; height:52px; border-radius:50%; background:#fbeaea; color:var(--bad); align-items:center; justify-content:center; font-size:28px; font-weight:700; }
   dialog[data-kind="error"] .band { background:#fff; color:var(--ink); padding:12px 22px 0; font-size:19px; }
   dialog .body { padding:18px 22px; line-height:1.6; }
+  /* News about a booking - the barber's answer: a small white card, two lines and
+     small round buttons. Not a refusal, so no red mark. */
+  dialog[data-kind="news"] { width:min(300px, 84vw); border-radius:18px; text-align:center; overflow:hidden; }
+  dialog[data-kind="news"] .band { background:#fff; color:var(--ink); padding:18px 18px 4px; font-size:17px; }
+  dialog[data-kind="news"] .body { padding:0 18px 4px; color:var(--mut); font-size:14px; }
+  dialog[data-kind="news"] .actions { padding:10px 18px 18px; display:flex; justify-content:center; gap:8px; }
+  dialog[data-kind="news"] .actions button { border-radius:999px; min-height:36px; padding:0 16px; font-size:13px; }
+  dialog[data-kind="news"] [data-testid="popup-close"] { background:#f1efea; color:var(--mut); border:0; }
+  dialog[data-kind="news"] [data-testid="popup-action"] { background:var(--ink); color:#fff; border:0; }
+  dialog[data-kind="news"] [data-testid="popup-action"][hidden] + [data-testid="popup-close"] { background:var(--ink); color:#fff; }
   dialog[data-kind="error"] .body { padding:8px 24px 6px; color:var(--mut); }
   dialog .actions { padding:0 22px 20px; text-align:left; }
   dialog[data-kind="error"] .actions { padding:12px 24px 24px; display:flex; flex-direction:column; gap:8px; text-align:center; }
@@ -606,7 +616,7 @@ function statusText(b) {
       ? `ממתין לאישור של ${isolate(b.barber_name)}`
       : "ממתין לאישור";
   }
-  if (b.approval === "declined") return me.role === "customer" ? "הספר לא יכול בשעה הזו" : "נדחה";
+  if (b.approval === "declined") return me.role === "customer" ? "לא אושר" : "נדחה";
   return STATUS[b.status] || b.status;
 }
 const barberName = (id) => (barbers.find((b) => b.id === id) || {}).display_name || "?";
@@ -1654,13 +1664,13 @@ function tellAboutAnswers(all) {
     const when = (b) => `${dayLabel(b.start_local)} ${clock(b.start_local)}`;
     const [only] = news;
     if (news.length === 1 && only.approval === "approved") {
-      popup(`✓ ${isolate(only.barber_name)} אישר את התור`, `${when(only)} · ${isolate(only.service_name)}`, "ok");
+      popup(`${isolate(only.barber_name)} אישר את התור`, `${when(only)} · ${isolate(only.service_name)}`, "news");
     } else if (news.length === 1) {
-      popup(`${isolate(only.barber_name)} לא יכול בשעה הזו`, `התור של ${when(only)} לא נקבע. אפשר לבחור שעה אחרת.`, "ok", {
+      popup("התור לא אושר", `השעה של ${when(only)} לא התאימה הפעם. אפשר לבחור שעה אחרת.`, "news", {
         action: { label: "בחירת שעה אחרת", run: () => { hideDone(); showTab("book"); window.scrollTo(0, 0); } },
       });
     } else {
-      popup("יש עדכון על התורים שלך", news.map((b) => `${when(b)}: ${b.approval === "approved" ? "אושר" : "לא נקבע"}`).join(" · "), "ok");
+      popup("יש עדכון על התורים שלך", news.map((b) => `${when(b)}: ${b.approval === "approved" ? "אושר" : "לא אושר"}`).join(" · "), "news");
     }
   }
   try {

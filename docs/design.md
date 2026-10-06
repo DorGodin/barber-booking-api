@@ -192,8 +192,9 @@ its barber. The rule is by the hour only, not by service, and is a setting (`APP
 - **The customer is told in the app, not by text message.** The booking card says
   `הבקשה נשלחה`, with a short amber note (`<barber> יאשר או ידחה את התור.`) and nothing about the wait; the list says
   `ממתין לאישור של <barber>`. When the answer comes - the list is read again every 45 seconds
-  while one waits, and when the app comes back to the front - a popup says `<barber> אישר את
-  התור` or `<barber> לא יכול בשעה הזו`, with `בחירת שעה אחרת`. What the customer last saw waiting
+  while one waits, and when the app comes back to the front - a small white card of two lines (kind
+  `news`, no red mark) says `<barber> אישר את התור`, or `התור לא אושר` with `בחירת שעה אחרת`. The list says
+  `לא אושר` for a booking the barber declined. What the customer last saw waiting
   is kept on the device, so an answer that came while the app was shut is told on opening.
   A push notification to a closed app is a separate step (service worker, VAPID keys, HTTPS).
 
