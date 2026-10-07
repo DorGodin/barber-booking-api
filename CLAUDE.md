@@ -113,6 +113,9 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   the server makes; `/media` serves only the identity pictures and the ones a course holds.
 - **A review is the customer's, once, after the booking is over** (`reviews`, `app/routers/bookings.py`):
   stars at a tap, words optional and changeable, never for a cancelled or declined booking.
+- **A customer who cancelled or moved three times in 90 days waits for the barber on every booking**
+  (`is_flagged`, `booking_moves`): never shown to anyone, never approved by silence, counting only
+  the customer's own cancellations and moves.
 - **One `refused()` shows every refusal** - booking, guest booking, move. A new way to book
   uses it rather than a copy.
 - **Moving a booking is the booking panel with the barber and the service locked** to the

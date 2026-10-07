@@ -236,6 +236,16 @@ the words may be added or changed (`POST` and `PATCH /bookings/{id}/review`, a c
 only). The customer's row says `דירגת N כוכבים`; the barber and the owner see the stars and the words in
 the row. Nothing is shown to other customers yet - showing the rating on the page is a later step.
 
+## Customers who cancel or move too often (2026-10-07)
+
+Behind the scenes, with no screen and no word to the customer: one who cancelled three bookings, or
+moved a booking three times, in the last 90 days has **every** new booking (and every move) wait for
+the barber, at any hour, and **silence is never a yes** - the request waits until the barber answers
+(`approval: pending`, no `decide_by`). Only what the customer did counts: a booking the shop cancelled
+or declined, and a move by the owner, do not. It lifts by itself when the count falls under three, ninety
+days after. Settings: `FLAG_MOVES`, `FLAG_CANCELS`, `FLAG_WINDOW_DAYS`. Moves are kept in `booking_moves`;
+cancellations are read from the bookings.
+
 ## Kept as it is
 
 Every `data-testid`, the radio-group times, `aria-busy`, `textContent` for every value from a

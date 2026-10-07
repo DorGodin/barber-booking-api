@@ -28,6 +28,12 @@ class Settings:
     approval_from: str = "14:00"
     approval_until: str = "16:00"
     approval_wait_minutes: int = 120
+    # A customer who moved a booking flag_moves times, or cancelled flag_cancels,
+    # in the last flag_window_days has every booking wait for the barber's answer
+    # - with no time after which silence is a yes. Never told to the customer.
+    flag_moves: int = 3
+    flag_cancels: int = 3
+    flag_window_days: int = 90
     signups_per_address: int = 5
     signup_window_minutes: int = 60
     # Where a text message is posted: a provider's URL, or "console" to print it
@@ -95,6 +101,9 @@ class Settings:
             approval_from=os.environ.get("APPROVAL_FROM", "14:00"),
             approval_until=os.environ.get("APPROVAL_UNTIL", "16:00"),
             approval_wait_minutes=int(os.environ.get("APPROVAL_WAIT_MINUTES", "120")),
+            flag_moves=int(os.environ.get("FLAG_MOVES", "3")),
+            flag_cancels=int(os.environ.get("FLAG_CANCELS", "3")),
+            flag_window_days=int(os.environ.get("FLAG_WINDOW_DAYS", "90")),
             signups_per_address=int(os.environ.get("SIGNUPS_PER_ADDRESS", "5")),
             signup_window_minutes=int(os.environ.get("SIGNUP_WINDOW_MINUTES", "60")),
             backup_dir=os.environ.get("BACKUP_DIR", ""),

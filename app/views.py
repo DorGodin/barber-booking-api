@@ -106,7 +106,7 @@ def booking_view(
         # The same instant on the shop's clock, for the page to write as it is.
         "decide_by_local": (
             booking.decide_by.astimezone(tz).isoformat()
-            if approval_state(booking, now) == "pending"
+            if approval_state(booking, now) == "pending" and booking.decide_by is not None
             else None
         ),
     }
