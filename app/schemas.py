@@ -38,6 +38,7 @@ class ServiceIn(BaseModel):
     price_minor: int = Field(ge=0, le=10_000_000)
     currency: str = Field(default="ILS", pattern=r"^[A-Z]{3}$")
     requires_approval: bool = False
+    any_time: bool = False
 
 
 class ServicePatch(BaseModel):
@@ -46,6 +47,7 @@ class ServicePatch(BaseModel):
     price_minor: int | None = Field(default=None, ge=0, le=10_000_000)
     active: bool | None = None
     requires_approval: bool | None = None
+    any_time: bool | None = None
 
 
 class BarberPatch(BaseModel):

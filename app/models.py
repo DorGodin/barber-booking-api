@@ -157,6 +157,9 @@ class Service(Base):
     # A booking of this service always waits for its barber's answer - any day, any
     # hour, and silence is never a yes (an emergency haircut, say).
     requires_approval: Mapped[bool] = mapped_column(default=False, server_default=false())
+    # Offered on every day and at every hour, past the barber's hours and days off - only
+    # their bookings take times from it. The calendar opens whole for such a service.
+    any_time: Mapped[bool] = mapped_column(default=False, server_default=false())
 
 
 class Booking(Base):

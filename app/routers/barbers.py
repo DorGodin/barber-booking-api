@@ -153,7 +153,7 @@ def free_starts(
     """Whether the barber works that day, and the starts still free on it. One
     rule for the day's times and the month's counts: a day the calendar calls
     free always has a time to offer."""
-    window = day_window(session, config, barber_id, day)
+    window = day_window(session, config, barber_id, day, any_time=service.any_time)
     if window is None:
         return False, []
     taken = busy(session, window, barber_id=barber_id, excluding=moving)

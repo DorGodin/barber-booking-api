@@ -31,6 +31,7 @@ def service_view(service: Service) -> dict:
         "currency": service.currency,
         "active": service.active,
         "requires_approval": service.requires_approval,
+        "any_time": service.any_time,
     }
 
 
