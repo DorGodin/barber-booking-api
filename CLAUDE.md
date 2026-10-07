@@ -111,6 +111,8 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **A course is a card whose button opens WhatsApp** (`/courses`, `app/routers/courses.py`); the
   owner keeps them and uploads their pictures. A picture is accepted by its bytes and gets a name
   the server makes; `/media` serves only the identity pictures and the ones a course holds.
+- **A review is the customer's, once, after the booking is over** (`reviews`, `app/routers/bookings.py`):
+  stars at a tap, words optional and changeable, never for a cancelled or declined booking.
 - **One `refused()` shows every refusal** - booking, guest booking, move. A new way to book
   uses it rather than a copy.
 - **Moving a booking is the booking panel with the barber and the service locked** to the

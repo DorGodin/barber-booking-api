@@ -226,6 +226,16 @@ A customer is not offered `ביטול` or `שינוי מועד` once the booking
 shop's WhatsApp that names the booking. Without a WhatsApp number the row still says why. The owner is
 not held to the cutoffs and keeps the button. The server still refuses a late request.
 
+## Reviews (2026-10-06)
+
+Collection first, display later. Once a booking is over (and stood: not cancelled, not declined) the
+customer's `התורים שלי` opens with a card - `איך היה אצל <barber>?`, the day and time, five stars -
+and a tap on a star sends it; `תודה! קיבלנו את הדירוג` then offers a box for a few words (optional)
+and `שליחה` / `סיום`. `לא עכשיו` hides the card on this device. One review per booking: stars stay,
+the words may be added or changed (`POST` and `PATCH /bookings/{id}/review`, a customer's own booking
+only). The customer's row says `דירגת N כוכבים`; the barber and the owner see the stars and the words in
+the row. Nothing is shown to other customers yet - showing the rating on the page is a later step.
+
 ## Kept as it is
 
 Every `data-testid`, the radio-group times, `aria-busy`, `textContent` for every value from a
