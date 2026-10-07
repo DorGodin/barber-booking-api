@@ -16,6 +16,7 @@ from app.booking_rules import (
     check_bookable,
     clashes,
     decide_by,
+    is_flagged,
     needs_approval,
     visible_booking_or_404,
 )
@@ -23,7 +24,7 @@ from app.config import Settings
 from app.db import write_lock
 from app.deps import current_user, db, require, settings
 from app.errors import DomainError
-from app.models import Booking, IdempotencyKey, Review, Service, User
+from app.models import Booking, BookingMove, IdempotencyKey, Review, Service, User
 from app.scheduling import Interval
 from app.schemas import BookingIn, BookingMoveIn, GuestBookingIn, ReviewIn, ReviewTextIn
 from app.views import booking_view, page
@@ -120,7 +121,12 @@ def create_booking(
             price_minor=service.price_minor,
             currency=service.currency,
         )
-        if needs_approval(session, config, wanted.start):
+        # A customer who has cancelled or moved too often waits for the barber on
+        # every booking, whatever the hour, and silence is never a yes. They are
+        # not told why: it looks like any request.
+        if is_flagged(session, config, user.id, now):
+            booking.approval = "pending"
+        elif needs_approval(session, config, wanted.start):
             booking.approval = "pending"
             booking.decide_by = decide_by(config, now, wanted.start)
         session.add(booking)
@@ -344,8 +350,14 @@ def move_booking(
 
         booking.start_utc, booking.end_utc = wanted.start, wanted.end
         # A customer's new time answers to the same rule as a new booking; the
-        # owner moving it has decided it, whatever the hour.
-        if user.role == "customer" and needs_approval(session, config, wanted.start):
+        # owner moving it has decided it, whatever the hour. The customer's move is
+        # counted - after asking whether they were already flagged.
+        flagged = user.role == "customer" and is_flagged(session, config, user.id, now)
+        if user.role == "customer":
+            session.add(BookingMove(booking_id=booking.id, customer_id=user.id, moved_at=now))
+        if flagged:
+            booking.approval, booking.decide_by, booking.decided_by = "pending", None, None
+        elif user.role == "customer" and needs_approval(session, config, wanted.start):
             booking.approval, booking.decide_by, booking.decided_by = (
                 "pending",
                 decide_by(config, now, wanted.start),

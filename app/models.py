@@ -185,10 +185,23 @@ class Booking(Base):
     cancelled_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
     # A booking in the hours that need the barber's yes: "pending" until they
     # answer or decide_by passes, then "approved" or "declined". None: nothing
-    # to approve. "pending" past decide_by reads as approved (booking_rules).
+    # to approve. "pending" past decide_by reads as approved (booking_rules); with
+    # no decide_by it waits for the barber however long it takes.
     approval: Mapped[str | None] = mapped_column(String(16), nullable=True)
     decide_by: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     decided_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
+
+
+class BookingMove(Base):
+    """One time a customer moved a booking: kept to count them. The owner's moves
+    are not kept - only the customer's own count against them."""
+
+    __tablename__ = "booking_moves"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    booking_id: Mapped[str] = mapped_column(ForeignKey("bookings.id"))
+    customer_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    moved_at: Mapped[datetime] = mapped_column(UTCDateTime, index=True, default=now_utc)
 
 
 class Review(Base):

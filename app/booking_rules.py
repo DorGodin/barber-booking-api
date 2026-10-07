@@ -12,12 +12,12 @@ import json
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.errors import DomainError, not_found
-from app.models import BarberHours, Booking, Service, ShopSetting, TimeOff, User
+from app.models import BarberHours, Booking, BookingMove, Service, ShopSetting, TimeOff, User
 from app.scheduling import WEEKDAYS, Interval, is_aligned, parse_hhmm, working_window
 
 
@@ -53,6 +53,29 @@ def needs_approval(session: Session, config: Settings, start: datetime) -> bool:
     return in_approval_hours(approval_rules(session, config), config.shop_tz, start)
 
 
+def is_flagged(session: Session, config: Settings, customer_id: str, now: datetime) -> bool:
+    """A customer who cancelled flag_cancels bookings, or moved flag_moves, in the last
+    flag_window_days. Only what the customer did themselves counts: a booking the
+    shop cancelled or declined is not theirs, and nor is a move by the owner."""
+    since = now - timedelta(days=config.flag_window_days)
+    cancels = session.scalar(
+        select(func.count())
+        .select_from(Booking)
+        .where(
+            Booking.customer_id == customer_id,
+            Booking.status == "cancelled",
+            Booking.cancelled_by == customer_id,
+            Booking.cancelled_at >= since,
+        )
+    )
+    moves = session.scalar(
+        select(func.count())
+        .select_from(BookingMove)
+        .where(BookingMove.customer_id == customer_id, BookingMove.moved_at >= since)
+    )
+    return cancels >= config.flag_cancels or moves >= config.flag_moves
+
+
 def decide_by(config: Settings, asked: datetime, start: datetime) -> datetime:
     """The wait ends after approval_wait_minutes - or when the booking starts,
     if that comes first: a haircut cannot be approved after it was given."""
@@ -67,7 +90,7 @@ def approval_state(booking: Booking, now: datetime) -> str | None:
         return None
     if booking.status == "cancelled" and booking.approval != "declined":
         return None
-    if booking.approval == "pending" and booking.decide_by <= now:
+    if booking.approval == "pending" and booking.decide_by is not None and booking.decide_by <= now:
         return "approved"
     return booking.approval
 
