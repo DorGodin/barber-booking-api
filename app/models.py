@@ -211,6 +211,18 @@ class BookingMove(Base):
     moved_at: Mapped[datetime] = mapped_column(UTCDateTime, index=True, default=now_utc)
 
 
+class PushSubscription(Base):
+    """A browser that asked to be told about news: the address its push service gave it.
+    No keys - nothing is sent in the message, so nothing is encrypted."""
+
+    __tablename__ = "push_subscriptions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    endpoint: Mapped[str] = mapped_column(String(500), unique=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=now_utc)
+
+
 class Review(Base):
     """What a customer says about a booking once it is over: stars, and words if
     they add any. One per booking, kept even if the barber later leaves."""

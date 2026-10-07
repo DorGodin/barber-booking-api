@@ -34,6 +34,13 @@ class Settings:
     flag_moves: int = 3
     flag_cancels: int = 3
     flag_window_days: int = 90
+    # Web Push: the shop's VAPID key pair (`python -m app.push_keys` makes one), who is asking, and
+    # extra hosts a developer lets the server post to - the push services' own hosts are built in.
+    # No pair: no push, and the page does not offer it.
+    vapid_private_key: str = ""
+    vapid_public_key: str = ""
+    vapid_subject: str = "mailto:owner@example.com"
+    push_extra_hosts: str = ""
     signups_per_address: int = 5
     signup_window_minutes: int = 60
     # Where a text message is posted: a provider's URL, or "console" to print it
@@ -104,6 +111,10 @@ class Settings:
             flag_moves=int(os.environ.get("FLAG_MOVES", "3")),
             flag_cancels=int(os.environ.get("FLAG_CANCELS", "3")),
             flag_window_days=int(os.environ.get("FLAG_WINDOW_DAYS", "90")),
+            vapid_private_key=os.environ.get("VAPID_PRIVATE_KEY", ""),
+            vapid_public_key=os.environ.get("VAPID_PUBLIC_KEY", ""),
+            vapid_subject=os.environ.get("VAPID_SUBJECT", "mailto:owner@example.com"),
+            push_extra_hosts=os.environ.get("PUSH_EXTRA_HOSTS", ""),
             signups_per_address=int(os.environ.get("SIGNUPS_PER_ADDRESS", "5")),
             signup_window_minutes=int(os.environ.get("SIGNUP_WINDOW_MINUTES", "60")),
             backup_dir=os.environ.get("BACKUP_DIR", ""),

@@ -4,7 +4,7 @@ import hashlib
 import json
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, Header, Query, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -22,9 +22,10 @@ from app.booking_rules import (
 )
 from app.config import Settings
 from app.db import write_lock
-from app.deps import current_user, db, require, settings
+from app.deps import current_user, db, push_hub, require, settings
 from app.errors import DomainError
 from app.models import Booking, BookingMove, IdempotencyKey, Review, Service, User
+from app.push import PushHub
 from app.scheduling import Interval
 from app.schemas import BookingIn, BookingMoveIn, GuestBookingIn, ReviewIn, ReviewTextIn
 from app.views import booking_view, page
@@ -61,10 +62,12 @@ def _refuse_clashes(
 def create_booking(
     body: BookingIn,
     response: Response,
+    background: BackgroundTasks,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     user: User = Depends(require("customer")),
     session: Session = Depends(db),
     config: Settings = Depends(settings),
+    hub: PushHub = Depends(push_hub),
 ):
     if idempotency_key is not None and not 1 <= len(idempotency_key) <= 128:
         raise DomainError(422, "bad_idempotency_key", "Idempotency-Key must be 1 to 128 characters")
@@ -131,6 +134,8 @@ def create_booking(
             booking.decide_by = decide_by(config, now, wanted.start)
         session.add(booking)
         session.flush()
+        if booking.approval == "pending":
+            background.add_task(hub.tell, [booking.barber_id])
         if idempotency_key is not None:
             session.add(
                 IdempotencyKey(
@@ -215,9 +220,11 @@ def _waiting_booking(session: Session, booking_id: str, user: User, now: datetim
 @router.post("/bookings/{booking_id}/approve")
 def approve_booking(
     booking_id: str,
+    background: BackgroundTasks,
     user: User = Depends(require("barber", "owner")),
     session: Session = Depends(db),
     config: Settings = Depends(settings),
+    hub: PushHub = Depends(push_hub),
 ):
     """The barber says yes. The owner may too, for any barber; a barber only
     for their own - somebody else's is not found. Saying it again, or after the
@@ -230,15 +237,18 @@ def approve_booking(
             raise DomainError(409, "already_declined", "that booking was declined")
         if state == "pending":
             booking.approval, booking.decided_by = "approved", user.id
+            background.add_task(hub.tell, [booking.customer_id])
         return _view(session, booking, config)
 
 
 @router.post("/bookings/{booking_id}/decline")
 def decline_booking(
     booking_id: str,
+    background: BackgroundTasks,
     user: User = Depends(require("barber", "owner")),
     session: Session = Depends(db),
     config: Settings = Depends(settings),
+    hub: PushHub = Depends(push_hub),
 ):
     """The barber says no: the booking is cancelled and the time is free again.
     Only while it waits - once it stands, ending it is the owner's cancellation."""
@@ -252,6 +262,7 @@ def decline_booking(
             raise DomainError(409, "already_approved", "that booking already stands")
         booking.approval, booking.decided_by = "declined", user.id
         booking.status, booking.cancelled_at, booking.cancelled_by = "cancelled", now, user.id
+        background.add_task(hub.tell, [booking.customer_id])
         return _view(session, booking, config)
 
 
@@ -314,10 +325,12 @@ def add_words_to_review(
 @router.post("/bookings/{booking_id}/move")
 def move_booking(
     booking_id: str,
+    background: BackgroundTasks,
     body: BookingMoveIn,
     user: User = Depends(current_user),
     session: Session = Depends(db),
     config: Settings = Depends(settings),
+    hub: PushHub = Depends(push_hub),
 ):
     """The same booking at another time - same barber, service and price.
 
@@ -367,6 +380,8 @@ def move_booking(
             )
         else:
             booking.approval, booking.decide_by, booking.decided_by = None, None, None
+        if booking.approval == "pending":
+            background.add_task(hub.tell, [booking.barber_id])
         return _view(session, booking, config)
 
 
