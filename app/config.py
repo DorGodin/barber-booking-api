@@ -36,6 +36,10 @@ class Settings:
     flag_window_days: int = 90
     # How many people one customer may book for in one go, back to back with one barber.
     group_max: int = 2
+    # A reminder to a customer this many minutes before their booking - by push, so only when push
+    # is set up. The shop looks every reminder_check_seconds; 0 minutes turns reminders off.
+    reminder_minutes: int = 120
+    reminder_check_seconds: int = 60
     # Web Push: the shop's VAPID key pair (`python -m app.push_keys` makes one), who is asking, and
     # extra hosts a developer lets the server post to - the push services' own hosts are built in.
     # No pair: no push, and the page does not offer it.
@@ -114,6 +118,8 @@ class Settings:
             flag_cancels=int(os.environ.get("FLAG_CANCELS", "3")),
             flag_window_days=int(os.environ.get("FLAG_WINDOW_DAYS", "90")),
             group_max=int(os.environ.get("GROUP_MAX", "2")),
+            reminder_minutes=int(os.environ.get("REMINDER_MINUTES", "120")),
+            reminder_check_seconds=int(os.environ.get("REMINDER_CHECK_SECONDS", "60")),
             vapid_private_key=os.environ.get("VAPID_PRIVATE_KEY", ""),
             vapid_public_key=os.environ.get("VAPID_PUBLIC_KEY", ""),
             vapid_subject=os.environ.get("VAPID_SUBJECT", "mailto:owner@example.com"),

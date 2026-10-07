@@ -288,6 +288,21 @@ the write lock; `GET .../availability` and `.../days` take `also=<service>`.
   each. Each booking still follows the barber's-yes rules by itself (the hours, the service, the flag).
 - At most `GROUP_MAX` people (2). The control is not offered while moving a booking, nor to the owner.
 
+## A reminder before a booking (2026-10-08)
+
+A customer who turned notifications on is reminded two hours before a booking (`REMINDER_MINUTES`, 0 turns it off):
+`תזכורת לתור` / `היום ב־14:30 · תספורת אצל אבי` (`מחר ב־...` or the date when it is not today). The push carries no words;
+the service worker fetches them with its own push address (`POST /push/notice`) and is given them once, else it shows
+its fixed wording.
+
+- **The shop has no job that runs by itself, so each worker looks every `REMINDER_CHECK_SECONDS` (60).** A booking is
+  claimed in one write step (`reminded_at`), so with several workers it is still reminded once; a push that fails is
+  not tried again - better than telling a customer twice.
+- **Only a booking that stands**: not one waiting for the barber (until they say yes, or the wait runs out), cancelled or
+  declined; and not one made inside the window itself, where a reminder right after booking says nothing. A move clears
+  it, so the new time gets its own. Bookings made together are one reminder naming both.
+- Not for barbers or the owner. Only when push is set up.
+
 ## Kept as it is
 
 Every `data-testid`, the radio-group times, `aria-busy`, `textContent` for every value from a

@@ -202,6 +202,8 @@ class Booking(Base):
     # booking afterwards: moved, cancelled and answered one by one.
     for_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
     group_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    # When the customer was reminded of it; None until they are. A move clears it.
+    reminded_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
 
 class BookingMove(Base):
@@ -226,6 +228,21 @@ class PushSubscription(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     endpoint: Mapped[str] = mapped_column(String(500), unique=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=now_utc)
+
+
+class PushNotice(Base):
+    """What one browser is to be told the next time the push service wakes it. The push carries no
+    words, so the service worker asks for them - with its own address, which only that browser has -
+    and is given them once."""
+
+    __tablename__ = "push_notices"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    subscription_id: Mapped[int] = mapped_column(ForeignKey("push_subscriptions.id"), index=True)
+    title: Mapped[str] = mapped_column(String(120))
+    body: Mapped[str] = mapped_column(String(300))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=now_utc)
+    delivered_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
 
 class Review(Base):

@@ -102,15 +102,22 @@ class PushHub:
     def available(self) -> bool:
         return self.sender is not None
 
-    def tell(self, user_ids: list[str]) -> None:
+    def tell(self, user_ids: list[str], notice: tuple[str, str] | None = None) -> None:
+        """Wake each of these people's browsers. With a `notice` - a title and words - each browser is
+        also left the words to fetch when it wakes; without one it shows its fixed wording."""
         if self.sender is None:
             return
-        from app.models import PushSubscription
+        from app.models import PushNotice, PushSubscription
 
         with self.maker() as session:
             rows = session.scalars(
                 select(PushSubscription).where(PushSubscription.user_id.in_(user_ids))
             ).all()
+            if notice is not None:
+                session.add_all(
+                    PushNotice(subscription_id=r.id, title=notice[0], body=notice[1]) for r in rows
+                )
+                session.commit()
             gone = []
             for row in rows:
                 try:
@@ -119,6 +126,7 @@ class PushHub:
                 except Exception:  # noqa: BLE001 - a push must never break what it reports
                     continue
             if gone:
+                session.execute(delete(PushNotice).where(PushNotice.subscription_id.in_(gone)))
                 session.execute(delete(PushSubscription).where(PushSubscription.id.in_(gone)))
                 session.commit()
 

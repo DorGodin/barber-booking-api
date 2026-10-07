@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import html as html_text
@@ -21,6 +22,7 @@ from app.migrate import migrate
 from app.models import Course
 from app.push import PushHub, PushSender
 from app.push import sender_from as push_sender_from
+from app.reminders import reminders
 from app.routers import auth, barbers, bookings, courses, push, services
 from app.routers import settings as shop_settings
 from app.seed import seed_if_empty
@@ -134,7 +136,12 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         prepare_database(engine, app.state.sessionmaker, config)
+        watching = None
+        if app.state.push.available and config.reminder_minutes > 0:
+            watching = asyncio.create_task(reminders(app.state.sessionmaker, app.state.push, config))
         yield
+        if watching is not None:
+            watching.cancel()
         engine.dispose()
 
     app = FastAPI(title="Barber Booking API", version="1.0.0", lifespan=lifespan)
