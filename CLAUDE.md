@@ -119,6 +119,10 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **A service ticked `any_time` ignores the barber's hours and days off, and nothing else**
   (`day_window(any_time=...)`, used by the listing and by the booking): their bookings still take its
   times, and the booking window still ends it.
+- **A notification carries no booking** (`app/push.py`): a signed header and no body, the words fixed in
+  `/sw.js` by role. The server posts only to a push service's own host (`PUSH_HOSTS`, plus
+  `PUSH_EXTRA_HOSTS` for development) - a subscription address is typed by a customer, and trusting it is
+  a server-side request forgery. Never send a name, a time or a service through it.
 - **One `refused()` shows every refusal** - booking, guest booking, move. A new way to book
   uses it rather than a copy.
 - **Moving a booking is the booking panel with the barber and the service locked** to the

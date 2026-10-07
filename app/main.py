@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from sqlalchemy import select
 
 from app import backup
@@ -19,7 +19,9 @@ from app.errors import DomainError, domain_error_handler, not_found
 from app.identity import IMAGE_TYPES, contact_html, header_html, identity_from, media_file, under_brand
 from app.migrate import migrate
 from app.models import Course
-from app.routers import auth, barbers, bookings, courses, services
+from app.push import PushHub, PushSender
+from app.push import sender_from as push_sender_from
+from app.routers import auth, barbers, bookings, courses, push, services
 from app.routers import settings as shop_settings
 from app.seed import seed_if_empty
 from app.sms import SmsSender, sender_from
@@ -34,6 +36,7 @@ SECURITY_HEADERS = {
 }
 
 PAGE = Path(__file__).parent / "static" / "index.html"
+SERVICE_WORKER = Path(__file__).parent / "static" / "sw.js"
 STATEMENT = Path(__file__).parent / "static" / "accessibility.html"
 PRIVACY = Path(__file__).parent / "static" / "privacy.html"
 
@@ -67,6 +70,7 @@ def page_policy(html: str) -> str:
         # The shop's own pictures, served by this server under /media.
         "img-src 'self' data:; "
         "connect-src 'self'; "
+        "worker-src 'self'; manifest-src 'self'; "
         "form-action 'none'; base-uri 'none'; frame-ancestors 'none'"
     )
 
@@ -121,7 +125,9 @@ def _media_next_to(database_url: str) -> Path:
     return Path("media")
 
 
-def create_app(config: Settings | None = None, sms: SmsSender | None = None) -> FastAPI:
+def create_app(
+    config: Settings | None = None, sms: SmsSender | None = None, push_sender: PushSender | None = None
+) -> FastAPI:
     config = config or Settings.from_env()
     engine = make_engine(config.database_url)
 
@@ -138,6 +144,13 @@ def create_app(config: Settings | None = None, sms: SmsSender | None = None) -> 
     app.state.media_dir = media_dir
     app.state.sms = sms or sender_from(config.sms_url, config.sms_token)
     app.state.sessionmaker = make_sessionmaker(engine)
+    app.state.push = PushHub(
+        app.state.sessionmaker,
+        push_sender
+        or push_sender_from(
+            config.vapid_private_key, config.vapid_public_key, config.vapid_subject, config.push_extra_hosts
+        ),
+    )
     app.add_exception_handler(DomainError, domain_error_handler)
 
     @app.middleware("http")
@@ -178,6 +191,38 @@ def create_app(config: Settings | None = None, sms: SmsSender | None = None) -> 
             .replace("{{shop_title}}", html_text.escape(f"{identity.brand} {identity.tagline.title()}"))
         )
         return HTMLResponse(html, headers={"Content-Security-Policy": page_policy(html)})
+
+    @app.get("/sw.js", include_in_schema=False)
+    def service_worker():
+        """At the root, so its scope is the whole page. Never cached: a browser checks it afresh."""
+        return FileResponse(
+            SERVICE_WORKER,
+            media_type="text/javascript",
+            headers={"Cache-Control": "no-cache"},
+        )
+
+    @app.get("/manifest.webmanifest", include_in_schema=False)
+    def manifest():
+        """What lets the page be put on a phone's home screen - on an iPhone, the only way it can
+        be sent notifications."""
+        icons = []
+        if identity.profile:
+            kind = IMAGE_TYPES[identity.profile.rsplit(".", 1)[-1].lower()]
+            icons = [{"src": f"/media/{identity.profile}", "sizes": "any", "type": kind}]
+        return JSONResponse(
+            {
+                "name": f"{identity.brand} {identity.tagline.title()}",
+                "short_name": identity.brand,
+                "lang": "he",
+                "dir": "rtl",
+                "start_url": "/",
+                "display": "standalone",
+                "background_color": "#ffffff",
+                "theme_color": "#111111",
+                "icons": icons,
+            },
+            media_type="application/manifest+json",
+        )
 
     @app.get("/media/{name}", include_in_schema=False)
     def media(name: str):
@@ -234,6 +279,7 @@ def create_app(config: Settings | None = None, sms: SmsSender | None = None) -> 
         barbers.router,
         bookings.router,
         courses.router,
+        push.router,
         shop_settings.router,
     ):
         app.include_router(router)

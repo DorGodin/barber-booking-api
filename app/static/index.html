@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.webmanifest">
 <title>{{shop_title}}</title>
 <style>
   /* White, black buttons, a dark gold for the line under the brand; the barber
@@ -155,6 +156,15 @@
   .review-card .row-buttons { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
   .review-card .row-buttons button { border-radius:999px; min-height:44px; padding:0 18px; font-size:14px; }
   .review-card .row-buttons .soft { background:#f1efea; color:var(--mut); border:0; }
+  /* Notifications: asked once, at the top of the list. */
+  .push-card { display:block; background:#fff; border:1px solid var(--line); border-radius:18px; padding:14px 16px; margin:0 0 14px; text-align:center; }
+  .push-card h3 { margin:0; font-size:15px; color:var(--ink); }
+  .push-card p { margin:4px 0 10px; font-size:13px; color:var(--mut); }
+  .push-card .row-buttons { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .push-card .row-buttons button { border-radius:999px; min-height:44px; padding:0 18px; font-size:14px; }
+  .push-card .row-buttons .soft { background:#f1efea; color:var(--mut); border:0; }
+  .push-card.on { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 14px; text-align:start; }
+  .push-card.on span { font-size:13px; color:var(--mut); }
   .late-note { flex:1 1 100%; font-size:13px; color:var(--mut); line-height:1.6; }
   .late-note a { display:inline-flex; align-items:center; min-height:44px; padding:0 16px; margin-top:6px; border-radius:999px; background:#f1efea; color:var(--ink); font-weight:600; text-decoration:none; }
   .switch { display:flex; align-items:center; gap:8px; margin:0 0 12px; }
@@ -856,6 +866,7 @@ function signOut() {
   clearTimeout(cancelledExpiry);
   clearTimeout(waitingPoll);
   thanksFor = null;
+  pushInfo = { key: null, subscribed: false };
   stopMoving();
   hideDone();
   for (const id of ["bookings", "slots", "hours", "approval-hours", "days-off", "services", "barber", "service", "courses", "courses-admin"]) $(id).replaceChildren();
@@ -908,6 +919,7 @@ async function start() {
   $("barber").parentElement.hidden = me.role === "barber";
   $("bookings-title").textContent = { customer: "התורים שלי", barber: "היומן שלי", owner: "תורים" }[me.role];
   say("", "ok");
+  await loadPush();
   await refresh();
   // Today may be closed, or full: the screen opens on a day with a time.
   await keepAFreeDay();
@@ -1808,6 +1820,118 @@ async function moveSelected() {
   await refresh();
 }
 
+// ---- Notifications ------------------------------------------------------------
+// The shop tells a customer when the barber has answered, and a barber when a request waits - by a
+// notification, even with the page closed. Asked once, by a card, because a browser only lets a
+// person's own tap ask for the permission. Nothing about the booking travels in it.
+const PUSH_LATER_KEY = "push-not-now";
+let pushInfo = { key: null, subscribed: false };
+const pushRole = () => (me.role === "barber" ? "barber" : "customer");
+const pushSupported = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+const onIphone = () => /iPhone|iPad/.test(navigator.userAgent) && !navigator.standalone;
+const keyBytes = (text) => Uint8Array.from(atob(text.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+
+async function loadPush() {
+  pushInfo = { key: null, subscribed: false };
+  if (!me || (me.role !== "customer" && me.role !== "barber")) return;
+  const r = await api("GET", "/push/key");
+  if (!r.ok) return;
+  pushInfo.key = r.data.key;
+  if (pushSupported()) {
+    const registration = await navigator.serviceWorker.getRegistration();
+    pushInfo.subscribed = Boolean(registration && (await registration.pushManager.getSubscription()));
+  }
+}
+
+function pushLater() {
+  try {
+    return localStorage.getItem(PUSH_LATER_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function pushCard() {
+  if (!pushInfo.key) return null;
+  if (pushInfo.subscribed) {
+    const card = control("li", { className: "push-card on", testid: "push-card" });
+    card.dataset.state = "on";
+    const off = control("button", { type: "button", className: "ghost", testid: "push-off", textContent: "כיבוי" });
+    off.addEventListener("click", disablePush);
+    card.append(control("span", { textContent: "עדכונים פעילים" }), off);
+    return card;
+  }
+  if (pushLater() || (pushSupported() && Notification.permission === "denied")) return null;
+  const card = control("li", { className: "push-card", testid: "push-card" });
+  const row = control("div", { className: "row-buttons" });
+  const later = control("button", { type: "button", className: "soft", testid: "push-later", textContent: "לא עכשיו" });
+  later.addEventListener("click", () => {
+    try {
+      localStorage.setItem(PUSH_LATER_KEY, "1");
+    } catch {}
+    refreshBookings();
+  });
+  if (!pushSupported()) {
+    if (!onIphone()) return null;
+    card.dataset.state = "install";
+    card.append(
+      control("h3", { textContent: "רוצים עדכונים באייפון?" }),
+      control("p", { textContent: "כדי לקבל התראות צריך להוסיף את האתר למסך הבית: לוחצים על שיתוף, ואז על ״הוספה למסך הבית״." }),
+    );
+    row.append(later);
+    card.append(row);
+    return card;
+  }
+  card.dataset.state = "ask";
+  const yes = control("button", { type: "button", testid: "push-on", textContent: "כן, לעדכן אותי" });
+  yes.addEventListener("click", enablePush);
+  row.append(yes, later);
+  card.append(
+    control("h3", { textContent: me.role === "barber" ? "לקבל התראה על בקשה חדשה?" : "לקבל עדכון כשיש תשובה על התור?" }),
+    control("p", { textContent: "ההתראה לא מכילה פרטים, רק שיש חדש." }),
+    row,
+  );
+  return card;
+}
+
+function enablePush() {
+  return busyWhile(async () => {
+    try {
+      if ((await Notification.requestPermission()) !== "granted") {
+        await refreshBookings();
+        return;
+      }
+      const registration = await navigator.serviceWorker.register(`/sw.js?role=${pushRole()}`);
+      await navigator.serviceWorker.ready;
+      const subscription =
+        (await registration.pushManager.getSubscription()) ||
+        (await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(pushInfo.key) }));
+      const r = await api("POST", "/push/subscribe", { endpoint: subscription.endpoint });
+      pushInfo.subscribed = r.ok;
+      say(r.ok ? "מעכשיו נעדכן אתכם בהתראה." : explain(r), r.ok ? "ok" : "error");
+    } catch {
+      say("לא הצלחנו להפעיל התראות במכשיר הזה.", "error");
+    }
+    await refreshBookings();
+  });
+}
+
+function disablePush() {
+  return busyWhile(async () => {
+    try {
+      const registration = await navigator.serviceWorker.getRegistration();
+      const subscription = registration && (await registration.pushManager.getSubscription());
+      if (subscription) {
+        await api("POST", "/push/unsubscribe", { endpoint: subscription.endpoint });
+        await subscription.unsubscribe();
+      }
+    } catch {}
+    pushInfo.subscribed = false;
+    say("ההתראות כובו.", "ok");
+    await refreshBookings();
+  });
+}
+
 // ---- Reviews -----------------------------------------------------------------
 // Once a booking is over, a card at the top of the list asks how it was: five
 // stars, and a tap on one sends it. The words come after, if the customer likes.
@@ -1921,6 +2045,8 @@ async function refreshBookings() {
     const card = reviewCard(r.ok ? r.data.content : []);
     if (card) list.appendChild(card);
   }
+  const notify = pushCard();
+  if (notify) list.prepend(notify);
   for (const b of rows) {
     const row = document.createElement("li");
     row.dataset.testid = "booking-row";

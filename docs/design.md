@@ -255,6 +255,25 @@ What stays: the booking window, and every booking the barber already has - a tim
 services as well. `תספורת חירום` is ticked for this and for `דורש אישור ספר`. The owner ticks each in the
 services list and in the form for a new service.
 
+## Notifications (2026-10-07)
+
+A customer is told when the barber answers (`אישר` or `לא אושר`), and a barber when a request waits for
+them, by a **push notification** even with the page closed. Web Push without a payload: the server tells
+the browser's push service "there is news" with a signed header (VAPID) and no body, and the page's
+service worker (`/sw.js?role=customer|barber`) shows fixed words - `עדכון על התור שלך`, `בקשה חדשה ביומן` -
+so nothing about a booking travels through a push service. The owner is not sent any yet.
+
+- **Asked once, by a card at the top of the list** (a browser only lets a tap ask for the permission):
+  `לקבל עדכון כשיש תשובה על התור?`, `כן, לעדכן אותי` / `לא עכשיו` (remembered on the device). When on, a small
+  row says `עדכונים פעילים` with `כיבוי`. On an iPhone that has not put the page on the home screen the card
+  says how (`שיתוף` then `הוספה למסך הבית`) - Safari sends nothing otherwise. A refusal in the browser hides the card.
+- **Never to an address a customer typed**: the server posts only to the push services' own hosts (Google,
+  Apple, Mozilla, Microsoft) over https, and to the hosts in `PUSH_EXTRA_HOSTS` (development, tests).
+- A push that fails never breaks the booking; an address the service says is gone (404, 410) is removed.
+- **Set up**: `python -m app.push_keys` makes the key pair (`VAPID_PRIVATE_KEY`, `VAPID_PUBLIC_KEY`, and
+  `VAPID_SUBJECT`); without one nothing is offered. Production needs https. Not built yet: a reminder before the
+  appointment (it needs a job that runs by itself, and the shop has none).
+
 ## Kept as it is
 
 Every `data-testid`, the radio-group times, `aria-busy`, `textContent` for every value from a
