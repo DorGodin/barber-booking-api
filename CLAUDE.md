@@ -126,6 +126,8 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **A group booking is all or none, in one step under the write lock** (`/bookings/group`): the
   listing for two (`also=`) and the booking must agree, so a time offered for two always books. It counts
   as one toward the limit; afterwards each booking is its own.
+- **A reminder is claimed before it is sent** (`app/reminders.py`, `reminded_at`): several workers look at once, and
+  the claim is one write step - so a booking is reminded once, and a push that fails is not repeated.
 - **One `refused()` shows every refusal** - booking, guest booking, move. A new way to book
   uses it rather than a copy.
 - **Moving a booking is the booking panel with the barber and the service locked** to the

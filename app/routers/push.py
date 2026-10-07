@@ -9,7 +9,7 @@ from app.config import Settings
 from app.db import write_lock
 from app.deps import current_user, db, push_hub, settings
 from app.errors import DomainError
-from app.models import PushSubscription, User
+from app.models import PushNotice, PushSubscription, User, now_utc
 from app.push import PushHub, endpoint_allowed
 
 router = APIRouter(tags=["push"])
@@ -53,6 +53,25 @@ def subscribe(
             # The same browser, signed in as someone else now: the news follows the person.
             row.user_id = user.id
     return {"subscribed": True}
+
+
+@router.post("/push/notice")
+def notice(body: EndpointIn, session: Session = Depends(db)):
+    """The words for the notification a browser has just been woken for: the oldest not yet given to
+    it. Asked by the service worker, which has no sign-in - its own address, a secret only that
+    browser holds, is what it presents. Given once; none waiting, it shows its fixed wording."""
+    with write_lock(session):
+        row = session.scalar(
+            select(PushNotice)
+            .join(PushSubscription, PushSubscription.id == PushNotice.subscription_id)
+            .where(PushSubscription.endpoint == body.endpoint, PushNotice.delivered_at.is_(None))
+            .order_by(PushNotice.id)
+            .limit(1)
+        )
+        if row is None:
+            return {"title": None, "body": None}
+        row.delivered_at = now_utc()
+        return {"title": row.title, "body": row.body}
 
 
 @router.post("/push/unsubscribe")

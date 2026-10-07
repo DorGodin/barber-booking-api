@@ -6,9 +6,30 @@ const WORDS = {
   barber: ["בקשה חדשה ביומן", "יש בקשה שמחכה לאישור שלך."],
 };
 
-self.addEventListener("push", (event) => {
+// The push itself carries no words. When the shop left some for this browser - a reminder - they are
+// fetched, with this browser's own push address as the proof of who is asking, and given once; otherwise the
+// fixed wording above is shown.
+async function words() {
   const [title, body] = WORDS[role] || WORDS.customer;
-  event.waitUntil(self.registration.showNotification(title, { body, lang: "he", dir: "rtl", tag: role || "customer" }));
+  try {
+    const subscription = await self.registration.pushManager.getSubscription();
+    if (subscription) {
+      const answer = await fetch("/push/notice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: subscription.endpoint }),
+      });
+      const notice = answer.ok ? await answer.json() : null;
+      if (notice && notice.title) return [notice.title, notice.body];
+    }
+  } catch {}
+  return [title, body];
+}
+
+self.addEventListener("push", (event) => {
+  event.waitUntil(
+    words().then(([title, body]) => self.registration.showNotification(title, { body, lang: "he", dir: "rtl", tag: role || "customer" })),
+  );
 });
 
 self.addEventListener("notificationclick", (event) => {

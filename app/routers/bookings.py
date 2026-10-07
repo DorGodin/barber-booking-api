@@ -428,6 +428,7 @@ def move_booking(
         _refuse_clashes(session, wanted, booking.barber_id, booking.customer_id, excluding=booking.id)
 
         booking.start_utc, booking.end_utc = wanted.start, wanted.end
+        booking.reminded_at = None
         # A customer's new time answers to the same rule as a new booking; the
         # owner moving it has decided it, whatever the hour. The customer's move is
         # counted - after asking whether they were already flagged.
