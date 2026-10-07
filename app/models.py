@@ -14,6 +14,7 @@ from sqlalchemy import (
     Text,
     TypeDecorator,
     UniqueConstraint,
+    false,
     true,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -153,6 +154,9 @@ class Service(Base):
     price_minor: Mapped[int] = mapped_column(Integer)
     currency: Mapped[str] = mapped_column(String(3), default="ILS")
     active: Mapped[bool] = mapped_column(default=True)
+    # A booking of this service always waits for its barber's answer - any day, any
+    # hour, and silence is never a yes (an emergency haircut, say).
+    requires_approval: Mapped[bool] = mapped_column(default=False, server_default=false())
 
 
 class Booking(Base):

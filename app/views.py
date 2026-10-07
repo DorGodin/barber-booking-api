@@ -30,6 +30,7 @@ def service_view(service: Service) -> dict:
         "price_minor": service.price_minor,
         "currency": service.currency,
         "active": service.active,
+        "requires_approval": service.requires_approval,
     }
 
 
