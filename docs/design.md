@@ -246,6 +246,15 @@ or declined, and a move by the owner, do not. It lifts by itself when the count 
 days after. Settings: `FLAG_MOVES`, `FLAG_CANCELS`, `FLAG_WINDOW_DAYS`. Moves are kept in `booking_moves`;
 cancellations are read from the bookings.
 
+## An emergency haircut: any day, any hour (2026-10-07)
+
+A service can be ticked `בכל יום ובכל שעה` (`any_time`). Choosing it opens the whole day, every day:
+the barber's hours, closed days and days off do not limit it, and the calendar shows every day free.
+What stays: the booking window, and every booking the barber already has - a time taken is not offered
+(nor the one that would run into it), and a booking there is refused. It takes its time from the ordinary
+services as well. `תספורת חירום` is ticked for this and for `דורש אישור ספר`. The owner ticks each in the
+services list and in the form for a new service.
+
 ## Kept as it is
 
 Every `data-testid`, the radio-group times, `aria-busy`, `textContent` for every value from a

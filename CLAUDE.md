@@ -116,6 +116,9 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **A customer who cancelled or moved three times in 90 days waits for the barber on every booking**
   (`is_flagged`, `booking_moves`): never shown to anyone, never approved by silence, counting only
   the customer's own cancellations and moves.
+- **A service ticked `any_time` ignores the barber's hours and days off, and nothing else**
+  (`day_window(any_time=...)`, used by the listing and by the booking): their bookings still take its
+  times, and the booking window still ends it.
 - **One `refused()` shows every refusal** - booking, guest booking, move. A new way to book
   uses it rather than a copy.
 - **Moving a booking is the booking panel with the barber and the service locked** to the
