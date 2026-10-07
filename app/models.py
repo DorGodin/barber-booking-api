@@ -197,6 +197,11 @@ class Booking(Base):
     approval: Mapped[str | None] = mapped_column(String(16), nullable=True)
     decide_by: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     decided_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # A booking made for someone else - a child, a friend - in one go with the customer's own:
+    # who it is for, and the group the bookings were made together in. Each is its own
+    # booking afterwards: moved, cancelled and answered one by one.
+    for_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    group_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
 
 
 class BookingMove(Base):

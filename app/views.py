@@ -72,6 +72,8 @@ def booking_view(
     return {
         "id": booking.id,
         "customer_id": booking.customer_id,
+        "for_name": booking.for_name,
+        "group_id": booking.group_id,
         "guest_name": booking.guest_name,
         "barber_id": booking.barber_id,
         # In the booking itself: a customer's list of barbers no longer has one

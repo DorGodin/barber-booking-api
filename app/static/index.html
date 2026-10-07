@@ -165,6 +165,9 @@
   .push-card .row-buttons .soft { background:#f1efea; color:var(--mut); border:0; }
   .push-card.on { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 14px; text-align:start; }
   .push-card.on span { font-size:13px; color:var(--mut); }
+  /* Booking for two: the second person's service and name, under the first's. */
+  .companion { margin-top:8px; padding:12px; border:1px dashed var(--line); border-radius:12px; }
+  .companion select, .companion input { margin-bottom:8px; }
   .late-note { flex:1 1 100%; font-size:13px; color:var(--mut); line-height:1.6; }
   .late-note a { display:inline-flex; align-items:center; min-height:44px; padding:0 16px; margin-top:6px; border-radius:999px; background:#f1efea; color:var(--ink); font-weight:600; text-decoration:none; }
   .switch { display:flex; align-items:center; gap:8px; margin:0 0 12px; }
@@ -407,6 +410,16 @@
             <button data-testid="stop-moving" type="button" class="ghost">השארת המועד הקיים</button>
           </div>
           <div class="field"><label for="service">שירות</label><select id="service" data-testid="service"></select></div>
+          <div class="field" data-testid="companion-field" hidden>
+            <button type="button" class="ghost" data-testid="add-person">+ הוספת אדם נוסף (ילד או חבר)</button>
+            <div class="companion" data-testid="companion" hidden>
+              <label for="service-2">שירות לאדם הנוסף</label>
+              <select id="service-2" data-testid="service-2"></select>
+              <label for="person-name">שם (לא חובה)</label>
+              <input id="person-name" data-testid="person-name" maxlength="80" autocomplete="off">
+              <button type="button" class="ghost" data-testid="remove-person">הסרת האדם הנוסף</button>
+            </div>
+          </div>
           <div class="field calendar" data-testid="calendar">
             <span class="label" id="date-label">תאריך</span>
             <input type="hidden" id="date" data-testid="date">
@@ -867,9 +880,10 @@ function signOut() {
   clearTimeout(waitingPoll);
   thanksFor = null;
   pushInfo = { key: null, subscribed: false };
+  setCompanion(false);
   stopMoving();
   hideDone();
-  for (const id of ["bookings", "slots", "hours", "approval-hours", "days-off", "services", "barber", "service", "courses", "courses-admin"]) $(id).replaceChildren();
+  for (const id of ["bookings", "slots", "hours", "approval-hours", "days-off", "services", "barber", "service", "courses", "courses-admin", "service-2"]) $(id).replaceChildren();
   for (const id of ["display-name", "hours-for", "confirm-text"]) $(id).textContent = "";
   $("guest-name").value = "";
   for (const id of ["confirm", "no-slots", "no-bookings", "no-days-off", "app", "owner", "owner-nav", "whoami", "guest-field", "barber-left"]) $(id).hidden = true;
@@ -915,6 +929,7 @@ async function start() {
   $("book-panel").hidden = me.role === "barber";
   $("courses-panel").hidden = !customer;
   $("guest-field").hidden = me.role !== "owner";
+  $("companion-field").hidden = !customer;
   $("left-title").textContent = customer ? "קביעת תור" : me.role === "owner" ? "התורים וקביעת תור בשם" : "היומן שלך";
   $("barber").parentElement.hidden = me.role === "barber";
   $("bookings-title").textContent = { customer: "התורים שלי", barber: "היומן שלי", owner: "תורים" }[me.role];
@@ -1342,6 +1357,9 @@ function fillServiceChoice() {
   const bookable = services.filter((s) => s.active);
   $("service").replaceChildren(...bookable.map((s) => option(s.id, `${isolate(s.name)} · ${s.duration_minutes} דק׳ · ${money(s.price_minor, s.currency)}`)));
   if (bookable.some((s) => s.id === chosen)) $("service").value = chosen;
+  const second = $("service-2").value;
+  $("service-2").replaceChildren(...bookable.map((s) => option(s.id, `${isolate(s.name)} · ${s.duration_minutes} דק׳ · ${money(s.price_minor, s.currency)}`)));
+  if (bookable.some((s) => s.id === second)) $("service-2").value = second;
 }
 
 function saveService(service, priceInput, activeInput, approvalInput, anytimeInput) {
@@ -1442,6 +1460,7 @@ async function refreshSlots() {
   }
   if (!me || me.role === "barber" || !$("barber").value || !$("service").value || !$("date").value) return;
   const params = new URLSearchParams({ date: $("date").value, service_id: $("service").value });
+  if (companion) params.append("also", $("service-2").value);
   // While moving, the booking's own time is not in its way - the listing
   // offers exactly what the move will accept.
   if (moving) params.set("moving", moving.id);
@@ -1485,7 +1504,10 @@ function select(slot, button) {
   button.setAttribute("aria-checked", "true");
   button.tabIndex = 0;
   const service = serviceOf($("service").value);
-  $("confirm-text").textContent = `${dayLabel(slot.start_local)} ${clock(slot.start_local)} · ${isolate(service.name)} אצל ${isolate(barberName($("barber").value))}`;
+  const second = companion ? serviceOf($("service-2").value) : null;
+  const together = second ? ` + ${isolate(second.name)}` : "";
+  const total = second ? ` · סך הכול ${money(service.price_minor + second.price_minor, service.currency)}` : "";
+  $("confirm-text").textContent = `${dayLabel(slot.start_local)} ${clock(slot.start_local)} · ${isolate(service.name)}${together} אצל ${isolate(barberName($("barber").value))}${total}`;
   $("confirm").hidden = false;
 }
 
@@ -1508,6 +1530,7 @@ async function refreshDays(focusDay = null) {
   const barber = $("barber").value, service = $("service").value;
   if (!me || me.role === "barber" || !barber || !service || !shownMonth) return;
   const params = new URLSearchParams({ month: shownMonth, service_id: service });
+  if (companion) params.append("also", $("service-2").value);
   if (moving) params.set("moving", moving.id);
   const current = ticket("days");
   monthDays = {};
@@ -1647,14 +1670,16 @@ function focusOn(target) {
 // place of the form: what was booked, and the two ways on. The focus goes to
 // its heading, so a screen reader hears it.
 let doneBookingId = null;
-function showDone(title, made) {
+function showDone(title, made, other = null) {
   doneBookingId = made.id;
   $("booking-done-title").textContent = title;
   $("booking-done-when").textContent = `${dayLabel(made.start_local)} · ${clock(made.start_local)}`;
-  $("booking-done-what").textContent = `${isolate(made.service_name)} אצל ${isolate(made.barber_name)} · ${money(made.price_minor, made.currency)}`;
+  $("booking-done-what").textContent = other
+    ? `${isolate(made.service_name)} + ${isolate(other.service_name)}${other.for_name ? ` (${isolate(other.for_name)})` : ""} אצל ${isolate(made.barber_name)} · ${money(made.price_minor + other.price_minor, made.currency)}`
+    : `${isolate(made.service_name)} אצל ${isolate(made.barber_name)} · ${money(made.price_minor, made.currency)}`;
   // A booking in the hours that wait for the barber is a request, not yet a
   // booking: its title says so, and its mark is a pause and not a tick.
-  const waiting = made.approval === "pending";
+  const waiting = made.approval === "pending" || (other && other.approval === "pending");
   $("booking-done").toggleAttribute("data-waiting", waiting);
   $("booking-done").querySelector(".tick").textContent = waiting ? "…" : "✓";
   $("booking-done").hidden = false;
@@ -1728,14 +1753,27 @@ async function bookSelected() {
   $("book").disabled = true;
   const { slot, key } = selected;
   const body = { barber_id: $("barber").value, service_id: $("service").value, start: slot.start };
-  const r = await api("POST", "/bookings", body, { "Idempotency-Key": key });
+  const r = companion
+    ? await api("POST", "/bookings/group", {
+        barber_id: body.barber_id,
+        start: slot.start,
+        people: [{ service_id: body.service_id }, { service_id: $("service-2").value, name: $("person-name").value.trim() || null }],
+      })
+    : await api("POST", "/bookings", body, { "Idempotency-Key": key });
   booking = false;
   $("book").disabled = false;
   if (r.ok) {
     // The card in the panel says it, and the list shows it; a third copy under
     // the list only repeated them. An earlier refusal is cleared.
     say("", "ok");
-    showDone(r.data.approval === "pending" ? "הבקשה נשלחה" : "התור נקבע", r.data);
+    if (companion) {
+      const [first, other] = r.data.bookings;
+      const waiting = r.data.bookings.some((b) => b.approval === "pending");
+      showDone(waiting ? "הבקשה נשלחה" : "שני התורים נקבעו", first, other);
+      setCompanion(false);
+    } else {
+      showDone(r.data.approval === "pending" ? "הבקשה נשלחה" : "התור נקבע", r.data);
+    }
   } else {
     refused(r, slot, "לא הצלחנו לקבוע את התור");
   }
@@ -1785,6 +1823,8 @@ function startMoving(b) {
     shownMonth = $("date").value.slice(0, 7);
     $("left-title").textContent = "שינוי מועד";
     $("moving-text").textContent = `שינוי מועד לתור של ${dayLabel(b.start_local)} ${clock(b.start_local)} · ${isolate(b.service_name)} אצל ${isolate(b.barber_name)}. בוחרים מועד חדש:`;
+    setCompanion(false);
+    $("companion-field").hidden = true;
     $("moving").hidden = false;
     $("book").textContent = "אישור המועד החדש";
     await refresh();
@@ -1793,7 +1833,32 @@ function startMoving(b) {
   });
 }
 
+// Booking for two: the customer and a child or a friend, one right after the other with the
+// same barber. The times and the calendar then offer only where both fit.
+let companion = false;
+function setCompanion(on) {
+  companion = on;
+  $("companion").hidden = !on;
+  $("add-person").hidden = on;
+  if (!on) $("person-name").value = "";
+}
+$("add-person").addEventListener("click", () => busyWhile(async () => {
+  setCompanion(true);
+  await refresh();
+  await keepAFreeDay();
+}));
+$("remove-person").addEventListener("click", () => busyWhile(async () => {
+  setCompanion(false);
+  await refresh();
+  await keepAFreeDay();
+}));
+$("service-2").addEventListener("change", () => busyWhile(async () => {
+  await refresh();
+  await keepAFreeDay();
+}));
+
 function stopMoving() {
+  $("companion-field").hidden = !me || me.role !== "customer";
   moving = null;
   lockBarber(false);
   $("service").disabled = false;
@@ -2064,7 +2129,8 @@ async function refreshBookings() {
     // A guest's name is shown: the owner and the barber need to know who is
     // coming. A customer's is not in the booking at all.
     const who = b.guest_name ? ` · ${isolate(b.guest_name)} (בלי חשבון)` : "";
-    detail.textContent = `${isolate(b.service_name)} אצל ${isolate(b.barber_name)}${who} · ${money(b.price_minor, b.currency)}`;
+    const forWho = b.for_name ? ` · עבור ${isolate(b.for_name)}` : "";
+    detail.textContent = `${isolate(b.service_name)} אצל ${isolate(b.barber_name)}${who}${forWho} · ${money(b.price_minor, b.currency)}`;
     const standing = document.createElement("span");
     standing.textContent = statusText(b);
     detail.append(standing);

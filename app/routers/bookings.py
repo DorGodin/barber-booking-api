@@ -24,10 +24,10 @@ from app.config import Settings
 from app.db import write_lock
 from app.deps import current_user, db, push_hub, require, settings
 from app.errors import DomainError
-from app.models import Booking, BookingMove, IdempotencyKey, Review, Service, User
+from app.models import Booking, BookingMove, IdempotencyKey, Review, Service, User, new_id
 from app.push import PushHub
 from app.scheduling import Interval
-from app.schemas import BookingIn, BookingMoveIn, GuestBookingIn, ReviewIn, ReviewTextIn
+from app.schemas import BookingIn, BookingMoveIn, GroupBookingIn, GuestBookingIn, ReviewIn, ReviewTextIn
 from app.views import booking_view, page
 
 router = APIRouter(tags=["bookings"])
@@ -56,6 +56,16 @@ def _refuse_clashes(
         wanted, busy(session, wanted, customer_id=customer_id, excluding=excluding)
     ):
         raise DomainError(409, "customer_overlap", "you already have a booking at that time")
+
+
+def _held_ahead(session: Session, customer_id: str, now: datetime) -> int:
+    """The bookings a customer holds ahead. Those made together for two people count as one:
+    bringing a child must not need a free place for each."""
+    return session.scalar(
+        select(func.count(func.distinct(func.coalesce(Booking.group_id, Booking.id))))
+        .select_from(Booking)
+        .where(Booking.customer_id == customer_id, Booking.status == "confirmed", Booking.start_utc > now)
+    )
 
 
 @router.post("/bookings", status_code=201)
@@ -100,12 +110,7 @@ def create_booking(
         # lock, so two bookings sent at once cannot both pass it. Before the
         # slot checks: a customer at the limit is told that, not that a time
         # is taken.
-        ahead = session.scalar(
-            select(func.count())
-            .select_from(Booking)
-            .where(Booking.customer_id == user.id, Booking.status == "confirmed", Booking.start_utc > now)
-        )
-        if ahead >= config.max_future_bookings:
+        if _held_ahead(session, user.id, now) >= config.max_future_bookings:
             raise DomainError(
                 409,
                 "too_many_bookings",
@@ -143,6 +148,67 @@ def create_booking(
                 )
             )
         return _view(session, booking, config)
+
+
+@router.post("/bookings/group", status_code=201)
+def create_group_booking(
+    body: GroupBookingIn,
+    background: BackgroundTasks,
+    user: User = Depends(require("customer")),
+    session: Session = Depends(db),
+    config: Settings = Depends(settings),
+    hub: PushHub = Depends(push_hub),
+):
+    """The customer's own booking and someone else's - a child, a friend - one right after
+    the other with the same barber, all or none. Afterwards each is a booking of its own."""
+    if len(body.people) > config.group_max:
+        raise DomainError(
+            422,
+            "group_too_big",
+            f"at most {config.group_max} people in one go",
+            extra={"limit": config.group_max},
+        )
+    start = body.start.astimezone(UTC)
+    now = datetime.now(UTC)
+    with write_lock(session):
+        bookable_barber_or_error(session, body.barber_id)
+        services = [active_service_or_error(session, p.service_id) for p in body.people]
+        if _held_ahead(session, user.id, now) >= config.max_future_bookings:
+            raise DomainError(
+                409,
+                "too_many_bookings",
+                f"at most {config.max_future_bookings} bookings ahead; cancel one to book another",
+                extra={"limit": config.max_future_bookings},
+            )
+        flagged = is_flagged(session, config, user.id, now)
+        group_id = new_id("grp")
+        cursor, made = start, []
+        for person, service in zip(body.people, services, strict=True):
+            wanted = check_bookable(session, config, body.barber_id, service, cursor, now)
+            _refuse_clashes(session, wanted, body.barber_id, user.id)
+            booking = Booking(
+                customer_id=user.id,
+                barber_id=body.barber_id,
+                service_id=service.id,
+                start_utc=wanted.start,
+                end_utc=wanted.end,
+                price_minor=service.price_minor,
+                currency=service.currency,
+                for_name=person.name or None,
+                group_id=group_id,
+            )
+            if service.requires_approval or flagged:
+                booking.approval = "pending"
+            elif needs_approval(session, config, wanted.start):
+                booking.approval = "pending"
+                booking.decide_by = decide_by(config, now, wanted.start)
+            session.add(booking)
+            session.flush()
+            made.append(booking)
+            cursor = wanted.end
+        if any(b.approval == "pending" for b in made):
+            background.add_task(hub.tell, [body.barber_id])
+        return {"group_id": group_id, "bookings": [_view(session, b, config) for b in made]}
 
 
 @router.get("/bookings")

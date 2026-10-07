@@ -130,6 +130,19 @@ class BookingIn(BaseModel):
     start: AwareDatetime
 
 
+class PersonIn(BaseModel):
+    service_id: str
+    name: Annotated[str, StringConstraints(strip_whitespace=True, max_length=80)] | None = None
+
+
+class GroupBookingIn(BaseModel):
+    """Two bookings back to back with one barber: the customer's own and someone else's."""
+
+    barber_id: str
+    start: AwareDatetime
+    people: Annotated[list[PersonIn], Field(min_length=2, max_length=4)]
+
+
 class GuestBookingIn(BookingIn):
     """The owner books someone with no account - who phoned, or walked in."""
 

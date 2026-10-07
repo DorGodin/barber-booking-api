@@ -149,11 +149,15 @@ def free_starts(
     day: date,
     now: datetime,
     moving: str | None,
+    also: list[Service] | None = None,
 ) -> tuple[bool, list[datetime]]:
     """Whether the barber works that day, and the starts still free on it. One
     rule for the day's times and the month's counts: a day the calendar calls
     free always has a time to offer."""
-    window = day_window(session, config, barber_id, day, any_time=service.any_time)
+    # For two people, back to back: the times where both fit one after the other, and at any
+    # time only when every service works at any time.
+    together = [service, *(also or [])]
+    window = day_window(session, config, barber_id, day, any_time=all(s.any_time for s in together))
     if window is None:
         return False, []
     taken = busy(session, window, barber_id=barber_id, excluding=moving)
@@ -161,7 +165,7 @@ def free_starts(
     # at another barber - the booking would refuse it.
     if user.role == "customer":
         taken += busy(session, window, customer_id=user.id, excluding=moving)
-    duration = timedelta(minutes=service.duration_minutes)
+    duration = timedelta(minutes=sum(s.duration_minutes for s in together))
     return True, available_starts(window, duration, taken, now, latest_start(config, now))
 
 
@@ -170,6 +174,7 @@ def availability(
     barber_id: str,
     day: date = Query(alias="date"),
     service_id: str = Query(),
+    also: list[str] = Query(default=[], description="services for people booked back to back with the first"),
     moving: str | None = Query(
         default=None, description="a booking being moved: its own time counts as free"
     ),
@@ -184,7 +189,17 @@ def availability(
     if moving is not None:
         visible_booking_or_404(session, moving, user)
 
-    _, starts = free_starts(session, config, user, barber_id, service, day, now, moving)
+    _, starts = free_starts(
+        session,
+        config,
+        user,
+        barber_id,
+        service,
+        day,
+        now,
+        moving,
+        [active_service_or_error(session, s) for s in also],
+    )
     return {
         "barber_id": barber_id,
         "service_id": service_id,
@@ -200,6 +215,7 @@ def days_of_month(
     barber_id: str,
     month: str = Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$", description="YYYY-MM, on the shop's calendar"),
     service_id: str = Query(),
+    also: list[str] = Query(default=[], description="services for people booked back to back with the first"),
     moving: str | None = Query(
         default=None, description="a booking being moved: its own time counts as free"
     ),
@@ -216,6 +232,7 @@ def days_of_month(
     if moving is not None:
         visible_booking_or_404(session, moving, user)
 
+    others = [active_service_or_error(session, s) for s in also]
     year, number = map(int, month.split("-"))
     first = date(year, number, 1)
     after = date(year + number // 12, number % 12 + 1, 1)
@@ -231,7 +248,7 @@ def days_of_month(
     days = []
     day = max(first, today)
     while day < after and day <= last:
-        works, starts = free_starts(session, config, user, barber_id, service, day, now, moving)
+        works, starts = free_starts(session, config, user, barber_id, service, day, now, moving, others)
         days.append({"date": day.isoformat(), "works": works, "free": len(starts)})
         day += timedelta(days=1)
     return {"barber_id": barber_id, "service_id": service_id, "month": month, "days": days}

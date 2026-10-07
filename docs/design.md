@@ -274,6 +274,20 @@ so nothing about a booking travels through a push service. The owner is not sent
   `VAPID_SUBJECT`); without one nothing is offered. Production needs https. Not built yet: a reminder before the
   appointment (it needs a job that runs by itself, and the shop has none).
 
+## Booking for two (2026-10-08)
+
+Under the service, `+ הוספת אדם נוסף (ילד או חבר)` opens a second service and an optional name. The times
+and the calendar then offer only where both fit, one right after the other with the same barber;
+the confirm bar reads `11:00 · תספורת + תספורת ילד אצל אבי · סך הכול ₪150`, and the card `שני התורים נקבעו`
+(or `הבקשה נשלחה` when either waits for the barber). `POST /bookings/group`: all or none, in one step under
+the write lock; `GET .../availability` and `.../days` take `also=<service>`.
+
+- **Each booking is its own afterwards**: moved, cancelled and answered one by one; the list says
+  `עבור <name>` on the one made for someone else. They share a `group_id`.
+- **A group counts as one toward the two bookings ahead** - bringing a child must not need a free place for
+  each. Each booking still follows the barber's-yes rules by itself (the hours, the service, the flag).
+- At most `GROUP_MAX` people (2). The control is not offered while moving a booking, nor to the owner.
+
 ## Kept as it is
 
 Every `data-testid`, the radio-group times, `aria-busy`, `textContent` for every value from a
