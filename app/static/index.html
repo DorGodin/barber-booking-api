@@ -482,6 +482,7 @@
         <div class="field"><label for="new-service-name">שם השירות</label><input id="new-service-name" data-testid="new-service-name" maxlength="80"></div>
         <div class="field"><label for="new-service-duration">משך</label><select id="new-service-duration" data-testid="new-service-duration"></select></div>
         <div class="field"><label for="new-service-price">מחיר בשקלים</label><input id="new-service-price" data-testid="new-service-price" inputmode="decimal" dir="ltr"></div>
+        <div class="switch"><input type="checkbox" id="new-service-approval" data-testid="new-service-approval"><label for="new-service-approval">דורש אישור ספר</label></div>
         <button data-testid="add-service" type="button">הוספת השירות</button>
         <h3>ספר חדש</h3>
         <div class="field"><label for="new-barber-name">שם הספר</label><input id="new-barber-name" data-testid="new-barber-name" maxlength="80"></div>
@@ -1302,10 +1303,11 @@ function renderServices() {
     const name = control("span", { textContent: `${isolate(s.name)} · ${s.duration_minutes} דק׳` });
     const price = control("input", { className: "service-price", testid: "service-price", value: shekels(s.price_minor), inputmode: "decimal", "aria-label": `מחיר ${s.name} בשקלים` });
     const active = control("input", { type: "checkbox", testid: "service-active", checked: s.active, "aria-label": `${s.name} מוצע ללקוחות` });
+    const approval = control("input", { type: "checkbox", testid: "service-approval", checked: s.requires_approval, "aria-label": `${s.name} דורש אישור ספר` });
     const save = control("button", { type: "button", className: "ghost", testid: "save-service", textContent: "שמירה" });
-    save.addEventListener("click", () => saveService(s, price, active));
+    save.addEventListener("click", () => saveService(s, price, active, approval));
     const controls = control("span", {});
-    controls.append(price, active, save);
+    controls.append(price, active, approval, save);
     row.append(name, controls);
     list.append(row);
   }
@@ -1328,14 +1330,14 @@ function fillServiceChoice() {
   if (bookable.some((s) => s.id === chosen)) $("service").value = chosen;
 }
 
-function saveService(service, priceInput, activeInput) {
+function saveService(service, priceInput, activeInput, approvalInput) {
   return busyWhile(async () => {
     const price = parseShekels(priceInput.value);
     if (price === null) {
       say("המחיר צריך להיות מספר בשקלים, עם עד שתי ספרות אחרי הנקודה, למשל 80 או 92.50.", "error");
       return;
     }
-    const r = await api("PATCH", `/services/${service.id}`, { price_minor: price, active: activeInput.checked });
+    const r = await api("PATCH", `/services/${service.id}`, { price_minor: price, active: activeInput.checked, requires_approval: approvalInput.checked });
     say(r.ok ? `השירות ${isolate(service.name)} נשמר.` : explain(r), r.ok ? "ok" : "error");
     await reloadServices();
   });
@@ -1348,13 +1350,14 @@ function addService() {
       say("המחיר צריך להיות מספר בשקלים, עם עד שתי ספרות אחרי הנקודה, למשל 80 או 92.50.", "error");
       return;
     }
-    const body = { name: $("new-service-name").value.trim(), duration_minutes: Number($("new-service-duration").value), price_minor: price };
+    const body = { name: $("new-service-name").value.trim(), duration_minutes: Number($("new-service-duration").value), price_minor: price, requires_approval: $("new-service-approval").checked };
     const r = await api("POST", "/services", body);
     if (!r.ok) {
       say(explain(r, { invalid: "כדאי לבדוק את שם השירות." }), "error");
       return;
     }
     $("new-service-name").value = $("new-service-price").value = "";
+    $("new-service-approval").checked = false;
     say(`השירות ${isolate(r.data.name)} נוסף.`, "ok");
     await reloadServices();
   });

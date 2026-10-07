@@ -124,7 +124,7 @@ def create_booking(
         # A customer who has cancelled or moved too often waits for the barber on
         # every booking, whatever the hour, and silence is never a yes. They are
         # not told why: it looks like any request.
-        if is_flagged(session, config, user.id, now):
+        if service.requires_approval or is_flagged(session, config, user.id, now):
             booking.approval = "pending"
         elif needs_approval(session, config, wanted.start):
             booking.approval = "pending"
@@ -352,7 +352,9 @@ def move_booking(
         # A customer's new time answers to the same rule as a new booking; the
         # owner moving it has decided it, whatever the hour. The customer's move is
         # counted - after asking whether they were already flagged.
-        flagged = user.role == "customer" and is_flagged(session, config, user.id, now)
+        flagged = user.role == "customer" and (
+            service.requires_approval or is_flagged(session, config, user.id, now)
+        )
         if user.role == "customer":
             session.add(BookingMove(booking_id=booking.id, customer_id=user.id, moved_at=now))
         if flagged:
