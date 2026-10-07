@@ -23,9 +23,9 @@ from app.config import Settings
 from app.db import write_lock
 from app.deps import current_user, db, require, settings
 from app.errors import DomainError
-from app.models import Booking, IdempotencyKey, Service, User
+from app.models import Booking, IdempotencyKey, Review, Service, User
 from app.scheduling import Interval
-from app.schemas import BookingIn, BookingMoveIn, GuestBookingIn
+from app.schemas import BookingIn, BookingMoveIn, GuestBookingIn, ReviewIn, ReviewTextIn
 from app.views import booking_view, page
 
 router = APIRouter(tags=["bookings"])
@@ -37,6 +37,7 @@ def _view(session: Session, booking: Booking, config: Settings) -> dict:
         session.get(Service, booking.service_id).name,
         session.get(User, booking.barber_id).display_name,
         config.shop_tz,
+        review=session.scalar(select(Review).where(Review.booking_id == booking.id)),
     )
 
 
@@ -245,6 +246,62 @@ def decline_booking(
             raise DomainError(409, "already_approved", "that booking already stands")
         booking.approval, booking.decided_by = "declined", user.id
         booking.status, booking.cancelled_at, booking.cancelled_by = "cancelled", now, user.id
+        return _view(session, booking, config)
+
+
+def _own_finished_booking(session: Session, booking_id: str, user: User, now: datetime) -> Booking:
+    booking = visible_booking_or_404(session, booking_id, user)
+    if booking.status != "confirmed" or approval_state(booking, now) == "declined":
+        raise DomainError(409, "not_reviewable", "only a booking that stood can be reviewed")
+    if booking.end_utc > now:
+        raise DomainError(409, "not_over_yet", "a booking can be reviewed once it is over")
+    return booking
+
+
+@router.post("/bookings/{booking_id}/review", status_code=201)
+def review_booking(
+    booking_id: str,
+    body: ReviewIn,
+    user: User = Depends(require("customer")),
+    session: Session = Depends(db),
+    config: Settings = Depends(settings),
+):
+    """The customer's stars - and words, if they add any - for a booking that is over.
+    One per booking: a second is refused, never replaces the first."""
+    now = datetime.now(UTC)
+    with write_lock(session):
+        booking = _own_finished_booking(session, booking_id, user, now)
+        if session.scalar(select(Review).where(Review.booking_id == booking.id)) is not None:
+            raise DomainError(409, "already_reviewed", "that booking already has a review")
+        session.add(
+            Review(
+                booking_id=booking.id,
+                customer_id=user.id,
+                barber_id=booking.barber_id,
+                stars=body.stars,
+                text=body.text or None,
+            )
+        )
+        session.flush()
+        return _view(session, booking, config)
+
+
+@router.patch("/bookings/{booking_id}/review")
+def add_words_to_review(
+    booking_id: str,
+    body: ReviewTextIn,
+    user: User = Depends(require("customer")),
+    session: Session = Depends(db),
+    config: Settings = Depends(settings),
+):
+    """The words that follow the stars: they may be added or changed; the stars stay."""
+    now = datetime.now(UTC)
+    with write_lock(session):
+        booking = _own_finished_booking(session, booking_id, user, now)
+        review = session.scalar(select(Review).where(Review.booking_id == booking.id))
+        if review is None:
+            raise DomainError(409, "no_review_yet", "give the stars first")
+        review.text = body.text or None
         return _view(session, booking, config)
 
 

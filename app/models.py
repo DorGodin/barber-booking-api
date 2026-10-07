@@ -191,6 +191,25 @@ class Booking(Base):
     decided_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
+class Review(Base):
+    """What a customer says about a booking once it is over: stars, and words if
+    they add any. One per booking, kept even if the barber later leaves."""
+
+    __tablename__ = "reviews"
+    __table_args__ = (
+        UniqueConstraint("booking_id", name="uq_reviews_booking"),
+        CheckConstraint("stars BETWEEN 1 AND 5", name="ck_reviews_stars"),
+    )
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=lambda: new_id("rev"))
+    booking_id: Mapped[str] = mapped_column(ForeignKey("bookings.id"))
+    customer_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    barber_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    stars: Mapped[int] = mapped_column(Integer)
+    text: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=now_utc)
+
+
 class Course(Base):
     """A course the shop gives, shown to customers as a card whose button opens
     WhatsApp. Withdrawn ones are kept, never deleted - like a service."""
