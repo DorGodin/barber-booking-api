@@ -59,7 +59,12 @@ def cancelled_by_label(booking: Booking) -> str | None:
 
 
 def booking_view(
-    booking: Booking, service_name: str, barber_name: str, tz: ZoneInfo, now: datetime | None = None
+    booking: Booking,
+    service_name: str,
+    barber_name: str,
+    tz: ZoneInfo,
+    now: datetime | None = None,
+    review=None,
 ) -> dict:
     now = now or now_utc()
     return {
@@ -88,6 +93,14 @@ def booking_view(
         "cancelled_by": cancelled_by_label(booking),
         # None: no one's yes was needed. pending: waiting for the barber until
         # decide_by, then it stands. approved, or declined - which cancels it.
+        # What the customer said about it, once it was over - and whether they may
+        # still be asked: it is over, it stood, and nothing was said yet.
+        "review": None if review is None else {"stars": review.stars, "text": review.text},
+        "reviewable": review is None
+        and booking.customer_id is not None
+        and booking.status == "confirmed"
+        and booking.end_utc <= now
+        and approval_state(booking, now) != "declined",
         "approval": approval_state(booking, now),
         "decide_by": iso_utc(booking.decide_by) if approval_state(booking, now) == "pending" else None,
         # The same instant on the shop's clock, for the page to write as it is.

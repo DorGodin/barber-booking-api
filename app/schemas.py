@@ -71,6 +71,15 @@ class HoursIn(BaseModel):
         return hours
 
 
+class ReviewIn(BaseModel):
+    stars: int = Field(ge=1, le=5)
+    text: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)] | None = None
+
+
+class ReviewTextIn(BaseModel):
+    text: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)]
+
+
 class CourseIn(BaseModel):
     title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
     subtitle: Annotated[str, StringConstraints(strip_whitespace=True, max_length=120)] = ""

@@ -145,6 +145,16 @@
   [data-testid="booking-row"] > span { flex:1 1 100%; }
   [data-testid="booking-row"] > button { border-radius:999px; min-height:36px; padding:0 16px; font-size:13px; }
   [data-testid="booking-when"], [data-testid="booking-detail"] > span { display:block; }
+  /* After the appointment: stars at a tap, then - if they like - a few words. */
+  .review-card { display:block; background:#fff; border:1px solid var(--line); border-radius:18px; padding:16px; margin:0 0 14px; text-align:center; box-shadow:0 6px 24px #0001; }
+  .review-card h3 { margin:0; font-size:16px; color:var(--ink); }
+  .review-card .muted { margin:2px 0 8px; font-size:13px; }
+  .review-card .stars { display:flex; justify-content:center; gap:2px; }
+  .review-card .stars button { background:none; border:0; color:#c9951b; font-size:36px; line-height:1; min-width:48px; min-height:48px; padding:0; }
+  .review-card textarea { width:100%; min-height:72px; margin:8px 0; padding:8px; border:1px solid var(--line); border-radius:10px; font:inherit; }
+  .review-card .row-buttons { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .review-card .row-buttons button { border-radius:999px; min-height:44px; padding:0 18px; font-size:14px; }
+  .review-card .row-buttons .soft { background:#f1efea; color:var(--mut); border:0; }
   .late-note { flex:1 1 100%; font-size:13px; color:var(--mut); line-height:1.6; }
   .late-note a { display:inline-flex; align-items:center; min-height:44px; padding:0 16px; margin-top:6px; border-radius:999px; background:#f1efea; color:var(--ink); font-weight:600; text-decoration:none; }
   .switch { display:flex; align-items:center; gap:8px; margin:0 0 12px; }
@@ -606,6 +616,10 @@ const FRIENDLY = {
   invalid_image: () => "התמונה צריכה להיות קובץ JPEG, PNG או WebP.",
   image_too_large: () => "התמונה גדולה מדי. אפשר עד 3 מגה־בייט.",
   already_off: () => "הספר כבר בחופש ביום הזה.",
+  not_over_yet: () => "אפשר לדרג אחרי שהתור מסתיים.",
+  not_reviewable: () => "אפשר לדרג רק תור שהתקיים.",
+  already_reviewed: () => "כבר דירגת את התור הזה.",
+  no_review_yet: () => "קודם בוחרים כוכבים.",
 };
 
 function explain(resp, context = {}) {
@@ -663,7 +677,8 @@ function statusText(b) {
       : "ממתין לאישור";
   }
   if (b.approval === "declined") return me.role === "customer" ? "לא אושר" : "נדחה";
-  return STATUS[b.status] || b.status;
+  const said = b.review ? ` · ${me.role === "customer" ? `דירגת ${b.review.stars} כוכבים` : `${"★".repeat(b.review.stars)}${b.review.text ? ` ״${b.review.text}״` : ""}`}` : "";
+  return `${STATUS[b.status] || b.status}${said}`;
 }
 const barberName = (id) => (barbers.find((b) => b.id === id) || {}).display_name || "?";
 const serviceOf = (id) => services.find((s) => s.id === id) || {};
@@ -838,6 +853,7 @@ function signOut() {
   cancelledHere.clear();
   clearTimeout(cancelledExpiry);
   clearTimeout(waitingPoll);
+  thanksFor = null;
   stopMoving();
   hideDone();
   for (const id of ["bookings", "slots", "hours", "approval-hours", "days-off", "services", "barber", "service", "courses", "courses-admin"]) $(id).replaceChildren();
@@ -1787,6 +1803,79 @@ async function moveSelected() {
   await refresh();
 }
 
+// ---- Reviews -----------------------------------------------------------------
+// Once a booking is over, a card at the top of the list asks how it was: five
+// stars, and a tap on one sends it. The words come after, if the customer likes.
+// "Not now" is remembered on this device, so the card does not nag.
+const DISMISSED_KEY = "dismissed-reviews";
+const dismissedReviews = () => {
+  try {
+    return JSON.parse(localStorage.getItem(DISMISSED_KEY) || "[]");
+  } catch {
+    return [];
+  }
+};
+let thanksFor = null;
+
+function reviewCard(all) {
+  const thanks = thanksFor && all.find((b) => b.id === thanksFor && b.review);
+  const asked = !thanks && all.filter((b) => b.reviewable && !dismissedReviews().includes(b.id)).sort((a, b) => Date.parse(b.end) - Date.parse(a.end))[0];
+  const b = thanks || asked;
+  if (!b) return null;
+  const card = control("li", { className: "review-card", testid: "review-card" });
+  card.dataset.id = b.id;
+  const when = `${dayLabel(b.start_local)} · ${clock(b.start_local)}`;
+  if (thanks) {
+    card.dataset.state = "thanks";
+    const words = control("textarea", { testid: "review-text", maxLength: 500, placeholder: "אפשר להוסיף כמה מילים (לא חובה)", "aria-label": "כמה מילים על התור" });
+    words.value = b.review.text || "";
+    const send = control("button", { type: "button", testid: "review-send", textContent: "שליחה" });
+    const done = control("button", { type: "button", className: "soft", testid: "review-done", textContent: "סיום" });
+    send.addEventListener("click", () => sendWords(b, words.value));
+    done.addEventListener("click", () => { thanksFor = null; refreshBookings(); });
+    const row = control("div", { className: "row-buttons" });
+    row.append(send, done);
+    card.append(control("h3", { textContent: "תודה! קיבלנו את הדירוג" }), words, row);
+    return card;
+  }
+  card.dataset.state = "ask";
+  const stars = control("div", { className: "stars", role: "group", "aria-label": "דירוג" });
+  for (let n = 1; n <= 5; n += 1) {
+    const star = control("button", { type: "button", testid: `star-${n}`, textContent: "☆", "aria-label": n === 1 ? "כוכב אחד" : `${n} כוכבים` });
+    star.addEventListener("click", () => rate(b, n));
+    stars.append(star);
+  }
+  const later = control("button", { type: "button", className: "soft", testid: "review-later", textContent: "לא עכשיו" });
+  later.addEventListener("click", () => {
+    try {
+      localStorage.setItem(DISMISSED_KEY, JSON.stringify([...dismissedReviews(), b.id]));
+    } catch {}
+    refreshBookings();
+  });
+  const row = control("div", { className: "row-buttons" });
+  row.append(later);
+  card.append(control("h3", { textContent: `איך היה אצל ${isolate(b.barber_name)}?` }), control("p", { className: "muted", textContent: when }), stars, row);
+  return card;
+}
+
+function rate(booking, stars) {
+  return busyWhile(async () => {
+    const r = await api("POST", `/bookings/${booking.id}/review`, { stars });
+    if (r.ok) thanksFor = booking.id;
+    else say(explain(r), "error");
+    await refreshBookings();
+  });
+}
+
+function sendWords(booking, text) {
+  return busyWhile(async () => {
+    const r = await api("PATCH", `/bookings/${booking.id}/review`, { text });
+    if (r.ok) thanksFor = null;
+    say(r.ok ? "תודה! הביקורת נשמרה." : explain(r), r.ok ? "ok" : "error");
+    await refreshBookings();
+  });
+}
+
 // What a booking too close to cancel or move says, and where to ask instead.
 function lateNote(b, canCancel, canMove, when) {
   const cancelHours = shop.cancel_cutoff_hours, moveHours = shop.move_cutoff_hours;
@@ -1823,6 +1912,10 @@ async function refreshBookings() {
   list.replaceChildren();
   const rows = (r.ok ? r.data.content : []).filter((b) => me.role !== "customer" || shownToCustomer(b));
   tellAboutAnswers(r.ok ? r.data.content : []);
+  if (me.role === "customer") {
+    const card = reviewCard(r.ok ? r.data.content : []);
+    if (card) list.appendChild(card);
+  }
   for (const b of rows) {
     const row = document.createElement("li");
     row.dataset.testid = "booking-row";
