@@ -177,8 +177,14 @@ def clashes(wanted: Interval, candidates: list[Interval]) -> bool:
     return any(wanted.overlaps(other) for other in candidates)
 
 
-def day_window(session: Session, config: Settings, barber_id: str, day: date) -> Interval | None:
-    """The barber's working interval that local day, or None when they do not work it."""
+def day_window(
+    session: Session, config: Settings, barber_id: str, day: date, any_time: bool = False
+) -> Interval | None:
+    """The barber's working interval that local day, or None when they do not work it.
+    A service that works at any time (an emergency haircut) has the whole local day,
+    whatever the barber's hours and days off: only their bookings take times from it."""
+    if any_time:
+        return working_window(day, {WEEKDAYS[day.weekday()]: ["00:00", "24:00"]}, config.shop_tz)
     if is_off(session, barber_id, day):
         return None
     return working_window(day, hours_for(session, barber_id), config.shop_tz)
@@ -208,9 +214,9 @@ def check_bookable(
 
     wanted = Interval(start, start + timedelta(minutes=service.duration_minutes))
     local_day = start.astimezone(config.shop_tz).date()
-    if is_off(session, barber_id, local_day):
+    if not service.any_time and is_off(session, barber_id, local_day):
         raise DomainError(422, "barber_off", "the barber is not working that day")
-    window = working_window(local_day, hours_for(session, barber_id), config.shop_tz)
+    window = day_window(session, config, barber_id, local_day, any_time=service.any_time)
     if window is None or not window.contains(wanted):
         raise DomainError(422, "outside_hours", "that does not fit inside the barber's working hours")
     return wanted
