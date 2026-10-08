@@ -126,7 +126,9 @@
      field - day, month, year - and :focus-visible never reaches the field. */
   input:focus, select:focus { outline:3px solid var(--brand); outline-offset:2px; }
   .confirm { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px; border:1px dashed var(--brand); border-radius:8px; }
-  .confirm button { border-radius:999px; padding-inline:22px; }
+  /* The button keeps its size and its one line however long the words beside it - two services at one time. */
+  .confirm button { border-radius:999px; padding-inline:22px; flex:none; white-space:nowrap; min-height:44px; }
+  .confirm span { flex:1 1 auto; min-width:0; }
   [data-testid="left-panel"][data-done] > :not(.done) { display:none; }
   .done { text-align:center; padding:24px 8px 8px; }
   .done .tick { width:64px; height:64px; border-radius:50%; background:#e6f2e8; color:var(--ok); display:inline-flex; align-items:center; justify-content:center; font-size:32px; font-weight:700; }
@@ -1506,8 +1508,7 @@ function select(slot, button) {
   const service = serviceOf($("service").value);
   const second = companion ? serviceOf($("service-2").value) : null;
   const together = second ? ` + ${isolate(second.name)}` : "";
-  const total = second ? ` · סך הכול ${money(service.price_minor + second.price_minor, service.currency)}` : "";
-  $("confirm-text").textContent = `${dayLabel(slot.start_local)} ${clock(slot.start_local)} · ${isolate(service.name)}${together} אצל ${isolate(barberName($("barber").value))}${total}`;
+  $("confirm-text").textContent = `${dayLabel(slot.start_local)} ${clock(slot.start_local)} · ${isolate(service.name)}${together} אצל ${isolate(barberName($("barber").value))}`;
   $("confirm").hidden = false;
 }
 

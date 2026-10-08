@@ -278,7 +278,7 @@ so nothing about a booking travels through a push service. The owner is not sent
 
 Under the service, `+ הוספת אדם נוסף (ילד או חבר)` opens a second service and an optional name. The times
 and the calendar then offer only where both fit, one right after the other with the same barber;
-the confirm bar reads `11:00 · תספורת + תספורת ילד אצל אבי · סך הכול ₪150`, and the card `שני התורים נקבעו`
+the confirm bar reads `11:00 · תספורת + תספורת ילד אצל אבי`, and the card `שני התורים נקבעו`
 (or `הבקשה נשלחה` when either waits for the barber). `POST /bookings/group`: all or none, in one step under
 the write lock; `GET .../availability` and `.../days` take `also=<service>`.
 
