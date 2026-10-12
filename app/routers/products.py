@@ -19,7 +19,7 @@ from app.errors import DomainError, not_found
 from app.models import Booking, BookingProduct, Product, User, now_utc
 from app.routers.bookings import _view as booking_view_of
 from app.routers.courses import picture
-from app.schemas import ImageIn, ProductIn, ProductPatch
+from app.schemas import ImageIn, KeepIn, ProductIn, ProductPatch
 from app.views import page, product_view
 
 router = APIRouter(tags=["products"])
@@ -115,12 +115,15 @@ def _kept(session: Session, booking: Booking, product: Product) -> BookingProduc
 def keep_product(
     booking_id: str,
     product_id: str,
+    body: KeepIn | None = None,
     user: User = Depends(require("customer", "owner")),
     session: Session = Depends(db),
     config: Settings = Depends(settings),
 ):
-    """Keep a product for a booking that is still ahead and stands. Asked twice,
-    it is kept once."""
+    """Keep a product for a booking that is still ahead and stands - one, or as many
+    as asked. Asked again, the number is set, not added. A product that ran out or was
+    withdrawn can be kept in a smaller number, never a larger."""
+    quantity = body.quantity if body else 1
     with write_lock(session):
         booking = visible_booking_or_404(session, booking_id, user)
         product = _product_or_404(session, product_id)
@@ -131,11 +134,15 @@ def keep_product(
             or approval_state(booking, now) == "declined"
         ):
             raise DomainError(409, "booking_closed", "a product is kept only for a booking still ahead")
-        if not product.active or not product.in_stock:
+        kept = _kept(session, booking, product)
+        more = kept is None or quantity > kept.quantity
+        if more and (not product.active or not product.in_stock):
             raise DomainError(422, "product_unavailable", "that product cannot be kept right now")
-        if _kept(session, booking, product) is None:
-            session.add(BookingProduct(booking_id=booking.id, product_id=product.id))
-            session.flush()
+        if kept is None:
+            session.add(BookingProduct(booking_id=booking.id, product_id=product.id, quantity=quantity))
+        else:
+            kept.quantity = quantity
+        session.flush()
         return booking_view_of(session, booking, config)
 
 

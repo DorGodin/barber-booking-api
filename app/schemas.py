@@ -113,6 +113,12 @@ class ProductPatch(BaseModel):
     in_stock: bool | None = None
 
 
+class KeepIn(BaseModel):
+    """How many of a product to keep for a booking."""
+
+    quantity: int = Field(default=1, ge=1, le=9)
+
+
 class ImageIn(BaseModel):
     """A picture as base64 text: the page reads the file it was given and sends it
     in a JSON body, so no multipart machinery is needed."""

@@ -28,8 +28,9 @@ def ahead(client, customer, barber, services) -> str:
     return book(client, customer, barber, services[HAIRCUT]["id"], at(local_day(3), "10:00")).json()["id"]
 
 
-def keep(client, headers, booking, product):
-    return client.put(f"/bookings/{booking}/products/{product}", headers=headers)
+def keep(client, headers, booking, product, quantity=None):
+    body = {} if quantity is None else {"json": {"quantity": quantity}}
+    return client.put(f"/bookings/{booking}/products/{product}", headers=headers, **body)
 
 
 def test_the_owner_adds_a_product_and_a_customer_reads_it(client, owner, customer):
@@ -99,7 +100,7 @@ def test_a_product_is_kept_for_a_booking_ahead_and_the_booking_names_it(
     kept = keep(client, customer, ahead, wax)
 
     assert kept.status_code == 200
-    assert kept.json()["products"] == [{"id": wax, "name": "ווקס מט"}]
+    assert kept.json()["products"] == [{"id": wax, "name": "ווקס מט", "quantity": 1}]
     assert client.get(f"/bookings/{ahead}", headers=customer).json()["products"] == kept.json()["products"]
     diary = client.get("/bookings", headers=owner, params={"barber_id": barber}).json()["content"]
     [in_diary] = [b for b in diary if b["id"] == ahead]
@@ -157,6 +158,37 @@ def test_somebody_elses_booking_is_not_found_and_a_barber_keeps_nothing(
     assert keep(client, their_barber, ahead, wax).status_code == 403
     assert keep(client, owner, ahead, "prd_nope").status_code == 404
     assert keep(client, owner, ahead, wax).status_code == 200
+
+
+def test_the_number_asked_for_is_set_not_added(client, customer, wax, ahead):
+    keep(client, customer, ahead, wax, quantity=2)
+
+    raised = keep(client, customer, ahead, wax, quantity=3)
+    lowered = keep(client, customer, ahead, wax, quantity=1)
+
+    assert raised.json()["products"] == [{"id": wax, "name": "ווקס מט", "quantity": 3}]
+    assert lowered.json()["products"][0]["quantity"] == 1
+
+
+@pytest.mark.parametrize("quantity", [0, 10, -1, 1.5, "two"])
+def test_from_one_to_nine_of_a_product_and_nothing_else(client, customer, wax, ahead, quantity):
+    assert keep(client, customer, ahead, wax, quantity=quantity).status_code == 422
+    assert keep(client, customer, ahead, wax, quantity=9).json()["products"][0]["quantity"] == 9
+
+
+@pytest.mark.parametrize("change", [{"active": False}, {"in_stock": False}])
+def test_of_a_product_that_ran_out_fewer_may_be_kept_and_never_more(
+    client, customer, owner, wax, ahead, change
+):
+    keep(client, customer, ahead, wax, quantity=3)
+    client.patch(f"/products/{wax}", headers=owner, json=change)
+
+    fewer = keep(client, customer, ahead, wax, quantity=2)
+    more = keep(client, customer, ahead, wax, quantity=4)
+
+    assert fewer.json()["products"][0]["quantity"] == 2
+    assert (more.status_code, more.json()["code"]) == (422, "product_unavailable")
+    assert client.get(f"/bookings/{ahead}", headers=customer).json()["products"][0]["quantity"] == 2
 
 
 def test_the_database_refuses_a_negative_price(client):
