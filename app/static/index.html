@@ -118,6 +118,8 @@
   @media (max-width: 760px) {
     .slots { grid-template-columns: repeat(5, minmax(0, 1fr)); gap:6px; }
     .slots button { min-height:36px; height:36px; min-width:0; padding:0; font-size:14px; }
+    /* Five to a row in the narrowest column - the owner's, on a 320px phone - leaves 40px a time: the words fit at 13px. */
+    @media (max-width: 360px) { .slots button { font-size:13px; } }
   }
   /* One visible ring for every engine's focus, offset so it shows on a dark
      button as well as a light one. A keyboard user has to see where they are. */
