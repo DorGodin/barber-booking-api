@@ -231,13 +231,18 @@ def create_group_booking(
 def list_bookings(
     status: str | None = Query(default=None, pattern="^(confirmed|cancelled)$"),
     barber_id: str | None = None,
+    upcoming: bool = False,
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     user: User = Depends(current_user),
     session: Session = Depends(db),
     config: Settings = Depends(settings),
 ):
+    """`upcoming` leaves out what is over - a diary is read for what is still to come,
+    and a shop's past soon outgrows any page of it."""
     query = select(Booking)
+    if upcoming:
+        query = query.where(Booking.end_utc > datetime.now(UTC))
     if user.role == "customer":
         query = query.where(Booking.customer_id == user.id)
     elif user.role == "barber":
