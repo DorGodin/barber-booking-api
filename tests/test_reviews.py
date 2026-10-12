@@ -146,3 +146,31 @@ def test_the_barber_and_the_owner_see_the_review_in_the_diary(client, owner, cus
     as_owner = client.get(f"/bookings/{booking}", headers=owner).json()
 
     assert seen["review"] == as_owner["review"] == {"stars": 5, "text": "אלוף"}
+
+
+def test_the_diary_can_leave_out_what_is_over_and_the_customers_list_keeps_it(
+    client, owner, customer, barber, services
+):
+    over = past_booking(client, customer, barber, services[HAIRCUT]["id"])
+    ahead = book(client, customer, barber, services[HAIRCUT]["id"], at(local_day(3), "10:00")).json()["id"]
+
+    def ids(headers, **params):
+        listed = client.get("/bookings", headers=headers, params={"barber_id": barber, **params}).json()
+        return [b["id"] for b in listed["content"]], listed["total"]
+
+    assert ids(owner, upcoming="true") == ([ahead], 1)
+    assert ids(owner) == ([over, ahead], 2)
+    assert ids(customer) == ([over, ahead], 2)
+
+
+def test_a_booking_under_way_is_still_in_the_diary(client, owner, customer, barber, services):
+    now = datetime.now(UTC).replace(microsecond=0)
+    under_way = past_booking(client, customer, barber, services[HAIRCUT]["id"], hours_ago=0)
+    with client.app.state.sessionmaker() as session:
+        booking = session.get(Booking, under_way)
+        booking.start_utc, booking.end_utc = now - timedelta(minutes=10), now + timedelta(minutes=20)
+        session.commit()
+
+    listed = client.get("/bookings", headers=owner, params={"barber_id": barber, "upcoming": "true"}).json()
+
+    assert [b["id"] for b in listed["content"]] == [under_way]

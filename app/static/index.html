@@ -494,6 +494,7 @@
         <h2 data-testid="bookings-title">התורים שלי</h2>
         <ul data-testid="bookings"></ul>
         <p class="muted" data-testid="no-bookings" hidden>עוד אין תורים.</p>
+        <p class="muted" data-testid="more-bookings" hidden></p>
       </div>
       <div class="panel" data-testid="courses-panel" id="courses-section" data-section hidden>
         <h2>קורסים</h2>
@@ -2338,6 +2339,9 @@ async function refreshBookings() {
   if (!me) return;
   const params = new URLSearchParams({ limit: "100" });
   if (me.role === "owner" && $("barber").value) params.set("barber_id", $("barber").value);
+  // A diary is what is still to come. A customer's list keeps the past: a booking that is over is
+  // where they are asked what they thought of it.
+  if (me.role !== "customer") params.set("upcoming", "true");
   const current = ticket("bookings");
   const r = await api("GET", `/bookings?${params}`);
   if (!current()) return;
@@ -2422,6 +2426,10 @@ async function refreshBookings() {
     list.appendChild(row);
   }
   $("no-bookings").hidden = rows.length > 0;
+  // More ahead than one page holds: say so, rather than let the last of them go missing unnoticed.
+  const more = r.ok && me.role !== "customer" && r.data.total > r.data.content.length;
+  $("more-bookings").hidden = !more;
+  $("more-bookings").textContent = more ? `מוצגים ${r.data.content.length} התורים הקרובים מתוך ${r.data.total}.` : "";
   clearTimeout(cancelledExpiry);
   const left = rows.filter((b) => b.status === "cancelled").map((b) => CANCELLED_SHOWN_MS - cancelledAge(b));
   if (me.role === "customer" && left.length) {
