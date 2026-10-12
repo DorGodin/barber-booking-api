@@ -54,6 +54,19 @@ def course_view(course, whatsapp: str | None) -> dict:
     }
 
 
+def product_view(product) -> dict:
+    return {
+        "id": product.id,
+        "name": product.name,
+        "line": product.line,
+        "price_minor": product.price_minor,
+        "currency": "ILS",
+        "image_url": f"/media/{product.image}" if product.image else None,
+        "active": product.active,
+        "in_stock": product.in_stock,
+    }
+
+
 def cancelled_by_label(booking: Booking) -> str | None:
     if booking.cancelled_by is None:
         return None
@@ -67,6 +80,7 @@ def booking_view(
     tz: ZoneInfo,
     now: datetime | None = None,
     review=None,
+    products=(),
 ) -> dict:
     now = now or now_utc()
     return {
@@ -99,6 +113,9 @@ def booking_view(
         # decide_by, then it stands. approved, or declined - which cancels it.
         # What the customer said about it, once it was over - and whether they may
         # still be asked: it is over, it stood, and nothing was said yet.
+        # What the customer asked the shop to keep for this booking, by name - the
+        # barber reads it in the diary, the customer in their list.
+        "products": [{"id": p.id, "name": p.name} for p in products],
         "review": None if review is None else {"stars": review.stars, "text": review.text},
         "reviewable": review is None
         and booking.customer_id is not None

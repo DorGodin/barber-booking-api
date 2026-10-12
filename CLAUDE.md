@@ -128,6 +128,11 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   turns them off stays for whoever said yes.
 - **The service choice says the name and the price; the minutes stand on the label's line** (`serviceLabel`,
   `showLengths`): a phone's field cut the price off. **A tab pressed clears the message** of the last screen.
+- **A product is kept for a booking, never sold here** (`/products`, `app/routers/products.py`, `booking_products`):
+  the owner keeps the shelf and marks what ran out - nothing is counted, nothing is paid. A customer's button
+  appears only with a booking ahead and keeps the product for the nearest one; the booking names what is kept
+  (`products` in its view) for the customer's list and the barber's diary. A picture is a course's picture: by
+  its bytes, under the server's own name.
 - **A group booking is all or none, in one step under the write lock** (`/bookings/group`): the
   listing for two (`also=`) and the booking must agree, so a time offered for two always books. It counts
   as one toward the limit; afterwards each booking is its own.

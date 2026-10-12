@@ -34,6 +34,21 @@ def _extension(raw: bytes) -> str | None:
     return None
 
 
+def picture(body: ImageIn) -> tuple[bytes, str]:
+    """An uploaded picture's bytes and what they are. What is accepted is decided
+    by the bytes: a JPEG, a PNG or a WebP of at most 3 MB."""
+    try:
+        raw = base64.b64decode(body.data, validate=True)
+    except (binascii.Error, ValueError):
+        raise DomainError(422, "invalid_image", "the picture is not valid base64") from None
+    if len(raw) > MAX_IMAGE_BYTES:
+        raise DomainError(422, "image_too_large", "a picture may be at most 3 MB")
+    extension = _extension(raw)
+    if extension is None or extension not in IMAGE_TYPES:
+        raise DomainError(422, "invalid_image", "a picture must be a JPEG, PNG or WebP")
+    return raw, extension
+
+
 def _view(course: Course, config: Settings) -> dict:
     whatsapp = config.identity.links.get("whatsapp") if config.identity else None
     return course_view(course, whatsapp)
@@ -110,17 +125,8 @@ def set_course_image(
     config: Settings = Depends(settings),
     directory: Path = Depends(media_dir),
 ):
-    """The owner's picture for a course. What is accepted is decided by the bytes:
-    a JPEG, a PNG or a WebP of at most 3 MB. The file name is the server's own."""
-    try:
-        raw = base64.b64decode(body.data, validate=True)
-    except (binascii.Error, ValueError):
-        raise DomainError(422, "invalid_image", "the picture is not valid base64") from None
-    if len(raw) > MAX_IMAGE_BYTES:
-        raise DomainError(422, "image_too_large", "a picture may be at most 3 MB")
-    extension = _extension(raw)
-    if extension is None or extension not in IMAGE_TYPES:
-        raise DomainError(422, "invalid_image", "a picture must be a JPEG, PNG or WebP")
+    """The owner's picture for a course. The file name is the server's own."""
+    raw, extension = picture(body)
     with write_lock(session):
         course = _course_or_404(session, course_id)
         directory.mkdir(parents=True, exist_ok=True)

@@ -303,3 +303,36 @@ class IdempotencyKey(Base):
     customer_id: Mapped[str] = mapped_column(String(32), primary_key=True)
     request_hash: Mapped[str] = mapped_column(String(64))
     booking_id: Mapped[str] = mapped_column(ForeignKey("bookings.id"))
+
+
+class Product(Base):
+    """Something the shop sells from its shelf. A customer with a booking ahead can
+    ask for one to be kept for it. Withdrawn ones are kept, never deleted."""
+
+    __tablename__ = "products"
+    __table_args__ = (CheckConstraint("price_minor >= 0", name="ck_products_price"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=lambda: new_id("prd"))
+    name: Mapped[str] = mapped_column(String(80))
+    # One short line under the name: "100 מ״ל".
+    line: Mapped[str] = mapped_column(String(120), default="")
+    price_minor: Mapped[int] = mapped_column(Integer)
+    # A file name in the media folder, the server's own - as a course's.
+    image: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    active: Mapped[bool] = mapped_column(default=True, server_default=true())
+    # The owner's own switch: nothing is counted.
+    in_stock: Mapped[bool] = mapped_column(default=True, server_default=true())
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=now_utc)
+
+
+class BookingProduct(Base):
+    """A product kept for a booking: waiting at the shop when the customer comes.
+    Nothing is paid here, and a product is kept once for a booking."""
+
+    __tablename__ = "booking_products"
+    __table_args__ = (UniqueConstraint("booking_id", "product_id", name="uq_booking_products"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    booking_id: Mapped[str] = mapped_column(ForeignKey("bookings.id"), index=True)
+    product_id: Mapped[str] = mapped_column(ForeignKey("products.id"))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=now_utc)
