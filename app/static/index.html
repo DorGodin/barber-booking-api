@@ -65,6 +65,9 @@
      reader would announce the barber field as the whole list of barbers. */
   .field { margin-bottom:10px; }
   label { display:block; font-size:14px; color:var(--mut); }
+  /* How long the chosen service takes, on its label's line: in the choice itself it pushed the price out of a phone's field. */
+  .label-row { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .label-row span { font-size:14px; color:var(--mut); white-space:nowrap; }
   /* 16px, not less: below it Safari on iOS zooms the whole page in when a
      field takes the focus, and leaves it zoomed after. */
   input, select { display:block; width:100%; margin-top:4px; padding:9px 10px; font-size:16px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); }
@@ -120,6 +123,8 @@
     .slots button { min-height:36px; height:36px; min-width:0; padding:0; font-size:14px; }
     /* Five to a row in the narrowest column - the owner's, on a 320px phone - leaves 40px a time: the words fit at 13px. */
     @media (max-width: 360px) { .slots button { font-size:13px; } }
+  /* And the service choice gives its words the room its arrow can spare. */
+  @media (max-width: 360px) { select { padding-left:28px; padding-right:8px; } }
   }
   /* One visible ring for every engine's focus, offset so it shows on a dark
      button as well as a light one. A keyboard user has to see where they are. */
@@ -413,11 +418,11 @@
             <p data-testid="moving-text" tabindex="-1"></p>
             <button data-testid="stop-moving" type="button" class="ghost">השארת המועד הקיים</button>
           </div>
-          <div class="field"><label for="service">שירות</label><select id="service" data-testid="service"></select></div>
+          <div class="field"><div class="label-row"><label for="service">שירות</label><span data-testid="service-length"></span></div><select id="service" data-testid="service"></select></div>
           <div class="field" data-testid="companion-field" hidden>
             <button type="button" class="ghost" data-testid="add-person">+ הוספת אדם נוסף (ילד או חבר)</button>
             <div class="companion" data-testid="companion" hidden>
-              <label for="service-2">שירות לאדם הנוסף</label>
+              <div class="label-row"><label for="service-2">שירות לאדם הנוסף</label><span data-testid="service-2-length"></span></div>
               <select id="service-2" data-testid="service-2"></select>
               <label for="person-name">שם (לא חובה)</label>
               <input id="person-name" data-testid="person-name" maxlength="80" autocomplete="off">
@@ -694,6 +699,9 @@ function addDays(isoDate, days) {
 // The Israeli way round - the amount, then the sign - whatever language the
 // browser itself is set to.
 const money = (minor, currency) => new Intl.NumberFormat("he-IL", { style: "currency", currency }).format(minor / 100);
+// In the service choice a whole price drops its agorot, and the minutes stand on the label's line:
+// the field is narrow on a phone, and the price was pushed out of it.
+const shortMoney = (minor, currency) => new Intl.NumberFormat("he-IL", { style: "currency", currency, minimumFractionDigits: minor % 100 ? 2 : 0 }).format(minor / 100);
 const ROLE = { customer: "לקוח", barber: "ספר", owner: "בעלים" };
 const firstName = (name) => name.trim().split(/\s+/)[0];
 const STATUS = { confirmed: "מאושר", cancelled: "בוטל" };
@@ -1356,14 +1364,23 @@ async function reloadServices() {
 // What can be booked: the active services only. The owner's list holds the
 // withdrawn ones too, to manage them - offered here, the times for one were
 // refused, and the refusal replaced whatever the owner had just been told.
+const serviceLabel = (s) => `${isolate(s.name)} · ${shortMoney(s.price_minor, s.currency)}`;
+function showLengths() {
+  for (const id of ["service", "service-2"]) {
+    const minutes = serviceOf($(id).value).duration_minutes;
+    $(`${id}-length`).textContent = minutes ? `${minutes} דק׳` : "";
+  }
+}
+for (const id of ["service", "service-2"]) $(id).addEventListener("change", showLengths);
 function fillServiceChoice() {
   const chosen = $("service").value;
   const bookable = services.filter((s) => s.active);
-  $("service").replaceChildren(...bookable.map((s) => option(s.id, `${isolate(s.name)} · ${s.duration_minutes} דק׳ · ${money(s.price_minor, s.currency)}`)));
+  $("service").replaceChildren(...bookable.map((s) => option(s.id, serviceLabel(s))));
   if (bookable.some((s) => s.id === chosen)) $("service").value = chosen;
   const second = $("service-2").value;
-  $("service-2").replaceChildren(...bookable.map((s) => option(s.id, `${isolate(s.name)} · ${s.duration_minutes} דק׳ · ${money(s.price_minor, s.currency)}`)));
+  $("service-2").replaceChildren(...bookable.map((s) => option(s.id, serviceLabel(s))));
   if (bookable.some((s) => s.id === second)) $("service-2").value = second;
+  showLengths();
 }
 
 function saveService(service, priceInput, activeInput, approvalInput, anytimeInput) {
@@ -1714,6 +1731,8 @@ for (const button of $("tabbar").children) {
     // A tab the customer pressed wins over a focus still waiting for the list
     // to load - it would have pulled them back to the tab they just left.
     focusWhenSettled = null;
+    // What was said about the last thing done belongs to the screen it was done on.
+    say("", "ok");
     if (button.dataset.tab === "book") hideDone();
     showTab(button.dataset.tab);
     window.scrollTo(0, 0);
@@ -1820,6 +1839,7 @@ function startMoving(b) {
     showTab("book");
     setBarber(b.barber_id);
     $("service").value = b.service_id;
+    showLengths();
     lockBarber(true);
     $("service").disabled = true;
     $("date").value = b.start_local.slice(0, 10);
@@ -1893,6 +1913,7 @@ async function moveSelected() {
 // notification, even with the page closed. Asked once, by a card, because a browser only lets a
 // person's own tap ask for the permission. Nothing about the booking travels in it.
 const PUSH_LATER_KEY = "push-not-now";
+const PUSH_ASK_HOURS = 48;
 let pushInfo = { key: null, subscribed: false };
 const pushRole = () => (me.role === "barber" ? "barber" : "customer");
 const pushSupported = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
@@ -1929,8 +1950,10 @@ function pushCard(all) {
     card.append(control("span", { textContent: "עדכונים פעילים" }), off);
     return card;
   }
-  // Asked only of someone with something to be told about: a booking ahead that stands, or a barber.
-  const ahead = me.role === "barber" || all.some((b) => b.status === "confirmed" && Date.parse(b.end) > Date.now());
+  // Asked only after a booking was made, and for two days from then: a booking ahead that stands
+  // and is that new. Moving or cancelling one is not a reason to ask. A barber is always asked.
+  const madeLately = (b) => Date.now() - Date.parse(b.created_at) < PUSH_ASK_HOURS * 3600000;
+  const ahead = me.role === "barber" || all.some((b) => b.status === "confirmed" && Date.parse(b.end) > Date.now() && madeLately(b));
   if (!ahead || pushLater() || (pushSupported() && Notification.permission === "denied")) return null;
   const card = control("li", { className: "push-card", testid: "push-card" });
   const row = control("div", { className: "row-buttons" });
