@@ -330,9 +330,14 @@ class BookingProduct(Base):
     Nothing is paid here, and a product is kept once for a booking."""
 
     __tablename__ = "booking_products"
-    __table_args__ = (UniqueConstraint("booking_id", "product_id", name="uq_booking_products"),)
+    __table_args__ = (
+        UniqueConstraint("booking_id", "product_id", name="uq_booking_products"),
+        CheckConstraint("quantity BETWEEN 1 AND 9", name="ck_booking_products_quantity"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     booking_id: Mapped[str] = mapped_column(ForeignKey("bookings.id"), index=True)
     product_id: Mapped[str] = mapped_column(ForeignKey("products.id"))
+    # How many of it to have ready.
+    quantity: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=now_utc)

@@ -115,7 +115,7 @@ def booking_view(
         # still be asked: it is over, it stood, and nothing was said yet.
         # What the customer asked the shop to keep for this booking, by name - the
         # barber reads it in the diary, the customer in their list.
-        "products": [{"id": p.id, "name": p.name} for p in products],
+        "products": [{"id": p.id, "name": p.name, "quantity": quantity} for p, quantity in products],
         "review": None if review is None else {"stars": review.stars, "text": review.text},
         "reviewable": review is None
         and booking.customer_id is not None
