@@ -301,6 +301,11 @@
     [data-role="customer"][data-tab="courses"] [data-testid="left-panel"],
     [data-role="customer"][data-tab="courses"] [data-testid="right-panel"],
     [data-role="customer"]:not([data-tab="courses"]) [data-testid="courses-panel"] { display:none; }
+    [data-role="customer"][data-tab="products"] [data-testid="left-panel"],
+    [data-role="customer"][data-tab="products"] [data-testid="right-panel"],
+    [data-role="customer"]:not([data-tab="products"]) [data-testid="products-panel"] { display:none; }
+    /* Four tabs share a phone's width: each keeps its words on one line, and the longer name gets the wider tab. */
+    .tabbar button { flex:1 1 auto; padding:0 2px; white-space:nowrap; }
     /* The page ends above the tabs, and whatever the keyboard reaches stays
        above them too (WCAG 2.4.11). */
     body:has([data-testid="app"][data-role="customer"]:not([hidden])) { padding-bottom:72px; }
@@ -323,6 +328,27 @@
   .course-edit { border:1px solid var(--line); border-radius:12px; padding:12px; margin:0 0 12px; }
   .course-edit img { display:block; width:100%; height:90px; object-fit:cover; border-radius:8px; margin:0 0 8px; }
   .course-edit .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:8px 0 0; }
+  /* The shelf: the courses' card, with what the customer can do about a product under its words -
+     ask for it to be kept for the booking ahead, or take that back. */
+  [data-testid="products-panel"] { grid-column:1 / -1; }
+  [data-role="customer"] [data-testid="products-panel"] { display:block; }
+  .products { grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); }
+  .product img { height:120px; }
+  .product p { margin-bottom:10px; }
+  .product .keep { width:100%; border-radius:999px; min-height:44px; padding:0 8px; font-size:14px; white-space:nowrap; }
+  .product .out { display:block; text-align:center; font-size:14px; color:var(--mut); background:#f1efea; border-radius:999px; padding:11px 8px; }
+  [data-testid="products-for"] { margin:0 0 12px; }
+  /* Two to a row on a phone: a shelf is looked along, not scrolled through. */
+  @media (max-width: 760px) {
+    .products { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; }
+    .product img { height:100px; }
+    .product .course-body { padding:12px; }
+  }
+  /* On the narrowest phone a card is a hundred pixels wide: its button keeps its words by giving up its padding. */
+  @media (max-width: 360px) {
+    .product .course-body { padding:8px; }
+    .product .keep { padding:0; font-size:13px; }
+  }
   /* Opened by the same cut line as the top of the page. */
   footer { max-width:1000px; margin:auto auto 24px; padding:0 0 0; font-size:14px; text-align:center; }
   footer .cut { margin:0 auto 14px; }
@@ -474,6 +500,12 @@
         <div class="courses" data-testid="courses"></div>
         <p class="muted" data-testid="no-courses" hidden>עוד אין קורסים. נעדכן כאן כשייפתח קורס חדש.</p>
       </div>
+      <div class="panel" data-testid="products-panel" id="products-section" data-section hidden>
+        <h2>מוצרים</h2>
+        <p class="muted" data-testid="products-for" hidden></p>
+        <div class="courses products" data-testid="products"></div>
+        <p class="muted" data-testid="no-products" hidden>עוד אין מוצרים על המדף.</p>
+      </div>
     </div>
     <div class="grid owner" data-testid="owner" hidden>
       <div class="panel" data-testid="hours-panel" id="hours-section" data-section>
@@ -507,6 +539,16 @@
         <div class="field"><label for="new-course-price">מחיר בשקלים</label><input id="new-course-price" data-testid="new-course-price" inputmode="decimal" dir="ltr"></div>
         <button data-testid="add-course" type="button">הוספת הקורס</button>
       </div>
+      <div class="panel" data-testid="products-admin-panel" id="products-admin-section" data-section>
+        <h2>מוצרים</h2>
+        <p class="muted">כל מוצר מופיע ללקוחות בטאב המוצרים. לקוח שיש לו תור יכול לבקש שנשמור לו מוצר, וזה נכתב ליד התור שלו.</p>
+        <div data-testid="products-admin"></div>
+        <h3>מוצר חדש</h3>
+        <div class="field"><label for="new-product-name">שם המוצר</label><input id="new-product-name" data-testid="new-product-name" maxlength="80"></div>
+        <div class="field"><label for="new-product-line">שורה קצרה (למשל: 100 מ״ל)</label><input id="new-product-line" data-testid="new-product-line" maxlength="120"></div>
+        <div class="field"><label for="new-product-price">מחיר בשקלים</label><input id="new-product-price" data-testid="new-product-price" inputmode="decimal" dir="ltr"></div>
+        <button data-testid="add-product" type="button">הוספת המוצר</button>
+      </div>
       <div class="panel" data-testid="services-panel" id="services-section" data-section>
         <h2>שירותים</h2>
         <ul data-testid="services"></ul>
@@ -529,6 +571,7 @@
       <button type="button" data-testid="tab-book" data-tab="book"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>קביעת תור</button>
       <button type="button" data-testid="tab-mine" data-tab="mine"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="5" cy="6" r="1"/><circle cx="5" cy="12" r="1"/><circle cx="5" cy="18" r="1"/></svg>התורים שלי</button>
       <button type="button" data-testid="tab-courses" data-tab="courses"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg>קורסים</button>
+      <button type="button" data-testid="tab-products" data-tab="products"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3h4v3l2.5 3v10.5a1.5 1.5 0 0 1-1.5 1.5H9a1.5 1.5 0 0 1-1.5-1.5V9L10 6z"/><path d="M7.5 13h9"/></svg>מוצרים</button>
     </nav>
   </section>
 
@@ -649,6 +692,8 @@ const FRIENDLY = {
   name_taken: () => "כבר יש שירות בשם הזה.",
   invalid_image: () => "התמונה צריכה להיות קובץ JPEG, PNG או WebP.",
   image_too_large: () => "התמונה גדולה מדי. אפשר עד 3 מגה־בייט.",
+  product_unavailable: () => "המוצר הזה לא זמין כרגע.",
+  booking_closed: () => "אפשר לשמור מוצר רק לתור שעוד לפניך.",
   already_off: () => "הספר כבר בחופש ביום הזה.",
   not_over_yet: () => "אפשר לדרג אחרי שהתור מסתיים.",
   not_reviewable: () => "אפשר לדרג רק תור שהתקיים.",
@@ -895,7 +940,7 @@ function signOut() {
   setCompanion(false);
   stopMoving();
   hideDone();
-  for (const id of ["bookings", "slots", "hours", "approval-hours", "days-off", "services", "barber", "service", "courses", "courses-admin", "service-2"]) $(id).replaceChildren();
+  for (const id of ["bookings", "slots", "hours", "approval-hours", "days-off", "services", "barber", "service", "courses", "courses-admin", "service-2", "products", "products-admin"]) $(id).replaceChildren();
   for (const id of ["display-name", "hours-for", "confirm-text"]) $(id).textContent = "";
   $("guest-name").value = "";
   for (const id of ["confirm", "no-slots", "no-bookings", "no-days-off", "app", "owner", "owner-nav", "whoami", "guest-field", "barber-left"]) $(id).hidden = true;
@@ -940,6 +985,7 @@ async function start() {
   // same diary the site books into. A barber only reads their own.
   $("book-panel").hidden = me.role === "barber";
   $("courses-panel").hidden = !customer;
+  $("products-panel").hidden = !customer;
   $("guest-field").hidden = me.role !== "owner";
   $("companion-field").hidden = !customer;
   $("left-title").textContent = customer ? "קביעת תור" : me.role === "owner" ? "התורים וקביעת תור בשם" : "היומן שלך";
@@ -962,7 +1008,7 @@ async function keepAFreeDay() {
 }
 
 async function refresh() {
-  await Promise.all([refreshSlots(), refreshDays(), refreshBookings(), refreshOwner(), refreshCourses()]);
+  await Promise.all([refreshSlots(), refreshDays(), refreshBookings(), refreshOwner(), refreshCourses(), refreshProducts()]);
 }
 
 // ---- The courses ---------------------------------------------------------------
@@ -1115,6 +1161,171 @@ function removeCourseImage(course) {
     const r = await api("DELETE", `/courses/${course.id}/image`);
     say(r.ok ? "התמונה הוסרה." : explain(r), r.ok ? "ok" : "error");
     await refreshCourses();
+  });
+}
+
+// ---- Products -----------------------------------------------------------------
+// The shop's shelf. A customer with a booking ahead can ask for a product to be kept for it: it
+// waits at the shop and is paid for there. With no booking there is nothing to keep it for, and
+// no button. The owner marks what ran out; nothing is counted.
+let products = [];
+let myBookings = [];
+const bookingAhead = () =>
+  myBookings
+    .filter((b) => b.status === "confirmed" && b.approval !== "declined" && Date.parse(b.end) > Date.now())
+    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))[0] || null;
+
+async function refreshProducts() {
+  if (!me || (me.role !== "customer" && me.role !== "owner")) return;
+  const current = ticket("products");
+  const r = await api("GET", "/products");
+  if (!current()) return;
+  products = r.ok ? r.data.content : [];
+  if (me.role === "customer") renderProducts();
+  else renderProductAdmin(products);
+}
+
+function renderProducts() {
+  const holder = $("products");
+  const booking = bookingAhead();
+  const kept = new Set(booking ? booking.products.map((p) => p.id) : []);
+  holder.replaceChildren();
+  for (const p of products) {
+    const card = control("article", { className: "course product", testid: "product" });
+    card.dataset.id = p.id;
+    if (p.image_url) card.append(control("img", { src: p.image_url, alt: "" }));
+    const body = control("div", { className: "course-body" });
+    const line = [p.line, coursePrice(p.price_minor, p.currency)].filter(Boolean).join(" · ");
+    body.append(control("h3", { textContent: isolate(p.name), testid: "product-name" }), control("p", { textContent: line, testid: "product-line" }));
+    // What is already kept can be given back even after it ran out.
+    if (kept.has(p.id)) {
+      const release = control("button", { type: "button", className: "keep ghost", testid: "product-release", textContent: "✓ נשמר · ביטול", "aria-label": `ביטול השמירה של ${p.name}` });
+      release.addEventListener("click", () => keepProduct(booking, p, false));
+      body.append(release);
+    } else if (!p.in_stock) {
+      body.append(control("span", { className: "out", testid: "product-out", textContent: "אזל מהמלאי" }));
+    } else if (booking) {
+      const keep = control("button", { type: "button", className: "keep", testid: "product-keep", textContent: "שמור לי לתור", "aria-label": `שמירת ${p.name} לתור` });
+      keep.addEventListener("click", () => keepProduct(booking, p, true));
+      body.append(keep);
+    }
+    card.append(body);
+    holder.append(card);
+  }
+  $("no-products").hidden = products.length > 0;
+  $("products-for").hidden = !booking || products.length === 0;
+  $("products-for").textContent = booking ? `מה שתבקשו יחכה לכם במספרה בתור של ${dayLabel(booking.start_local)} ${clock(booking.start_local)}. התשלום במספרה.` : "";
+}
+
+function keepProduct(booking, product, keep) {
+  return busyWhile(async () => {
+    const r = await api(keep ? "PUT" : "DELETE", `/bookings/${booking.id}/products/${product.id}`);
+    if (r.ok) say(keep ? `${isolate(product.name)} יחכה לך בתור.` : `${isolate(product.name)} כבר לא שמור לך.`, "ok");
+    else say(explain(r), "error");
+    await Promise.all([refreshBookings(), refreshProducts()]);
+  });
+}
+
+// The owner keeps the shelf: a form for each product, with its picture and its two switches.
+function renderProductAdmin(list) {
+  const holder = $("products-admin");
+  holder.replaceChildren();
+  for (const p of list) {
+    const box = control("div", { className: "course-edit", testid: "product-edit" });
+    box.dataset.id = p.id;
+    if (p.image_url) box.append(control("img", { src: p.image_url, alt: "" }));
+    const field = (label, input) => {
+      const wrap = control("div", { className: "field" });
+      input.id = `product-${p.id}-${input.dataset.testid}`;
+      wrap.append(control("label", { htmlFor: input.id, textContent: label }), input);
+      return wrap;
+    };
+    const tick = (testid, checked, words) => {
+      const input = control("input", { type: "checkbox", testid, checked });
+      input.id = `product-${p.id}-${testid}`;
+      return [input, control("label", { htmlFor: input.id, textContent: words })];
+    };
+    const name = control("input", { testid: "product-edit-name", value: p.name, maxLength: 80 });
+    const line = control("input", { testid: "product-edit-line", value: p.line, maxLength: 120 });
+    const price = control("input", { testid: "product-edit-price", value: shekels(p.price_minor), inputmode: "decimal", dir: "ltr" });
+    const [active, activeLabel] = tick("product-edit-active", p.active, "מוצג ללקוחות");
+    const [stock, stockLabel] = tick("product-edit-stock", p.in_stock, "במלאי");
+    const save = control("button", { type: "button", testid: "save-product", textContent: "שמירה" });
+    save.addEventListener("click", () => saveProduct(p, { name, line, price, active, stock }));
+    const file = control("input", { type: "file", testid: "product-image", accept: "image/jpeg,image/png,image/webp", "aria-label": `תמונה למוצר ${p.name}` });
+    file.addEventListener("change", () => file.files[0] && uploadProductImage(p, file.files[0]));
+    const row = control("div", { className: "row" });
+    row.append(active, activeLabel, stock, stockLabel, save);
+    box.append(field("שם המוצר", name), field("שורה קצרה", line), field("מחיר בשקלים", price), row);
+    const pictures = control("div", { className: "row" });
+    pictures.append(file);
+    if (p.image_url) {
+      const remove = control("button", { type: "button", className: "ghost", testid: "remove-product-image", textContent: "הסרת התמונה" });
+      remove.addEventListener("click", () => removeProductImage(p));
+      pictures.append(remove);
+    }
+    box.append(pictures);
+    holder.append(box);
+  }
+}
+
+// A product always has a price: it is sold, not asked about.
+function productBody(name, line, priceText) {
+  const price = parseShekels(priceText);
+  if (price === null) {
+    say("המחיר צריך להיות מספר בשקלים, עם עד שתי ספרות אחרי הנקודה.", "error");
+    return null;
+  }
+  if (!name.trim()) {
+    say("צריך לתת למוצר שם.", "error");
+    return null;
+  }
+  return { name: name.trim(), line: line.trim(), price_minor: price };
+}
+
+function saveProduct(product, fields) {
+  return busyWhile(async () => {
+    const body = productBody(fields.name.value, fields.line.value, fields.price.value);
+    if (!body) return;
+    const r = await api("PATCH", `/products/${product.id}`, { ...body, active: fields.active.checked, in_stock: fields.stock.checked });
+    say(r.ok ? `המוצר ${isolate(body.name)} נשמר.` : explain(r, { invalid: "המוצר לא נשמר. כדאי לבדוק את השדות." }), r.ok ? "ok" : "error");
+    await refreshProducts();
+  });
+}
+
+function addProduct() {
+  return busyWhile(async () => {
+    const body = productBody($("new-product-name").value, $("new-product-line").value, $("new-product-price").value);
+    if (!body) return;
+    const r = await api("POST", "/products", body);
+    if (r.ok) for (const id of ["new-product-name", "new-product-line", "new-product-price"]) $(id).value = "";
+    say(r.ok ? `המוצר ${isolate(body.name)} נוסף.` : explain(r, { invalid: "המוצר לא נוסף. כדאי לבדוק את השדות." }), r.ok ? "ok" : "error");
+    await refreshProducts();
+  });
+}
+
+function uploadProductImage(product, file) {
+  return busyWhile(async () => {
+    if (file.size > 3_000_000) {
+      say(explain({ data: { code: "image_too_large" } }), "error");
+      return;
+    }
+    const data = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+      reader.readAsDataURL(file);
+    });
+    const r = await api("PUT", `/products/${product.id}/image`, { data });
+    say(r.ok ? "התמונה נשמרה." : explain(r), r.ok ? "ok" : "error");
+    await refreshProducts();
+  });
+}
+
+function removeProductImage(product) {
+  return busyWhile(async () => {
+    const r = await api("DELETE", `/products/${product.id}/image`);
+    say(r.ok ? "התמונה הוסרה." : explain(r), r.ok ? "ok" : "error");
+    await refreshProducts();
   });
 }
 
@@ -2134,6 +2345,8 @@ async function refreshBookings() {
   list.replaceChildren();
   const rows = (r.ok ? r.data.content : []).filter((b) => me.role !== "customer" || shownToCustomer(b));
   tellAboutAnswers(r.ok ? r.data.content : []);
+  myBookings = r.ok ? r.data.content : [];
+  if (me.role === "customer") renderProducts();
   if (me.role === "customer") {
     const card = reviewCard(r.ok ? r.data.content : []);
     if (card) list.appendChild(card);
@@ -2162,6 +2375,10 @@ async function refreshBookings() {
     const standing = document.createElement("span");
     standing.textContent = statusText(b);
     detail.append(standing);
+    // What the customer asked the shop to keep for this booking: the barber gets it ready.
+    if (b.status === "confirmed" && b.products.length) {
+      detail.append(control("span", { testid: "booking-products", textContent: `שמור לתור: ${b.products.map((p) => isolate(p.name)).join(", ")}` }));
+    }
     text.append(when, detail);
     row.append(text);
     // A customer cannot cancel or move a booking that is too close: the button is not
@@ -2351,6 +2568,7 @@ $("booking-done-more").addEventListener("click", () => {
 });
 $("save-hours").addEventListener("click", saveHours);
 $("add-course").addEventListener("click", addCourse);
+$("add-product").addEventListener("click", addProduct);
 $("save-approval").addEventListener("click", saveApproval);
 $("barber-active-toggle").addEventListener("click", toggleBarberActive);
 $("add-dayoff").addEventListener("click", addDayOff);

@@ -24,7 +24,17 @@ from app.config import Settings
 from app.db import write_lock
 from app.deps import current_user, db, push_hub, require, settings
 from app.errors import DomainError
-from app.models import Booking, BookingMove, IdempotencyKey, Review, Service, User, new_id
+from app.models import (
+    Booking,
+    BookingMove,
+    BookingProduct,
+    IdempotencyKey,
+    Product,
+    Review,
+    Service,
+    User,
+    new_id,
+)
 from app.push import PushHub
 from app.scheduling import Interval
 from app.schemas import BookingIn, BookingMoveIn, GroupBookingIn, GuestBookingIn, ReviewIn, ReviewTextIn
@@ -40,6 +50,12 @@ def _view(session: Session, booking: Booking, config: Settings) -> dict:
         session.get(User, booking.barber_id).display_name,
         config.shop_tz,
         review=session.scalar(select(Review).where(Review.booking_id == booking.id)),
+        products=session.scalars(
+            select(Product)
+            .join(BookingProduct, BookingProduct.product_id == Product.id)
+            .where(BookingProduct.booking_id == booking.id)
+            .order_by(BookingProduct.id)
+        ).all(),
     )
 
 

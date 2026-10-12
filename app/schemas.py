@@ -99,6 +99,20 @@ class CoursePatch(BaseModel):
     active: bool | None = None
 
 
+class ProductIn(BaseModel):
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+    line: Annotated[str, StringConstraints(strip_whitespace=True, max_length=120)] = ""
+    price_minor: int = Field(ge=0, le=10_000_000)
+
+
+class ProductPatch(BaseModel):
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)] | None = None
+    line: Annotated[str, StringConstraints(strip_whitespace=True, max_length=120)] | None = None
+    price_minor: int | None = Field(default=None, ge=0, le=10_000_000)
+    active: bool | None = None
+    in_stock: bool | None = None
+
+
 class ImageIn(BaseModel):
     """A picture as base64 text: the page reads the file it was given and sends it
     in a JSON body, so no multipart machinery is needed."""
