@@ -29,17 +29,23 @@ exactly as a real product would be.
    make run
    ```
 
-3. Open **http://127.0.0.1:8100** and sign in. The first start creates the shop, with the
-   passwords from `.env`:
+3. Open **http://127.0.0.1:8100** and sign in: a name, a mobile number, and the code sent to
+   it. With `SMS_URL=console` the code is printed in the terminal `make run` runs in.
 
-   | Username | Who |
+   | Sign in with | What opens |
    |---|---|
-   | `owner` | the owner — the same page becomes the management screen |
-   | `barber`, `barber.yossi`, `barber.moran`, `barber.ron` | four barbers, each on their own days |
-   | `customer`, `yael` | two customers, nothing booked |
+   | the number in `OWNER_PHONE` | the owner's screen — the same page becomes the management screen |
+   | a number the owner typed for a barber | that barber's diary |
+   | any other mobile | a customer's bookings; the first sign-in opens the account |
 
-   Try it: sign in as `customer` in one window and `yael` in another, pick the same time in
-   both, and press book in each — one is booked, the other is told the time has just gone.
+   The first start creates the shop with four barbers, each on their own days; the owner gives
+   each the mobile they sign in with. Try it: sign in with two different numbers in two
+   windows, pick the same time in both, and press book in each — one is booked, the other is
+   told the time has just gone.
+
+   The seed accounts' usernames and passwords (`owner`, `barber`, `customer`, from `.env`) still
+   sign in through the API (`POST /auth/token`), for scripts and tests. The page has no form
+   for them.
 
 The API's interactive docs are at http://127.0.0.1:8100/docs.
 

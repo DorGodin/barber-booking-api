@@ -79,7 +79,6 @@
   select { -webkit-appearance:none; appearance:none; padding-left:34px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%231d4e5f' stroke-width='2'/%3E%3C/svg%3E") no-repeat left 12px center; }
   /* A username and a password are Latin text; typed right to left they read
      backwards while they are being typed. */
-  input[autocomplete="username"], input[type="password"] { direction:ltr; text-align:right; }
   button { font:inherit; font-size:14px; padding:8px 14px; border-radius:6px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; }
   button:disabled { opacity:.5; cursor:wait; }
   button.ghost { background:#fff; color:var(--brand); }
@@ -196,7 +195,6 @@
   .auth { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
   @media (max-width: 760px) { .auth { grid-template-columns: 1fr; } }
   .auth { grid-template-columns: minmax(0, 420px); justify-content:center; }
-  .auth-legacy { display:grid; gap:18px; margin-top:12px; }
   .otp button[type="submit"] { width:100%; min-height:44px; }
   .hint { text-align:center; font-size:14px; margin:10px 0 0; }
   .link { background:none; border:0; color:var(--brand); text-decoration:underline; padding:10px 4px; min-height:44px; }
@@ -218,9 +216,6 @@
   .code-wrap input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; font-size:16px; }
   /* After a wrong code every box is red - the one the next digit goes to included. */
   .code-wrap.bad .code-boxes span, .code-wrap.bad:focus-within .code-boxes span.now { border-color:var(--bad); color:var(--bad); }
-  details.legacy { grid-column:1 / -1; text-align:center; }
-  details.legacy summary { color:var(--brand); cursor:pointer; padding:10px; min-height:44px; }
-  details.legacy[open] { text-align:start; }
   /* A phone number reads left to right but stands, like every field here, on the right. */
   #phone { text-align:right; }
   .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
@@ -415,20 +410,6 @@
       </div>
       <button data-testid="change-phone" type="button" class="link">החלפת מספר</button>
     </form>
-    <!-- Until every account has a phone and the test suites sign in by code,
-         the old sign-in stays here, folded away. -->
-    <details class="legacy" data-testid="password-sign-in">
-      <summary>כניסה עם שם משתמש וסיסמה</summary>
-      <div class="auth-legacy">
-    <form class="panel" data-testid="login-form">
-      <h2>כניסה</h2>
-      <div class="field"><label for="login-username">שם משתמש</label><input id="login-username" data-testid="username" autocomplete="username" required></div>
-      <div class="field"><label for="login-password">סיסמה</label><input id="login-password" data-testid="password" type="password" autocomplete="current-password" required></div>
-      <button data-testid="login" type="submit">כניסה</button>
-      <p data-testid="login-error" class="error" role="alert" hidden></p>
-    </form>
-      </div>
-    </details>
   </section>
 
   <section data-testid="app" aria-busy="false" hidden>
@@ -523,6 +504,10 @@
         <h3>פעילות</h3>
         <p class="muted" data-testid="barber-status"></p>
         <button data-testid="barber-active-toggle" type="button" class="ghost"></button>
+        <h3>כניסה</h3>
+        <p class="muted" data-testid="barber-phone-note"></p>
+        <div class="field"><label for="barber-phone">הטלפון הנייד של הספר</label><input id="barber-phone" data-testid="barber-phone" type="tel" inputmode="tel" autocomplete="off" dir="ltr" placeholder="0501234567"></div>
+        <button data-testid="save-barber-phone" type="button" class="ghost">שמירת הטלפון</button>
         <h3>ימי חופש</h3>
         <ul data-testid="days-off"></ul>
         <p class="muted" data-testid="no-days-off" hidden>אין ימי חופש קבועים.</p>
@@ -569,8 +554,7 @@
         <button data-testid="add-service" type="button">הוספת השירות</button>
         <h3>ספר חדש</h3>
         <div class="field"><label for="new-barber-name">שם הספר</label><input id="new-barber-name" data-testid="new-barber-name" maxlength="80"></div>
-        <div class="field"><label for="new-barber-username">שם משתמש לספר</label><input id="new-barber-username" data-testid="new-barber-username" autocomplete="off" dir="ltr"></div>
-        <div class="field"><label for="new-barber-password">סיסמה לספר</label><input id="new-barber-password" data-testid="new-barber-password" type="password" autocomplete="new-password"></div>
+        <div class="field"><label for="new-barber-phone">הטלפון הנייד של הספר (איתו הוא נכנס)</label><input id="new-barber-phone" data-testid="new-barber-phone" type="tel" inputmode="tel" autocomplete="off" dir="ltr" placeholder="0501234567"></div>
         <button data-testid="add-barber" type="button">הוספת הספר</button>
       </div>
     </div>
@@ -688,6 +672,7 @@ const FRIENDLY = {
   already_cancelled: () => "התור הזה כבר בוטל.",
   already_started: () => "התור הזה כבר התחיל.",
   username_taken: () => "שם המשתמש הזה תפוס.",
+  phone_taken: () => "המספר הזה כבר שייך לחשבון אחר.",
   bad_credentials: () => "שם משתמש או סיסמה שגויים.",
   too_many_bookings: (_, data) => `אפשר להחזיק עד ${data.limit} תורים קדימה. כדי לפנות מקום, אפשר לבטל אחד מהם.`,
   too_many_attempts: (_, data) => `יותר מדי ניסיונות כניסה שגויים. אפשר לנסות שוב בעוד ${Math.max(1, Math.ceil(data.retry_after_seconds / 60))} דקות.`,
@@ -789,22 +774,6 @@ function remember(value) { try { sessionStorage.setItem(SESSION, value); } catch
 function forget() { try { sessionStorage.removeItem(SESSION); } catch { /* nothing to forget */ } }
 function remembered() { try { return sessionStorage.getItem(SESSION); } catch { return null; } }
 
-async function signIn(username, password, errorBox) {
-  const r = await api("POST", "/auth/token", { username, password });
-  if (!r.ok) {
-    errorBox.textContent = explain(r);
-    errorBox.hidden = false;
-    return;
-  }
-  errorBox.hidden = true;
-  token = r.data.access_token;
-  remember(token);
-  await busyWhile(async () => {
-    me = (await api("GET", "/me")).data;
-    await start();
-  });
-}
-
 // ---- Sign-in with a code ------------------------------------------------------
 // The phone is who you are and the code is the password. The phone is sent as
 // typed: the server reads it whatever the spaces, dashes or +972 around it, and
@@ -814,8 +783,6 @@ const otp = { name: "", phone: "", rejected: null, lockedOut: false, timer: null
 function showCodeStep(last4, waitSeconds) {
   $("code-request-form").hidden = true;
   $("code-form").hidden = false;
-  // Under the code there is nothing else to do: no password sign-in.
-  $("password-sign-in").hidden = true;
   $("code-sent-to").textContent = `שלחנו קוד בן 4 ספרות למספר שמסתיים ב־${last4}`;
   $("code").value = "";
   setCodeState(null);
@@ -903,7 +870,6 @@ function resetCodeSignIn() {
   Object.assign(otp, { name: "", phone: "", rejected: null, lockedOut: false });
   $("code-form").hidden = true;
   $("code-request-form").hidden = false;
-  $("password-sign-in").hidden = false;
   for (const id of ["code-request-error", "code-error", "code-locked-hint"]) $(id).hidden = true;
   $("code-request-form").reset();
   $("code").value = "";
@@ -959,8 +925,6 @@ function signOut() {
 
 function clearForms() {
   resetCodeSignIn();
-  $("login-form").reset();
-  $("login-error").hidden = true;
 }
 
 async function start() {
@@ -1470,6 +1434,24 @@ function renderBarberActivity(barberId) {
   const active = barberOf(barberId).active !== false;
   $("barber-status").textContent = active ? "הספר פעיל ומוצע ללקוחות." : "הספר לא פעיל: הוא לא מוצע ללקוחות ולא יכול להתחבר.";
   $("barber-active-toggle").textContent = active ? "הוצאת הספר מהפעילות" : "החזרת הספר לפעילות";
+  // The barber signs in as a customer does: this mobile, and the code sent to it.
+  const phone = barberOf(barberId).phone || "";
+  $("barber-phone").value = phone;
+  $("barber-phone-note").textContent = phone ? "הספר נכנס עם הטלפון הזה ועם הקוד שנשלח אליו." : "עוד אין לספר טלפון, ולכן הוא לא יכול להיכנס.";
+}
+
+function saveBarberPhone() {
+  return busyWhile(async () => {
+    const barberId = $("barber").value;
+    const r = await api("PATCH", `/barbers/${barberId}`, { phone: $("barber-phone").value.trim() });
+    if (!r.ok) {
+      say(explain(r, { invalid: "הטלפון לא נשמר. צריך מספר נייד: 05 ועוד שמונה ספרות." }), "error");
+      return;
+    }
+    barbers = (await api("GET", "/barbers")).data.content;
+    say(r.data.phone ? `הטלפון של ${isolate(r.data.display_name)} נשמר.` : `ל${isolate(r.data.display_name)} אין עכשיו טלפון, והוא לא יכול להיכנס.`, "ok");
+    renderBarberActivity(barberId);
+  });
 }
 
 // Leaving cancels nothing: the barber's bookings stay in the diary, for the
@@ -1553,16 +1535,16 @@ function removeDayOff(day) {
 
 function addBarber() {
   return busyWhile(async () => {
-    const body = { display_name: $("new-barber-name").value.trim(), username: $("new-barber-username").value.trim(), password: $("new-barber-password").value };
+    const body = { display_name: $("new-barber-name").value.trim(), phone: $("new-barber-phone").value.trim() };
     const r = await api("POST", "/barbers", body);
     if (!r.ok) {
-      say(explain(r, { invalid: "כדאי לבדוק את הפרטים: שם, שם משתמש באנגלית, באותיות קטנות, 3 עד 64 תווים, וסיסמה של 8 תווים לפחות." }), "error");
+      say(explain(r, { invalid: "כדאי לבדוק את הפרטים: שם, ומספר נייד של הספר." }), "error");
       return;
     }
     barbers = (await api("GET", "/barbers")).data.content;
     fillBarberChoice();
     setBarber(r.data.id);
-    for (const id of ["new-barber-name", "new-barber-username", "new-barber-password"]) $(id).value = "";
+    for (const id of ["new-barber-name", "new-barber-phone"]) $(id).value = "";
     say(`הספר ${isolate(r.data.display_name)} נוסף, בשעות העבודה של המספרה.`, "ok");
     await refresh();
   });
@@ -2563,12 +2545,7 @@ $("change-phone").addEventListener("click", () => {
   clearInterval(otp.timer);
   $("code-form").hidden = true;
   $("code-request-form").hidden = false;
-  $("password-sign-in").hidden = false;
   $("phone").focus();
-});
-$("login-form").addEventListener("submit", (e) => {
-  e.preventDefault();
-  signIn($("username").value, $("password").value, $("login-error"));
 });
 $("logout").addEventListener("click", signOut);
 $("book").addEventListener("click", book);
@@ -2606,6 +2583,7 @@ $("save-approval").addEventListener("click", saveApproval);
 $("barber-active-toggle").addEventListener("click", toggleBarberActive);
 $("add-dayoff").addEventListener("click", addDayOff);
 $("add-barber").addEventListener("click", addBarber);
+$("save-barber-phone").addEventListener("click", saveBarberPhone);
 $("add-service").addEventListener("click", addService);
 $("service").addEventListener("change", () => busyWhile(async () => {
   await refresh();

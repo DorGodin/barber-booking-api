@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import secrets
 from datetime import UTC, date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
@@ -24,8 +25,9 @@ from app.db import write_lock
 from app.deps import current_user, db, require, settings
 from app.errors import DomainError
 from app.models import BarberHours, Service, TimeOff, User
+from app.phones import normalize
 from app.scheduling import available_starts
-from app.schemas import AccountIn, BarberPatch, HoursIn, TimeOffIn
+from app.schemas import BarberIn, BarberPatch, HoursIn, TimeOffIn
 from app.security import hash_password
 from app.views import barber_view, iso_utc, page
 
@@ -55,7 +57,21 @@ def list_barbers(user: User = Depends(current_user), session: Session = Depends(
     if user.role != "owner":
         query = query.where(User.active.is_(True))
     rows = session.scalars(query).all()
-    return page(len(rows), [barber_view(b) for b in rows])
+    return page(len(rows), [barber_view(b, for_owner=user.role == "owner") for b in rows])
+
+
+def _staff_phone(session: Session, raw: str | None, holder: User | None = None) -> str | None:
+    """The mobile a barber signs in with, in the form it is stored - or nothing. A phone
+    is one person's: the number of anyone else, customer or staff, is refused."""
+    if raw is None or not raw.strip():
+        return None
+    phone = normalize(raw)
+    if phone is None:
+        raise DomainError(422, "bad_phone", "a mobile number: 05 and eight more digits")
+    taken = session.scalar(select(User).where(User.phone == phone))
+    if taken is not None and (holder is None or taken.id != holder.id):
+        raise DomainError(409, "phone_taken", "that phone already belongs to an account")
+    return phone
 
 
 @router.patch("/barbers/{barber_id}")
@@ -65,26 +81,36 @@ def update_barber(
     """A barber who leaves is made inactive, not deleted: their bookings stay,
     for the owner to move or cancel one by one. A customer is not cancelled by
     the system without anyone deciding to."""
+    sent = body.model_dump(exclude_unset=True)
     with write_lock(session):
         barber = barber_or_404(session, barber_id)
-        barber.active = body.active
-    return barber_view(barber)
+        if sent.get("active") is not None:
+            barber.active = sent["active"]
+        if "phone" in sent:
+            barber.phone = _staff_phone(session, sent["phone"], holder=barber)
+        return barber_view(barber, for_owner=True)
 
 
 @router.post("/barbers", status_code=201)
-def create_barber(body: AccountIn, _: User = Depends(require("owner")), session: Session = Depends(db)):
+def create_barber(body: BarberIn, _: User = Depends(require("owner")), session: Session = Depends(db)):
     # The hash is slow on purpose; it is made before the lock, not while holding it.
-    password_hash = hash_password(body.password)
+    # With no password given the account has one nobody knows: it signs in by code.
+    password_hash = hash_password(body.password or secrets.token_urlsafe(32))
+    username = body.username or f"b-{secrets.token_hex(6)}"
     with write_lock(session):
-        if session.scalar(select(User).where(User.username == body.username)):
+        if session.scalar(select(User).where(User.username == username)):
             raise DomainError(409, "username_taken", "that username is taken")
         barber = User(
-            username=body.username, password_hash=password_hash, role="barber", display_name=body.display_name
+            username=username,
+            password_hash=password_hash,
+            role="barber",
+            display_name=body.display_name,
+            phone=_staff_phone(session, body.phone),
         )
         session.add(barber)
         session.flush()
         session.add(BarberHours(barber_id=barber.id, hours_json=json.dumps(DEFAULT_HOURS)))
-    return barber_view(barber)
+        return barber_view(barber, for_owner=True)
 
 
 @router.get("/barbers/{barber_id}/hours")

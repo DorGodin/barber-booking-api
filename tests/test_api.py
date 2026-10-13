@@ -194,8 +194,10 @@ def test_the_booking_page_is_served_at_the_root(client):
     page = client.get("/")
 
     assert page.status_code == 200 and page.headers["content-type"].startswith("text/html")
-    for testid in ("login-form", "slots", "book", "bookings"):
+    for testid in ("code-request-form", "slots", "book", "bookings"):
         assert f'data-testid="{testid}"' in page.text
+    # One way in, for a customer and for the staff alike: a phone and a code.
+    assert 'type="password"' not in page.text and "/auth/token" not in page.text
 
 
 def test_the_shop_publishes_its_own_clock_and_rules(client):

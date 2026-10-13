@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Annotated
 
-from pydantic import AwareDatetime, BaseModel, Field, StringConstraints, field_validator
+from pydantic import AwareDatetime, BaseModel, Field, StringConstraints, field_validator, model_validator
 
 from app.scheduling import WEEKDAYS, parse_hhmm
 
@@ -50,8 +50,29 @@ class ServicePatch(BaseModel):
     any_time: bool | None = None
 
 
+class BarberIn(BaseModel):
+    """A new barber: a name, and the mobile they sign in with - the same sign-in a customer
+    has, a code by SMS. A username and a password are still taken, for the accounts that
+    have them; without them the account signs in by code alone."""
+
+    display_name: str = Field(min_length=1, max_length=80)
+    phone: str | None = Field(default=None, max_length=20)
+    username: str | None = Field(default=None, pattern=USERNAME)
+    password: str | None = Field(default=None, min_length=8, max_length=128)
+
+
 class BarberPatch(BaseModel):
-    active: bool
+    """What the owner changes about a barber: whether they work here, and the mobile
+    they sign in with. Only what is sent is changed; an empty phone takes it away."""
+
+    active: bool | None = None
+    phone: str | None = Field(default=None, max_length=20)
+
+    @model_validator(mode="after")
+    def _something(self) -> BarberPatch:
+        if not self.model_fields_set:
+            raise ValueError("send what to change: active, phone, or both")
+        return self
 
 
 class HoursIn(BaseModel):

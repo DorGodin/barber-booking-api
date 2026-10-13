@@ -33,6 +33,13 @@ owner's list and diary - still finds them. Their bookings are not cancelled by t
 the owner decides about each. An inactive user's token stops working at once, and
 `account_inactive` is told only after the right password.
 
+**One way in on the page: a mobile, and the code sent to it** (`/auth/otp`). Whose phone it is
+decides what opens - the owner's is `OWNER_PHONE`, set on every start by `give_owner_phone` and
+refused when it is not a mobile or is somebody else's account; a barber's is given by the owner
+(`PATCH /barbers/{id}` with `phone`, `_staff_phone`), unique across every account, shown to the
+owner alone. **Never let a name decide a role** - anyone can type one. The password sign-in
+(`/auth/token`) is the API's only, for scripts and tests; the page has no form for it.
+
 **A booking is a customer's or a guest's, never both, never neither** - the database's own
 check holds it. A guest (`POST /bookings/guest`, the owner only) has a name and no account:
 the chair is checked, the customer is not, and the limit on bookings ahead does not apply.
