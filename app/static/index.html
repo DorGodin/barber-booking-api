@@ -2148,7 +2148,7 @@ async function moveSelected() {
 // notification, even with the page closed. Asked once, by a card, because a browser only lets a
 // person's own tap ask for the permission. Nothing about the booking travels in it.
 const PUSH_LATER_KEY = "push-not-now";
-const PUSH_ASK_HOURS = 48;
+const PUSH_ASK_HOURS = 24;
 let pushInfo = { key: null, subscribed: false };
 const pushRole = () => (me.role === "barber" ? "barber" : "customer");
 const pushSupported = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
@@ -2185,7 +2185,7 @@ function pushCard(all) {
     card.append(control("span", { textContent: "עדכונים פעילים" }), off);
     return card;
   }
-  // Asked only after a booking was made, and for two days from then: a booking ahead that stands
+  // Asked only after a booking was made, and for a day from then: a booking ahead that stands
   // and is that new. Moving or cancelling one is not a reason to ask. A barber is always asked.
   const madeLately = (b) => Date.now() - Date.parse(b.created_at) < PUSH_ASK_HOURS * 3600000;
   const ahead = me.role === "barber" || all.some((b) => b.status === "confirmed" && Date.parse(b.end) > Date.now() && madeLately(b));
@@ -2414,7 +2414,8 @@ async function refreshBookings() {
     const hoursLeft = (Date.parse(b.start) - Date.now()) / 3600000;
     const canMove = hoursLeft >= shop.move_cutoff_hours;
     const canCancel = hoursLeft >= shop.cancel_cutoff_hours;
-    if (b.status === "confirmed" && me.role === "customer" && (!canMove || !canCancel)) row.append(lateNote(b, canCancel, canMove, when.textContent));
+    // Only while it is still ahead: a booking that is over is not one to cancel, and its row said so anyway.
+    if (b.status === "confirmed" && me.role === "customer" && hoursLeft > 0 && (!canMove || !canCancel)) row.append(lateNote(b, canCancel, canMove, when.textContent));
     if (b.status === "confirmed" && me.role === "customer" && canMove) {
       const move = document.createElement("button");
       move.type = "button";
