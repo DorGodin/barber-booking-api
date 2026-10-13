@@ -79,7 +79,8 @@
   select { -webkit-appearance:none; appearance:none; padding-left:34px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%231d4e5f' stroke-width='2'/%3E%3C/svg%3E") no-repeat left 12px center; }
   /* A username and a password are Latin text; typed right to left they read
      backwards while they are being typed. */
-  button { font:inherit; font-size:14px; padding:8px 14px; border-radius:6px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; }
+  /* One shape for every button, the owner's as the customer's: a pill. */
+  button { font:inherit; font-size:14px; padding:8px 18px; border-radius:999px; border:1px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; }
   button:disabled { opacity:.5; cursor:wait; }
   button.ghost { background:#fff; color:var(--brand); }
   /* The month: a day with a free time has a gold dot; a full one says so; a day
@@ -226,7 +227,7 @@
   table.hours th, table.hours td { padding:4px 6px; text-align:start; font-weight:normal; }
   table.hours input:not([type="checkbox"]), .service-price { width:76px; display:inline-block; margin:0; direction:ltr; text-align:center; }
   /* 24px everywhere, not only on a phone: WCAG 2.2 asks it of every pointer. */
-  input[type="checkbox"] { width:24px; height:24px; display:inline-block; margin:0 0 0 6px; }
+  input[type="checkbox"] { width:24px; height:24px; display:inline-block; margin:0 0 0 6px; accent-color:var(--ink); }
   dialog { border:0; border-radius:14px; padding:0; width:min(420px, 92vw); box-shadow:0 18px 50px #0004; }
   dialog::backdrop { background:#1f293399; }
   dialog .band { padding:18px 22px; color:#fff; font-size:18px; font-weight:700; }
@@ -269,7 +270,7 @@
      stays on top jumps to each; scroll-margin keeps a section's title from
      landing underneath it. */
   .owner-nav { position:sticky; top:52px; z-index:5; display:flex; gap:8px; margin:0 -16px 16px; padding:8px 16px; background:var(--bg); border-bottom:1px solid var(--line); }
-  .owner-nav a { flex:1; display:flex; align-items:center; justify-content:center; padding:0 8px; border:1px solid var(--brand); border-radius:6px; background:#fff; color:var(--brand); text-decoration:none; font-size:14px; }
+  .owner-nav a { flex:1; display:flex; align-items:center; justify-content:center; padding:0 8px; border:1.5px solid var(--line); border-radius:999px; background:#fff; color:var(--ink); text-decoration:none; font-size:14px; white-space:nowrap; }
   @media (min-width: 761px) { .owner-nav { display:none; } }
   @media (max-width: 420px) {
     table.hours th, table.hours td { padding:4px 3px; }
@@ -325,8 +326,24 @@
   .course h3 { margin:0; font-size:16px; color:var(--ink); }
   .course p { margin:4px 0 12px; color:var(--mut); font-size:14px; }
   .course .course-go { display:inline-flex; align-items:center; border-radius:999px; background:var(--ink); color:#fff; min-height:44px; padding:0 22px; font-size:14px; text-decoration:none; }
-  .course-edit { border:1px solid var(--line); border-radius:12px; padding:12px; margin:0 0 12px; }
-  .course-edit img { display:block; width:100%; height:90px; object-fit:cover; border-radius:8px; margin:0 0 8px; }
+  .course-edit { border:1px solid var(--line); border-radius:16px; padding:14px; margin:0 0 12px; background:#fff; }
+  .course-edit img { display:block; width:100%; height:110px; object-fit:cover; border-radius:10px; margin:0 0 10px; }
+  /* Choosing a picture: a pill with Hebrew words. The browser's own control lies over it, unseen,
+     so a tap, the keyboard and a screen reader still reach the real thing. */
+  .file-pick { position:relative; display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 18px; border:1px solid var(--brand); border-radius:999px; background:#fff; color:var(--brand); font-size:14px; }
+  .file-pick input { position:absolute; inset:0; width:100%; height:100%; margin:0; padding:0; opacity:0; cursor:pointer; }
+  .file-pick:focus-within { outline:2px solid var(--ink); outline-offset:2px; }
+  /* A service, kept as the courses and the products are: a card, every switch with its words. */
+  [data-testid="services"] > li { display:block; border:1px solid var(--line); border-radius:16px; padding:14px; margin:0 0 12px; }
+  [data-testid="services"] > li[data-active="false"] { background:#faf9f6; }
+  .service-head { display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin:0 0 10px; }
+  .service-head strong { font-size:16px; color:var(--ink); overflow-wrap:anywhere; }
+  .service-head span { font-size:14px; color:var(--mut); white-space:nowrap; }
+  .service-price-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 10px; }
+  .service-price-row label { margin:0; }
+  [data-testid="services"] .switch { margin:0 0 8px; }
+  [data-testid="services"] .switch label { font-size:14px; color:var(--ink); }
+  [data-testid="services"] > li > button { margin-top:4px; }
   .course-edit .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:8px 0 0; }
   /* The shelf: the courses' card, with what the customer can do about a product under its words -
      ask for it to be kept for the booking ahead, or take that back. */
@@ -1055,13 +1072,15 @@ function renderCourseAdmin(list) {
     activeLabel.htmlFor = active.id;
     const save = control("button", { type: "button", testid: "save-course", textContent: "שמירה" });
     save.addEventListener("click", () => saveCourse(c, { title, subtitle, date, price, active }));
-    const file = control("input", { type: "file", testid: "course-image", accept: "image/jpeg,image/png,image/webp", "aria-label": `תמונה לקורס ${c.title}` });
+    const file = control("input", { type: "file", testid: "course-image", accept: "image/jpeg,image/png,image/webp", "aria-label": `${c.image_url ? "החלפת התמונה" : "בחירת תמונה"} לקורס ${c.title}` });
+    const pick = control("span", { className: "file-pick" });
+    pick.append(control("span", { textContent: c.image_url ? "החלפת התמונה" : "בחירת תמונה" }), file);
     file.addEventListener("change", () => file.files[0] && uploadCourseImage(c, file.files[0]));
     const row = control("div", { className: "row" });
     row.append(active, activeLabel, save);
     box.append(field("שם הקורס", title), field("שורה קצרה", subtitle), field("תאריך התחלה", date), field("מחיר בשקלים", price), row);
     const pictures = control("div", { className: "row" });
-    pictures.append(file);
+    pictures.append(pick);
     if (c.image_url) {
       const remove = control("button", { type: "button", className: "ghost", testid: "remove-course-image", textContent: "הסרת התמונה" });
       remove.addEventListener("click", () => removeCourseImage(c));
@@ -1240,13 +1259,15 @@ function renderProductAdmin(list) {
     const [stock, stockLabel] = tick("product-edit-stock", p.in_stock, "במלאי");
     const save = control("button", { type: "button", testid: "save-product", textContent: "שמירה" });
     save.addEventListener("click", () => saveProduct(p, { name, line, price, active, stock }));
-    const file = control("input", { type: "file", testid: "product-image", accept: "image/jpeg,image/png,image/webp", "aria-label": `תמונה למוצר ${p.name}` });
+    const file = control("input", { type: "file", testid: "product-image", accept: "image/jpeg,image/png,image/webp", "aria-label": `${p.image_url ? "החלפת התמונה" : "בחירת תמונה"} למוצר ${p.name}` });
+    const pick = control("span", { className: "file-pick" });
+    pick.append(control("span", { textContent: p.image_url ? "החלפת התמונה" : "בחירת תמונה" }), file);
     file.addEventListener("change", () => file.files[0] && uploadProductImage(p, file.files[0]));
     const row = control("div", { className: "row" });
     row.append(active, activeLabel, stock, stockLabel, save);
     box.append(field("שם המוצר", name), field("שורה קצרה", line), field("מחיר בשקלים", price), row);
     const pictures = control("div", { className: "row" });
-    pictures.append(file);
+    pictures.append(pick);
     if (p.image_url) {
       const remove = control("button", { type: "button", className: "ghost", testid: "remove-product-image", textContent: "הסרת התמונה" });
       remove.addEventListener("click", () => removeProductImage(p));
@@ -1557,16 +1578,26 @@ function renderServices() {
     const row = control("li", { testid: "service-row" });
     row.dataset.id = s.id;
     row.dataset.active = String(s.active);
-    const name = control("span", { textContent: `${isolate(s.name)} · ${s.duration_minutes} דק׳` });
-    const price = control("input", { className: "service-price", testid: "service-price", value: shekels(s.price_minor), inputmode: "decimal", "aria-label": `מחיר ${s.name} בשקלים` });
-    const active = control("input", { type: "checkbox", testid: "service-active", checked: s.active, "aria-label": `${s.name} מוצע ללקוחות` });
-    const approval = control("input", { type: "checkbox", testid: "service-approval", checked: s.requires_approval, "aria-label": `${s.name} דורש אישור ספר` });
-    const anytime = control("input", { type: "checkbox", testid: "service-any-time", checked: s.any_time, "aria-label": `${s.name} בכל יום ובכל שעה` });
+    const head = control("div", { className: "service-head" });
+    head.append(control("strong", { textContent: isolate(s.name) }), control("span", { textContent: `${s.duration_minutes} דק׳` }));
+    const price = control("input", { className: "service-price", testid: "service-price", value: shekels(s.price_minor), inputmode: "decimal", "aria-label": `מחיר בשקלים, ${s.name}` });
+    price.id = `service-${s.id}-price`;
+    const priceRow = control("div", { className: "service-price-row" });
+    priceRow.append(control("label", { htmlFor: price.id, textContent: "מחיר בשקלים" }), price);
+    // Each switch says what it is, in words beside it - three bare boxes in a row said nothing.
+    const tick = (testid, checked, words) => {
+      const input = control("input", { type: "checkbox", testid, checked, "aria-label": `${words}, ${s.name}` });
+      input.id = `service-${s.id}-${testid}`;
+      const wrap = control("div", { className: "switch" });
+      wrap.append(input, control("label", { htmlFor: input.id, textContent: words }));
+      return [input, wrap];
+    };
+    const [active, activeRow] = tick("service-active", s.active, "מוצע ללקוחות");
+    const [approval, approvalRow] = tick("service-approval", s.requires_approval, "דורש אישור ספר");
+    const [anytime, anytimeRow] = tick("service-any-time", s.any_time, "בכל יום ובכל שעה");
     const save = control("button", { type: "button", className: "ghost", testid: "save-service", textContent: "שמירה" });
     save.addEventListener("click", () => saveService(s, price, active, approval, anytime));
-    const controls = control("span", {});
-    controls.append(price, active, approval, anytime, save);
-    row.append(name, controls);
+    row.append(head, priceRow, activeRow, approvalRow, anytimeRow, save);
     list.append(row);
   }
 }
