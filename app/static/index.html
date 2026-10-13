@@ -14,7 +14,10 @@
   /* An element's own display rule beats the browser's [hidden] rule, so a
      hidden grid or flex box stays on screen. This puts hidden back in charge. */
   [hidden] { display: none !important; }
-  body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background:var(--bg); color:var(--ink); }
+  /* The shop's own letters: Rubik, kept here - the page asks no other site for anything. */
+  @font-face { font-family:"Rubik"; font-style:normal; font-weight:300 900; font-display:swap; src:url("/fonts/rubik-hebrew.woff2") format("woff2"); unicode-range:U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+  @font-face { font-family:"Rubik"; font-style:normal; font-weight:300 900; font-display:swap; src:url("/fonts/rubik-latin.woff2") format("woff2"); unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  body { margin:0; font-family: "Rubik", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background:var(--bg); color:var(--ink); }
   /* A barber pole down each side, turning in opposite directions. Decoration:
      hidden from screen readers, and still for anyone who asked for less motion. */
   .pole { position:fixed; top:0; bottom:0; width:var(--pole); z-index:10; pointer-events:none;
@@ -70,6 +73,7 @@
   .label-row span { font-size:14px; color:var(--mut); white-space:nowrap; }
   /* 16px, not less: below it Safari on iOS zooms the whole page in when a
      field takes the focus, and leaves it zoomed after. */
+  input, select, textarea { font-family:inherit; }
   input, select { display:block; width:100%; margin-top:4px; padding:9px 10px; font-size:16px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); }
   /* Safari draws its own select and ignores its height and padding - 23px
      tall on an iPhone, whatever the CSS says. Drawn here instead, with the
@@ -143,11 +147,11 @@
   .confirm span { flex:1 1 auto; min-width:0; font-size:14px; font-weight:600; }
   [data-testid="left-panel"][data-done] > :not(.done) { display:none; }
   .done { text-align:center; padding:24px 8px 8px; }
-  .done .tick { width:64px; height:64px; border-radius:50%; background:#e6f2e8; color:var(--ok); display:inline-flex; align-items:center; justify-content:center; font-size:32px; font-weight:700; }
+  .done .ring { position:relative; width:64px; height:64px; border-radius:50%; background:#e6f2e8; color:var(--ok); display:inline-flex; align-items:center; justify-content:center; font-size:32px; font-weight:700; }
   .done h2 { margin:14px 0 6px; font-size:22px; color:var(--ink); }
   .done .when { margin:0; font-size:16px; font-weight:700; }
   .done .muted { margin:4px 0 0; }
-  .done[data-waiting] .tick { background:#fbf3df; color:#8a5a00; }
+  .done[data-waiting] .ring { background:#fbf3df; color:#8a5a00; }
   [data-testid="booking-row"][data-approval="pending"] [data-testid="booking-detail"] { color:#8a5a00; }
   .done-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:20px; }
   .done-actions button { border-radius:999px; min-height:44px; padding:0 24px; font-size:14px; }
@@ -368,6 +372,59 @@
   .product .stepper { display:inline-flex; align-items:center; border:1px solid var(--ink); border-radius:999px; }
   .product .stepper button { flex:none; width:36px; min-width:36px; height:36px; min-height:36px; padding:0; border:0; background:none; color:var(--ink); border-radius:999px; font-size:16px; line-height:1; }
   .product .stepper span { min-width:26px; text-align:center; font-size:14px; font-weight:700; color:var(--ink); white-space:nowrap; }
+  /* ---- While a list loads: its shape, in grey, where it will be. Shown only when the answer is
+     slow in coming, and gone the moment it arrives. Decoration: nothing here is read out. */
+  .is-loading { display:none !important; }
+  .skeleton { animation:appear .2s ease both; }
+  .skeleton .bone { background:#ecebe6; border-radius:8px; }
+  .skeleton.slots-shape { display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; margin-top:10px; }
+  .skeleton.slots-shape .bone { height:36px; border-radius:999px; }
+  .skeleton .row-shape { padding:12px 0; border-bottom:1px solid var(--line); }
+  .skeleton .row-shape .bone { height:14px; margin:0 0 9px; }
+  .skeleton .row-shape .bone:nth-child(1) { width:58%; height:18px; }
+  .skeleton .row-shape .bone:nth-child(2) { width:82%; }
+  .skeleton .row-shape .bone:nth-child(3) { width:92px; height:36px; border-radius:999px; margin:4px 0 0; }
+  .skeleton.cards-shape { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:14px; }
+  .skeleton .card-shape { border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+  .skeleton .card-shape .bone:nth-child(1) { height:120px; border-radius:0; }
+  .skeleton .card-shape .bone:nth-child(2) { width:70%; height:16px; margin:14px 14px 9px; }
+  .skeleton .card-shape .bone:nth-child(3) { width:45%; height:13px; margin:0 14px 14px; }
+  @media (max-width: 760px) { .skeleton.cards-shape.two { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; } }
+  @keyframes appear { from { opacity:0; } to { opacity:1; } }
+
+  /* ---- Motion. All of it is extra: a person who asked their device for less of it gets none,
+     and nothing waits for an animation to end. */
+  @media (prefers-reduced-motion: no-preference) {
+    @keyframes shimmer { from { background-position:100% 0; } to { background-position:0 0; } }
+    @keyframes rise { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+    @keyframes pop { 0% { transform:scale(1); } 45% { transform:scale(1.14); } 100% { transform:scale(1); } }
+    @keyframes ring-in { 0% { transform:scale(.3); opacity:0; } 60% { transform:scale(1.12); opacity:1; } 100% { transform:scale(1); } }
+    @keyframes drawn { from { clip-path:inset(0 100% 0 0); } to { clip-path:inset(0 0 0 0); } }
+    @keyframes fly { from { transform:translate(0, 0) rotate(0) scale(1); opacity:1; } to { transform:translate(var(--dx), var(--dy)) rotate(var(--turn)) scale(.6); opacity:0; } }
+    @keyframes sheet { from { opacity:0; transform:translateY(24px) scale(.97); } to { opacity:1; transform:none; } }
+    .skeleton .bone { background:linear-gradient(90deg, #ecebe6 25%, #f7f6f2 37%, #ecebe6 63%); background-size:400% 100%; animation:shimmer 1.15s ease-in-out infinite; }
+    /* A screen arrives; so does each thing on it, one after the other. */
+    [data-role="customer"] .panel { animation:rise .34s cubic-bezier(.2, .7, .2, 1) both; }
+    [data-testid="booking-row"], .course, .product, .push-card, .review-card { animation:rise .42s cubic-bezier(.2, .7, .2, 1) both; }
+    [data-testid="booking-row"]:nth-child(2), .course:nth-child(2), .product:nth-child(2) { animation-delay:.07s; }
+    [data-testid="booking-row"]:nth-child(3), .product:nth-child(3) { animation-delay:.14s; }
+    .product:nth-child(4) { animation-delay:.21s; }
+    .slots button { animation:rise .26s ease both; animation-delay:calc(var(--nth, 0) * 12ms); }
+    /* What was chosen answers the finger. */
+    .slots button[aria-checked="true"], table.cal td[aria-selected="true"] > span { animation:pop .24s ease; }
+    button, .pills button, table.cal td > span, .tabbar button svg { transition:transform .13s ease, background-color .18s ease, color .18s ease, border-color .18s ease; }
+    button:active { transform:scale(.95); }
+    .tabbar button[aria-current="page"] svg { transform:translateY(-2px) scale(1.12); }
+    .confirm { animation:rise .3s cubic-bezier(.2, .7, .2, 1) both; }
+    dialog[open] { animation:sheet .3s cubic-bezier(.2, .8, .2, 1); }
+    /* A booking made: the ring lands, the tick is drawn, and the rest follows it in. */
+    .done:not([hidden]) { animation:rise .36s cubic-bezier(.2, .7, .2, 1) both; }
+    .done .ring { animation:ring-in .55s cubic-bezier(.2, 1.4, .4, 1) both; }
+    .done:not([data-waiting]) .tick { display:inline-block; animation:drawn .4s .3s ease both; }
+    .done h2, .done .when, .done .muted, .done .done-actions { animation:rise .4s both; }
+    .done h2 { animation-delay:.18s; } .done .when { animation-delay:.26s; } .done .muted { animation-delay:.32s; } .done .done-actions { animation-delay:.42s; }
+    .done .bit { position:absolute; left:50%; top:50%; width:8px; height:8px; margin:-4px; border-radius:2px; pointer-events:none; animation:fly .95s .3s cubic-bezier(.15, .7, .3, 1) both; }
+  }
   /* Opened by the same cut line as the top of the page. */
   footer { max-width:1000px; margin:auto auto 24px; padding:0 0 0; font-size:14px; text-align:center; }
   footer .cut { margin:0 auto 14px; }
@@ -485,7 +542,7 @@
           </div>
         </div>
         <div class="done" data-testid="booking-done" hidden>
-          <span class="tick" aria-hidden="true">✓</span>
+          <span class="ring" aria-hidden="true"><span class="tick">✓</span></span>
           <h2 data-testid="booking-done-title" tabindex="-1"></h2>
           <p class="when" data-testid="booking-done-when"></p>
           <p class="muted" data-testid="booking-done-what"></p>
@@ -618,6 +675,54 @@ let moving = null;
 // is current. A screen reader waits for it; so does a test, instead of guessing
 // how long a refresh takes. A counter, because two refreshes can overlap.
 let inFlight = 0;
+// ---- While a list loads --------------------------------------------------------
+// A list that is slow to arrive is drawn first as its own shape in grey. Only when it is slow: an
+// answer inside SKELETON_AFTER shows nothing, so a fast shop never flickers. The list itself is
+// hidden meanwhile and shown again the moment the answer lands - before the page says it is settled.
+const SKELETON_AFTER = 150;
+const SHAPES = {
+  slots: () => shape("slots-shape", 15, () => bone()),
+  bookings: () => shape("", 2, () => bones("row-shape", 3)),
+  courses: () => shape("cards-shape", 2, () => bones("card-shape", 3)),
+  products: () => shape("cards-shape two", 4, () => bones("card-shape", 3)),
+};
+const bone = () => control("div", { className: "bone" });
+function bones(className, count) {
+  const wrap = control("div", { className });
+  for (let i = 0; i < count; i += 1) wrap.append(bone());
+  return wrap;
+}
+function shape(className, count, piece) {
+  const wrap = control("div", { className: `skeleton ${className}`.trim(), "aria-hidden": "true" });
+  for (let i = 0; i < count; i += 1) wrap.append(piece());
+  return wrap;
+}
+const waitingFor = {};
+function loading(id) {
+  const state = (waitingFor[id] = waitingFor[id] || { count: 0, timer: null, drawn: null });
+  state.count += 1;
+  if (state.count === 1) {
+    state.timer = setTimeout(() => {
+      const box = $(id);
+      if (!box.offsetParent) return;
+      state.drawn = SHAPES[id]();
+      box.classList.add("is-loading");
+      box.after(state.drawn);
+    }, SKELETON_AFTER);
+  }
+  let ended = false;
+  return () => {
+    if (ended) return;
+    ended = true;
+    state.count -= 1;
+    if (state.count > 0) return;
+    clearTimeout(state.timer);
+    if (state.drawn) state.drawn.remove();
+    state.drawn = null;
+    $(id).classList.remove("is-loading");
+  };
+}
+
 async function busyWhile(work) {
   inFlight += 1;
   $("app").setAttribute("aria-busy", "true");
@@ -1023,7 +1128,9 @@ function courseLine(c) {
 async function refreshCourses() {
   if (!me || (me.role !== "customer" && me.role !== "owner")) return;
   const current = ticket("courses");
+  const arrived = loading("courses");
   const r = await api("GET", "/courses");
+  arrived();
   if (!current()) return;
   courses = r.ok ? r.data.content : [];
   if (me.role === "customer") renderCourses(courses);
@@ -1171,7 +1278,9 @@ const bookingAhead = () =>
 async function refreshProducts() {
   if (!me || (me.role !== "customer" && me.role !== "owner")) return;
   const current = ticket("products");
+  const arrived = loading("products");
   const r = await api("GET", "/products");
+  arrived();
   if (!current()) return;
   products = r.ok ? r.data.content : [];
   if (me.role === "customer") renderProducts();
@@ -1734,7 +1843,9 @@ async function refreshSlots() {
   // offers exactly what the move will accept.
   if (moving) params.set("moving", moving.id);
   const current = ticket("slots");
+  const arrived = loading("slots");
   const r = await api("GET", `/barbers/${$("barber").value}/availability?${params}`);
+  arrived();
   if (!current()) return;
   const box = $("slots");
   box.replaceChildren();
@@ -1743,10 +1854,14 @@ async function refreshSlots() {
     say(explain(r), "error");
     return;
   }
+  let nth = 0;
   for (const slot of r.data.slots) {
     const button = document.createElement("button");
     button.type = "button";
     button.dataset.testid = "slot";
+    // Its place in the row: the times come in one after the other, where motion is wanted.
+    button.style.setProperty("--nth", String(Math.min(nth, 30)));
+    nth += 1;
     button.dataset.start = slot.start;
     button.textContent = clock(slot.start_local);
     // A radio group, not a row of buttons: one Tab stop for all the times,
@@ -1938,6 +2053,25 @@ function focusOn(target) {
 // place of the form: what was booked, and the two ways on. The focus goes to
 // its heading, so a screen reader hears it.
 let doneBookingId = null;
+// A booking that went through, marked for a second: a little confetti from the tick, in the shop's
+// colours. Only for a person who has not asked their device for less motion.
+const CONFETTI = ["#b08a2e", "#111111", "#e7d9b0", "#1f6f43", "#d9c8a0"];
+function celebrate(ring) {
+  if (!window.matchMedia("(prefers-reduced-motion: no-preference)").matches) return;
+  for (let i = 0; i < 26; i += 1) {
+    const bit = control("i", { className: "bit" });
+    const angle = (Math.PI * 2 * i) / 26 + Math.random() * 0.4;
+    const reach = 70 + Math.random() * 80;
+    bit.style.setProperty("--dx", `${Math.cos(angle) * reach}px`);
+    bit.style.setProperty("--dy", `${Math.sin(angle) * reach - 30}px`);
+    bit.style.setProperty("--turn", `${Math.random() * 540 - 270}deg`);
+    bit.style.background = CONFETTI[i % CONFETTI.length];
+    if (i % 3 === 0) bit.style.borderRadius = "50%";
+    ring.append(bit);
+    setTimeout(() => bit.remove(), 1700);
+  }
+}
+
 function showDone(title, made, other = null) {
   doneBookingId = made.id;
   $("booking-done-title").textContent = title;
@@ -1951,6 +2085,7 @@ function showDone(title, made, other = null) {
   $("booking-done").toggleAttribute("data-waiting", waiting);
   $("booking-done").querySelector(".tick").textContent = waiting ? "…" : "✓";
   $("booking-done").hidden = false;
+  if (!waiting) celebrate($("booking-done").querySelector(".ring"));
   $("left-panel").dataset.done = "";
   showTab("book");
   window.scrollTo(0, 0);
@@ -2379,7 +2514,9 @@ async function refreshBookings() {
   // where they are asked what they thought of it.
   if (me.role !== "customer") params.set("upcoming", "true");
   const current = ticket("bookings");
+  const arrived = loading("bookings");
   const r = await api("GET", `/bookings?${params}`);
+  arrived();
   if (!current()) return;
   const list = $("bookings");
   list.replaceChildren();
