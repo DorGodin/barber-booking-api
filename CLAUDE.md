@@ -134,8 +134,8 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   (`products` in its view) for the customer's list and the barber's diary. A picture is a course's picture: by
   its bytes, under the server's own name.
   **A kept product has a number, one to nine, that is set and never added** (`KeepIn`): fewer of a product
-  that ran out may be kept, never more. The customer takes a product off from the shelf or from the booking's
-  own row; the diary only reads it. With no booking ahead the shelf says to book first.
+  that ran out may be kept, never more. The booking's row says what is kept, the same words for the customer and in the
+  diary; it is changed on the shelf only. The shelf's buttons are 36px by the owner's choice. With no booking ahead the shelf says to book first.
 - **A group booking is all or none, in one step under the write lock** (`/bookings/group`): the
   listing for two (`also=`) and the booking must agree, so a time offered for two always books. It counts
   as one toward the limit; afterwards each booking is its own.

@@ -335,8 +335,9 @@
   .products { grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); }
   .product img { height:120px; }
   .product p { margin-bottom:10px; }
-  .product .keep { width:100%; border-radius:999px; min-height:44px; padding:0 8px; font-size:14px; white-space:nowrap; }
-  .product .out { display:block; text-align:center; font-size:14px; color:var(--mut); background:#f1efea; border-radius:999px; padding:11px 8px; }
+  /* Small by the owner's choice (2026-10-13), like the buttons under a booking: 36px, as wide as their words. */
+  .product .keep { border-radius:999px; min-height:36px; padding:0 16px; font-size:13px; white-space:nowrap; }
+  .product .out { display:inline-block; font-size:13px; color:var(--mut); background:#f1efea; border-radius:999px; padding:8px 14px; }
   [data-testid="products-for"] { margin:0 0 12px; }
   /* Two to a row on a phone: a shelf is looked along, not scrolled through. */
   @media (max-width: 760px) {
@@ -346,14 +347,10 @@
   }
   /* On the narrowest phone two cards leave no room for a finger on each side of the number: one to a row. */
   @media (max-width: 360px) { .products { grid-template-columns:minmax(0, 1fr); } }
-  /* A kept product: fewer (or none) on one side, more on the other, how many between them. */
-  .product .stepper { display:flex; align-items:center; justify-content:space-between; gap:4px; }
-  .product .stepper button { flex:none; min-width:44px; min-height:44px; padding:0; border-radius:999px; font-size:18px; line-height:1; }
-  .product .stepper span { font-size:14px; font-weight:600; color:var(--ink); white-space:nowrap; }
-  /* The same in the customer's list, under the booking it is kept for: a pill each, with its way out. */
-  .kept-list { flex:1 1 100%; display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:14px; color:var(--mut); }
-  .kept-chip { display:inline-flex; align-items:center; background:#f1efea; color:var(--ink); border-radius:999px; padding-inline:12px 0; }
-  .kept-chip button { min-width:36px; min-height:36px; padding:0; border:0; background:none; color:var(--mut); border-radius:999px; font-size:14px; }
+  /* A kept product: one capsule - fewer (or none) on one side, more on the other, how many between them. */
+  .product .stepper { display:inline-flex; align-items:center; border:1px solid var(--ink); border-radius:999px; }
+  .product .stepper button { flex:none; width:36px; min-width:36px; height:36px; min-height:36px; padding:0; border:0; background:none; color:var(--ink); border-radius:999px; font-size:16px; line-height:1; }
+  .product .stepper span { min-width:26px; text-align:center; font-size:14px; font-weight:700; color:var(--ink); white-space:nowrap; }
   /* Opened by the same cut line as the top of the page. */
   footer { max-width:1000px; margin:auto auto 24px; padding:0 0 0; font-size:14px; text-align:center; }
   footer .cut { margin:0 auto 14px; }
@@ -1211,9 +1208,9 @@ function renderProducts() {
       const one = have.quantity === 1;
       const less = control("button", { type: "button", className: "ghost", testid: one ? "product-release" : "product-less", textContent: one ? "✕" : "−", "aria-label": one ? `ביטול השמירה של ${p.name}` : `פחות ${p.name}` });
       less.addEventListener("click", () => keepProduct(booking, p, have.quantity - 1));
-      stepper.append(less, control("span", { testid: "product-quantity", textContent: `✓ ${have.quantity}` }));
+      stepper.append(less, control("span", { testid: "product-quantity", textContent: String(have.quantity) }));
       if (p.in_stock && have.quantity < MAX_KEPT) {
-        const more = control("button", { type: "button", testid: "product-more", textContent: "+", "aria-label": `עוד ${p.name}` });
+        const more = control("button", { type: "button", className: "ghost", testid: "product-more", textContent: "+", "aria-label": `עוד ${p.name}` });
         more.addEventListener("click", () => keepProduct(booking, p, have.quantity + 1));
         stepper.append(more);
       }
@@ -1246,21 +1243,6 @@ function keepProduct(booking, product, quantity) {
     else say(quantity === 0 ? `${name} כבר לא שמור לך.` : quantity === 1 ? `${name} יחכה לך בתור.` : `${quantity} יחידות של ${name} יחכו לך בתור.`, "ok");
     await Promise.all([refreshBookings(), refreshProducts()]);
   });
-}
-
-// In the customer's own list each kept product is a pill under its booking, with a way to take it off.
-function keptList(b, when) {
-  const list = control("div", { className: "kept-list", testid: "booking-products" });
-  list.append(control("span", { textContent: "שמור לתור:" }));
-  for (const p of b.products) {
-    const chip = control("span", { className: "kept-chip", testid: "kept-product" });
-    chip.dataset.id = p.id;
-    const remove = control("button", { type: "button", testid: "kept-remove", textContent: "✕", "aria-label": `הסרת ${p.name} מהתור של ${when}` });
-    remove.addEventListener("click", () => keepProduct(b, p, 0));
-    chip.append(control("span", { textContent: keptWords(p) }), remove);
-    list.append(chip);
-  }
-  return list;
 }
 
 // The owner keeps the shelf: a form for each product, with its picture and its two switches.
@@ -2416,13 +2398,12 @@ async function refreshBookings() {
     standing.textContent = statusText(b);
     detail.append(standing);
     // What the customer asked the shop to keep for this booking: the barber gets it ready.
-    const keeps = b.status === "confirmed" && b.products.length > 0;
-    if (keeps && me.role !== "customer") {
+    // The same line for the customer and in the diary. It is changed on the shelf, not here.
+    if (b.status === "confirmed" && b.products.length > 0) {
       detail.append(control("span", { testid: "booking-products", textContent: `שמור לתור: ${b.products.map(keptWords).join(", ")}` }));
     }
     text.append(when, detail);
     row.append(text);
-    if (keeps && me.role === "customer") row.append(keptList(b, when.textContent));
     // A customer cannot cancel or move a booking that is too close: the button is not
     // offered, and the row says why - with the way to ask the shop, on WhatsApp.
     const hoursLeft = (Date.parse(b.start) - Date.now()) / 3600000;
