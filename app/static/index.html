@@ -124,7 +124,12 @@
     /* Five to a row in the narrowest column - the owner's, on a 320px phone - leaves 40px a time: the words fit at 13px. */
     @media (max-width: 360px) { .slots button { font-size:13px; } }
   /* And the service choice gives its words the room its arrow can spare. */
-  @media (max-width: 360px) { select { padding-left:28px; padding-right:8px; } }
+  @media (max-width: 360px) {
+    select { padding-left:28px; padding-right:8px; }
+    /* And the page gives up some of its margin: the longest service fitted its field by 5px on one
+       system's letters and missed it by 3px on another's. */
+    main { padding:0 10px; }
+  }
   }
   /* One visible ring for every engine's focus, offset so it shows on a dark
      button as well as a light one. A keyboard user has to see where they are. */
