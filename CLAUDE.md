@@ -123,7 +123,7 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   `/sw.js` by role. The server posts only to a push service's own host (`PUSH_HOSTS`, plus
   `PUSH_EXTRA_HOSTS` for development) - a subscription address is typed by a customer, and trusting it is
   a server-side request forgery. Never send a name, a time or a service through it.
-- **A customer is asked for notifications only after booking, for 48 hours** (`pushCard`, `PUSH_ASK_HOURS`): a
+- **A customer is asked for notifications only after booking, for 24 hours** (`pushCard`, `PUSH_ASK_HOURS`): a
   booking ahead that stands and was made that lately. Moving or cancelling is no reason to ask; the row that
   turns them off stays for whoever said yes.
 - **The service choice says the name and the price; the minutes stand on the label's line** (`serviceLabel`,
