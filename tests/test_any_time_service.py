@@ -10,6 +10,12 @@ from tests.conftest import ALL_WEEK, HAIRCUT, a_second_barber, at, book, local_d
 SHORT_DAYS = {**dict.fromkeys(ALL_WEEK, ["09:00", "10:00"]), "sat": None}
 
 
+def working_day(days_ahead: int):
+    """The first day from then on that is not the Saturday this barber is closed: a test that
+    books an ordinary service on "four days from now" failed every Tuesday."""
+    return next(local_day(n) for n in range(days_ahead, days_ahead + 2) if local_day(n).weekday() != 5)
+
+
 @pytest.fixture
 def emergency(client, owner):
     made = client.post(
@@ -47,7 +53,7 @@ def test_a_service_says_whether_it_works_at_any_time_and_only_the_owner_sets_it(
 def test_it_offers_the_whole_day_where_an_ordinary_service_offers_the_barbers_hour(
     client, customer, short_barber, services, emergency
 ):
-    day = local_day(4)
+    day = working_day(4)
     ordinary = slots(client, customer, short_barber, services[HAIRCUT]["id"], day)
     anytime = slots(client, customer, short_barber, emergency["id"], day)
 
@@ -73,7 +79,7 @@ def test_it_offers_a_day_off(client, owner, customer, short_barber, emergency):
 def test_a_booking_already_there_still_takes_its_time(
     client, owner, new_customer, short_barber, services, emergency
 ):
-    day = local_day(6)
+    day = working_day(6)
     other = book(client, new_customer(), short_barber, services[HAIRCUT]["id"], at(day, "09:00"))
     assert other.status_code == 201
     taken = book(client, new_customer(), short_barber, emergency["id"], at(day, "18:00"))
@@ -91,7 +97,7 @@ def test_a_booking_already_there_still_takes_its_time(
 def test_an_emergency_booking_takes_the_time_from_the_ordinary_services_too(
     client, new_customer, short_barber, services, emergency
 ):
-    day = local_day(6)
+    day = working_day(6)
     assert book(client, new_customer(), short_barber, emergency["id"], at(day, "09:00")).status_code == 201
 
     ordinary = book(client, new_customer(), short_barber, services[HAIRCUT]["id"], at(day, "09:00"))
