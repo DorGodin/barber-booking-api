@@ -159,6 +159,19 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **`[hidden] { display: none !important; }` stays.** Without it, any element with its own
   `display` rule ignores `hidden`.
 
+### How it feels
+
+- **The letters are Rubik, served by this server** (`/fonts`, two files and nothing else; `font-src 'self'`).
+  The page asks no other site for anything - a font from someone else's server would be a request to them
+  for every visitor. The same `@font-face` is in the page, the privacy policy and the accessibility statement.
+- **A list that is slow to arrive is drawn in grey first** (`loading(id)`, `SHAPES`): only after
+  `SKELETON_AFTER`, so a fast answer never flickers; only when the list is on the screen; hidden from a
+  screen reader; and gone - the list shown again - before `aria-busy` goes false. A new list that loads
+  gets its `loading()` and its shape.
+- **Motion is extra, all of it inside `@media (prefers-reduced-motion: no-preference)`**, and the confetti
+  checks the same in script. Nothing waits for an animation to end, and nothing is shown only by one.
+  The outside page tests run without motion; `test_fresh_look.py` asks for it.
+
 ### Hebrew, right to left
 
 - **`<html lang="he" dir="rtl">`**, and times keep `direction: ltr` inside it: 10:30 never

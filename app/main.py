@@ -39,6 +39,8 @@ SECURITY_HEADERS = {
 
 PAGE = Path(__file__).parent / "static" / "index.html"
 SERVICE_WORKER = Path(__file__).parent / "static" / "sw.js"
+FONTS = Path(__file__).parent / "static" / "fonts"
+FONT_FILES = frozenset({"rubik-hebrew.woff2", "rubik-latin.woff2"})
 STATEMENT = Path(__file__).parent / "static" / "accessibility.html"
 PRIVACY = Path(__file__).parent / "static" / "privacy.html"
 
@@ -71,6 +73,8 @@ def page_policy(html: str) -> str:
         # The select's arrow is an inline SVG.
         # The shop's own pictures, served by this server under /media.
         "img-src 'self' data:; "
+        # The page's own letters, served by this server under /fonts.
+        "font-src 'self'; "
         "connect-src 'self'; "
         "worker-src 'self'; manifest-src 'self'; "
         "form-action 'none'; base-uri 'none'; frame-ancestors 'none'"
@@ -207,6 +211,15 @@ def create_app(
             SERVICE_WORKER,
             media_type="text/javascript",
             headers={"Cache-Control": "no-cache"},
+        )
+
+    @app.get("/fonts/{name}", include_in_schema=False)
+    def font(name: str):
+        """The page's letters - these two files and nothing else in the folder."""
+        if name not in FONT_FILES:
+            raise not_found("font")
+        return FileResponse(
+            FONTS / name, media_type="font/woff2", headers={"Cache-Control": "public, max-age=2592000"}
         )
 
     @app.get("/manifest.webmanifest", include_in_schema=False)

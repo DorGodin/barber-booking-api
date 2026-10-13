@@ -1,0 +1,9 @@
+Rubik (rubik-hebrew.woff2, rubik-latin.woff2)
+
+Copyright 2015 The Rubik Project Authors (https://github.com/googlefonts/rubik)
+
+These font files are licensed under the SIL Open Font License, Version 1.1.
+The license is available with a FAQ at: https://openfontlicense.org
+
+The files are the Hebrew and Latin subsets of the variable font (weights 300-900),
+as served by Google Fonts (version v31), unmodified.
