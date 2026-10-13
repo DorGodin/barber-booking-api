@@ -5,6 +5,18 @@ from dataclasses import dataclass
 from zoneinfo import ZoneInfo
 
 from app.identity import Identity, identity_from
+from app.phones import normalize
+
+
+def _owner_phone(raw: str) -> str:
+    """Stored the way every phone is, or the server does not start: a mistyped number
+    here would leave the owner locked out, or hand the shop to whoever has that number."""
+    if not raw.strip():
+        return ""
+    phone = normalize(raw)
+    if phone is None:
+        raise RuntimeError("OWNER_PHONE must be a mobile number: 05 and eight more digits. See .env.example.")
+    return phone
 
 
 @dataclass(frozen=True)
@@ -68,6 +80,9 @@ class Settings:
     # Empty: a backups folder next to the database.
     backup_dir: str = ""
     backups_kept: int = 10
+    # The owner's own mobile: signing in with it, by a code, opens the owner's screen.
+    # Empty: the owner has no phone on record and cannot sign in on the page.
+    owner_phone: str = ""
     accessibility_contact_name: str = "רכז/ת הנגישות של המספרה (לדוגמה)"
     accessibility_contact_phone: str = "03-0000000"
     accessibility_contact_email: str = "accessibility@example.com"
@@ -128,6 +143,7 @@ class Settings:
             signup_window_minutes=int(os.environ.get("SIGNUP_WINDOW_MINUTES", "60")),
             backup_dir=os.environ.get("BACKUP_DIR", ""),
             backups_kept=int(os.environ.get("BACKUPS_KEPT", "10")),
+            owner_phone=_owner_phone(os.environ.get("OWNER_PHONE", "")),
             **{
                 field: os.environ[name]
                 for field, name in (

@@ -18,8 +18,12 @@ def user_view(user: User) -> dict:
     return {"id": user.id, "username": user.username, "role": user.role, "display_name": user.display_name}
 
 
-def barber_view(user: User) -> dict:
-    return {"id": user.id, "display_name": user.display_name, "active": user.active}
+def barber_view(user: User, for_owner: bool = False) -> dict:
+    view = {"id": user.id, "display_name": user.display_name, "active": user.active}
+    # A barber's own mobile is the owner's to see, never a customer's.
+    if for_owner:
+        view["phone"] = user.phone
+    return view
 
 
 def service_view(service: Service) -> dict:

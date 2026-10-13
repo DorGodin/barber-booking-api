@@ -123,6 +123,26 @@ def seed_if_empty(session: Session, config: Settings) -> bool:
     return True
 
 
+def give_owner_phone(session: Session, config: Settings) -> None:
+    """The owner signs in with the mobile the settings name, by a code - there is no
+    other way in on the page. Set on every start, so a shop that existed before the
+    setting gets it, and changing the setting changes the phone. A number that is
+    already somebody else's account stops the server: handing the owner's screen to
+    it, or silently taking a customer's sign-in away, are both worse."""
+    if not config.owner_phone:
+        return
+    with write_lock(session):
+        owner = session.scalar(select(User).where(User.role == "owner").order_by(User.created_at))
+        if owner is None or owner.phone == config.owner_phone:
+            return
+        if session.scalar(select(User).where(User.phone == config.owner_phone)) is not None:
+            raise RuntimeError(
+                "OWNER_PHONE already belongs to another account in this shop. Choose the owner's own"
+                " number, or give that account another one first."
+            )
+        owner.phone = config.owner_phone
+
+
 def _seed(session: Session, config: Settings) -> None:
     owner_password = _password("SEED_OWNER_PASSWORD")
     barber_password = _password("SEED_BARBER_PASSWORD")

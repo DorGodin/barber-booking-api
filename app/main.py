@@ -25,7 +25,7 @@ from app.push import sender_from as push_sender_from
 from app.reminders import reminders
 from app.routers import auth, barbers, bookings, courses, products, push, services
 from app.routers import settings as shop_settings
-from app.seed import seed_if_empty
+from app.seed import give_owner_phone, seed_if_empty
 from app.sms import SmsSender, sender_from
 
 SECURITY_HEADERS = {
@@ -119,6 +119,7 @@ def prepare_database(engine, make_session, config: Settings) -> None:
                 connection.connection.driver_connection.execute("PRAGMA foreign_keys=ON")
     with make_session() as session:
         seed_if_empty(session, config)
+        give_owner_phone(session, config)
 
 
 def _media_next_to(database_url: str) -> Path:

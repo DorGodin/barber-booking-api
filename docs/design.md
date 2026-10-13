@@ -54,11 +54,12 @@ The poles and the scissors stop under `prefers-reduced-motion: reduce`. All deco
   `מספר טלפון` (digits only, written `0501234567`; spaces and dashes typed in are removed),
   the button `שולחים קוד`, and under it `קוד קצר ב־SMS, ואת/ה כבר בדרך לכיסא.` The first
   sign-in opens the account; there is no separate sign-up.
-- **The password form** (approved 2026-10-04): `כניסה עם שם משתמש וסיסמה`, folded under the
-  code form, stays for the accounts that already have one - the owner, the barbers, the seeded
-  and the test accounts. The `פעם ראשונה כאן?` form (name, username, password, `יצירת חשבון`)
-  is gone from the page: a first-time customer signs in with a code. `POST /customers` stays in
-  the API, with its limit of five accounts an hour from one address.
+- **One way in** (the owner's choice, 2026-10-13): the folded `כניסה עם שם משתמש וסיסמה` form is
+  gone. The owner and the barbers sign in on the customers' form, and whose phone it is decides
+  what opens - the owner's is the setting `OWNER_PHONE`, a barber's is typed by the owner (`הטלפון
+  הנייד של הספר`, with `שמירת הטלפון`, and in `ספר חדש`). A name opens nothing: anyone can type one.
+  `POST /auth/token` and `POST /customers` stay in the API for the accounts that have a password -
+  scripts and tests - with their limits.
 - **Verification code** (straight after sign-in): `קוד אימות`, `שלחנו קוד בן 4 ספרות למספר
   שמסתיים ב־4567` (the last four digits only), four boxes, the button `לכיסא` (read to a screen
   reader as `לכיסא, כניסה לחשבון`), `עוד קוד, בבקשה` with a countdown until it is allowed, and
