@@ -95,10 +95,17 @@
   /* The barbers as pills, by full name - not initials: גולדה and גולדין share
      four letters. A radio group, like the times: one Tab stop, the arrows move. */
   .pills { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
-  .pills button { border-radius:999px; background:#fff; color:var(--ink); border:1.5px solid var(--line); padding:8px 18px; font-size:14px; min-height:44px; }
-  .pills button[aria-checked="true"] { background:var(--ink); border-color:var(--ink); color:#fff; }
-  .pills button.left { color:var(--mut); border-style:dashed; }
-  .pills button.left[aria-checked="true"] { background:var(--mut); border-color:var(--mut); color:#fff; }
+  /* The barbers: a round picture each, the name under it; the one chosen ringed in black. */
+  .pills { gap:12px 14px; }
+  .pills button { display:flex; flex-direction:column; align-items:center; gap:6px; min-width:64px; padding:2px 2px 0; border:0; border-radius:12px; background:none; color:var(--mut); font-size:13px; min-height:44px; }
+  .pills .face { position:relative; width:60px; height:60px; border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, var(--tone, #8a6d3b), #1c1c1c); box-shadow:0 0 0 2.5px #fff, 0 0 0 4px var(--line); color:#fff; font-size:22px; font-weight:700; }
+  .pills .face::before { content:attr(data-initial); }
+  .pills .face img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .pills button[aria-checked="true"] { color:var(--ink); font-weight:700; }
+  .pills button[aria-checked="true"] .face { box-shadow:0 0 0 2.5px #fff, 0 0 0 5px var(--ink); }
+  .pills button.left { color:var(--mut); }
+  .pills button.left .face { filter:grayscale(1); opacity:.55; box-shadow:0 0 0 2.5px #fff, 0 0 0 4px var(--line); outline:1.5px dashed var(--mut); outline-offset:4px; }
+  .pills button:focus-visible { outline:2px solid var(--ink); outline-offset:3px; }
   .cal-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:4px 0 6px; }
   .cal-head h3 { margin:0; font-size:16px; color:var(--ink); }
   .cal-nav { width:44px; height:44px; padding:0; display:flex; align-items:center; justify-content:center; }
@@ -224,7 +231,16 @@
   /* A phone number reads left to right but stands, like every field here, on the right. */
   #phone { text-align:right; }
   .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
-  [data-testid="message"] { min-height:24px; margin:16px 0 0; font-weight:600; }
+  /* The message: a dark pill floating over the foot of the screen, above the tabs on a phone. */
+  [data-testid="message"] { position:fixed; z-index:40; inset-inline:16px; bottom:24px; max-width:520px; margin:0 auto; display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:22px; background:#161616; color:#fff !important; font-size:14px; font-weight:600; box-shadow:0 10px 30px #00000040; }
+  /* Empty, it is there and unseen - never display:none: a live region a screen reader cannot
+     find when its words arrive is not read out. */
+  [data-testid="message"]:empty { padding:0; background:none; box-shadow:none; pointer-events:none; }
+  [data-testid="message"]:empty::before { display:none; }
+  [data-testid="message"]::before { content:"!" / ""; flex:none; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#d5503f; color:#fff; font-size:13px; font-weight:800; }
+  [data-testid="message"][data-kind="ok"]::before { content:"✓" / ""; background:#2f9a5d; }
+  [data-testid="message"].faded { opacity:0; pointer-events:none; }
+  body:has([data-testid="app"][data-role="customer"]:not([hidden])) [data-testid="message"] { bottom:88px; }
   .owner { margin-top:18px; }
   h3 { margin:18px 0 8px; font-size:14px; color:var(--brand); }
   table.hours { width:100%; border-collapse:collapse; margin-bottom:12px; }
@@ -337,6 +353,10 @@
   .file-pick { position:relative; display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 18px; border:1px solid var(--brand); border-radius:999px; background:#fff; color:var(--brand); font-size:14px; }
   .file-pick input { position:absolute; inset:0; width:100%; height:100%; margin:0; padding:0; opacity:0; cursor:pointer; }
   .file-pick:focus-within { outline:2px solid var(--ink); outline-offset:2px; }
+  .barber-photo-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .barber-photo-row .face { position:relative; width:64px; height:64px; border-radius:50%; overflow:hidden; flex:none; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, var(--tone, #8a6d3b), #1c1c1c); color:#fff; font-size:24px; font-weight:700; }
+  .barber-photo-row .face::before { content:attr(data-initial); }
+  .barber-photo-row .face img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
   /* A service, kept as the courses and the products are: a card, every switch with its words. */
   [data-testid="services"] > li { display:block; border:1px solid var(--line); border-radius:16px; padding:14px; margin:0 0 12px; }
   [data-testid="services"] > li[data-active="false"] { background:#faf9f6; }
@@ -417,6 +437,9 @@
     .tabbar button[aria-current="page"] svg { transform:translateY(-2px) scale(1.12); }
     .confirm { animation:rise .3s cubic-bezier(.2, .7, .2, 1) both; }
     dialog[open] { animation:sheet .3s cubic-bezier(.2, .8, .2, 1); }
+    @keyframes toast { from { opacity:0; transform:translateY(24px) scale(.96); } to { opacity:1; transform:none; } }
+    [data-testid="message"]:not(:empty) { animation:toast .32s cubic-bezier(.2, .8, .2, 1) both; }
+    [data-testid="message"].faded { transition:opacity .4s ease, transform .4s ease; transform:translateY(12px); }
     /* A booking made: the ring lands, the tick is drawn, and the rest follows it in. */
     .done:not([hidden]) { animation:rise .36s cubic-bezier(.2, .7, .2, 1) both; }
     .done .ring { animation:ring-in .55s cubic-bezier(.2, 1.4, .4, 1) both; }
@@ -438,8 +461,7 @@
   footer a { color:var(--brand); display:inline-flex; align-items:center; min-height:44px; }
   .moving { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:12px; padding:8px 12px; border:1px solid var(--brand); border-radius:6px; }
   .moving p { flex:1 1 220px; margin:0; }
-  [data-testid="message"][data-kind="ok"] { color:var(--ok); }
-  [data-testid="message"][data-kind="error"], [data-testid="message"][data-kind="cancelled"], .error { color:var(--bad); }
+  .error { color:var(--bad); }
 </style>
 </head>
 <body>
@@ -578,6 +600,12 @@
         <h3>פעילות</h3>
         <p class="muted" data-testid="barber-status"></p>
         <button data-testid="barber-active-toggle" type="button" class="ghost"></button>
+        <h3>תמונה</h3>
+        <div class="barber-photo-row">
+          <span class="face" data-testid="barber-photo" aria-hidden="true"></span>
+          <span class="file-pick"><span data-testid="barber-photo-words">בחירת תמונה</span><input type="file" data-testid="barber-photo-file" accept="image/jpeg,image/png,image/webp" aria-label="בחירת תמונה לספר"></span>
+          <button data-testid="remove-barber-photo" type="button" class="ghost" hidden>הסרת התמונה</button>
+        </div>
         <h3>כניסה</h3>
         <p class="muted" data-testid="barber-phone-note"></p>
         <div class="field"><label for="barber-phone">הטלפון הנייד של הספר</label><input id="barber-phone" data-testid="barber-phone" type="tel" inputmode="tel" autocomplete="off" dir="ltr" placeholder="0501234567"></div>
@@ -838,10 +866,18 @@ function popup(title, text, kind, { action = null, closeLabel = "סגירה" } =
   if (!dialog.open) dialog.showModal();
 }
 
+// What the page says about the last thing done floats over the foot of the screen and fades
+// after a few seconds. Faded, not removed: a screen reader has already read it out (role=status),
+// and it stays in the page until the next thing is said.
+const SAY_FOR = 4000;
+let sayTimer = null;
 function say(text, kind) {
   const message = $("message");
   message.textContent = text;
   message.dataset.kind = kind;
+  message.classList.remove("faded");
+  clearTimeout(sayTimer);
+  if (text) sayTimer = setTimeout(() => message.classList.add("faded"), SAY_FOR);
 }
 
 // Times are taken from start_local exactly as the shop's clock wrote them, and
@@ -1564,10 +1600,55 @@ function renderBarberActivity(barberId) {
   const active = barberOf(barberId).active !== false;
   $("barber-status").textContent = active ? "הספר פעיל ומוצע ללקוחות." : "הספר לא פעיל: הוא לא מוצע ללקוחות ולא יכול להתחבר.";
   $("barber-active-toggle").textContent = active ? "הוצאת הספר מהפעילות" : "החזרת הספר לפעילות";
+  // The barber's picture, as customers see it beside the name.
+  const barber = barberOf(barberId);
+  const photo = $("barber-photo");
+  photo.replaceChildren();
+  photo.dataset.initial = (barber.display_name || "").trim().slice(0, 1);
+  if (barber.id) photo.style.setProperty("--tone", FACE_TONES[[...barber.id].reduce((sum, c) => sum + c.charCodeAt(0), 0) % FACE_TONES.length]);
+  if (barber.photo_url) photo.append(control("img", { src: barber.photo_url, alt: "" }));
+  $("barber-photo-words").textContent = barber.photo_url ? "החלפת התמונה" : "בחירת תמונה";
+  $("barber-photo-file").setAttribute("aria-label", `${barber.photo_url ? "החלפת התמונה" : "בחירת תמונה"} לספר ${barber.display_name || ""}`);
+  $("remove-barber-photo").hidden = !barber.photo_url;
   // The barber signs in as a customer does: this mobile, and the code sent to it.
   const phone = barberOf(barberId).phone || "";
   $("barber-phone").value = phone;
   $("barber-phone-note").textContent = phone ? "הספר נכנס עם הטלפון הזה ועם הקוד שנשלח אליו." : "עוד אין לספר טלפון, ולכן הוא לא יכול להיכנס.";
+}
+
+function changeBarberPhoto(file) {
+  return busyWhile(async () => {
+    const barberId = $("barber").value;
+    $("barber-photo-file").value = "";
+    if (file.size > 3_000_000) {
+      say(explain({ data: { code: "image_too_large" } }), "error");
+      return;
+    }
+    const data = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+      reader.readAsDataURL(file);
+    });
+    const r = await api("PUT", `/barbers/${barberId}/photo`, { data });
+    say(r.ok ? "התמונה נשמרה." : explain(r), r.ok ? "ok" : "error");
+    await reloadBarbers(barberId);
+  });
+}
+
+function removeBarberPhoto() {
+  return busyWhile(async () => {
+    const barberId = $("barber").value;
+    const r = await api("DELETE", `/barbers/${barberId}/photo`);
+    say(r.ok ? "התמונה הוסרה." : explain(r), r.ok ? "ok" : "error");
+    await reloadBarbers(barberId);
+  });
+}
+
+async function reloadBarbers(barberId) {
+  barbers = (await api("GET", "/barbers")).data.content;
+  fillBarberChoice();
+  setBarber(barberId);
+  renderBarberActivity(barberId);
 }
 
 function saveBarberPhone() {
@@ -1775,6 +1856,7 @@ function addService() {
 
 // The owner's list holds barbers who left, marked, to manage them and their
 // diary; nobody else's does. The chosen one lives in the hidden #barber.
+const FACE_TONES = ["#8a6d3b", "#2f3e4e", "#6b4f4f", "#3d5a45", "#5b4a6b", "#7a5a2b"];
 function fillBarberChoice() {
   const box = $("barbers");
   box.replaceChildren(...barbers.map((b) => {
@@ -1783,7 +1865,13 @@ function fillBarberChoice() {
     pill.dataset.testid = "barber-pill";
     pill.dataset.id = b.id;
     pill.setAttribute("role", "radio");
-    pill.textContent = b.active ? b.display_name : `${b.display_name} (לא פעיל)`;
+    // A round picture over the name - the barber's own when the owner gave one, else the first
+    // letter on a colour of its own. Decoration: the name beside it is what is read out.
+    const face = control("span", { className: "face", "aria-hidden": "true" });
+    face.dataset.initial = b.display_name.trim().slice(0, 1);
+    face.style.setProperty("--tone", FACE_TONES[[...b.id].reduce((sum, c) => sum + c.charCodeAt(0), 0) % FACE_TONES.length]);
+    if (b.photo_url) face.append(control("img", { src: b.photo_url, alt: "" }));
+    pill.append(face, control("span", { className: "name", textContent: b.active ? b.display_name : `${b.display_name} (לא פעיל)` }));
     if (!b.active) pill.classList.add("left");
     pill.addEventListener("click", () => chooseBarber(b.id));
     return pill;
@@ -2752,6 +2840,8 @@ $("barber-active-toggle").addEventListener("click", toggleBarberActive);
 $("add-dayoff").addEventListener("click", addDayOff);
 $("add-barber").addEventListener("click", addBarber);
 $("save-barber-phone").addEventListener("click", saveBarberPhone);
+$("barber-photo-file").addEventListener("change", () => $("barber-photo-file").files[0] && changeBarberPhoto($("barber-photo-file").files[0]));
+$("remove-barber-photo").addEventListener("click", removeBarberPhoto);
 $("add-service").addEventListener("click", addService);
 $("service").addEventListener("change", () => busyWhile(async () => {
   await refresh();

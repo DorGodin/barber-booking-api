@@ -168,6 +168,12 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   `SKELETON_AFTER`, so a fast answer never flickers; only when the list is on the screen; hidden from a
   screen reader; and gone - the list shown again - before `aria-busy` goes false. A new list that loads
   gets its `loading()` and its shape.
+- **A barber is chosen by their face** (`fillBarberChoice`): the owner's picture (`PUT /barbers/{id}/photo`,
+  served under `/media` like a course's) or the first letter on a colour of its own, drawn by CSS from
+  `data-initial` so the pill's words stay the name alone. The face is `aria-hidden`.
+- **What the page says floats** (`say()`): a dark pill over the foot of the screen that fades after `SAY_FOR`.
+  Faded, never removed, and never `display:none` even when empty - a live region a screen reader cannot
+  find when its words arrive is not read out. Its mark (`✓`, `!`) has empty alternative text.
 - **Motion is extra, all of it inside `@media (prefers-reduced-motion: no-preference)`**, and the confetti
   checks the same in script. Nothing waits for an animation to end, and nothing is shown only by one.
   The outside page tests run without motion; `test_fresh_look.py` asks for it.
