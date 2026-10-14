@@ -23,7 +23,7 @@ from app.models import Course, Product, User
 from app.push import PushHub, PushSender
 from app.push import sender_from as push_sender_from
 from app.reminders import reminders
-from app.routers import auth, barbers, bookings, courses, products, push, services
+from app.routers import auth, barbers, bookings, courses, customer_cards, products, push, services
 from app.routers import settings as shop_settings
 from app.seed import give_owner_phone, seed_if_empty
 from app.sms import SmsSender, sender_from
@@ -304,6 +304,7 @@ def create_app(
         bookings.router,
         courses.router,
         products.router,
+        customer_cards.router,
         push.router,
         shop_settings.router,
     ):

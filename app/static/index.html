@@ -74,7 +74,7 @@
   /* 16px, not less: below it Safari on iOS zooms the whole page in when a
      field takes the focus, and leaves it zoomed after. */
   input, select, textarea { font-family:inherit; }
-  input, select { display:block; width:100%; margin-top:4px; padding:9px 10px; font-size:16px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); }
+  input, select, textarea { display:block; width:100%; margin-top:4px; padding:9px 10px; font-size:16px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); }
   /* Safari draws its own select and ignores its height and padding - 23px
      tall on an iPhone, whatever the CSS says. Drawn here instead, with the
      arrow on the left, where a right to left page puts it. Safari also lets a
@@ -148,7 +148,7 @@
   :focus-visible { outline:3px solid var(--brand); outline-offset:2px; }
   /* A field shows it on any focus. Chromium focuses the parts inside a date
      field - day, month, year - and :focus-visible never reaches the field. */
-  input:focus, select:focus { outline:3px solid var(--brand); outline-offset:2px; }
+  input:focus, select:focus, textarea:focus { outline:3px solid var(--brand); outline-offset:2px; }
   .confirm { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px; border:1px dashed var(--brand); border-radius:8px; }
   /* The button keeps its size and its one line however long the words beside it - two services at one time. */
   .confirm button { border-radius:999px; padding-inline:22px; flex:none; white-space:nowrap; min-height:44px; }
@@ -168,9 +168,9 @@
   li { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); }
   /* A booking: the day and time, the service on one line, where it stands - and
      the buttons small and round underneath, never squeezing the words. */
-  [data-testid="booking-row"] { flex-wrap:wrap; justify-content:flex-start; gap:8px 8px; }
+  [data-testid="booking-row"] { flex-wrap:wrap; justify-content:center; gap:8px 8px; }
   [data-testid="booking-row"] > span { flex:1 1 100%; }
-  [data-testid="booking-row"] > button { border-radius:999px; min-height:36px; padding:0 16px; font-size:14px; }
+  [data-testid="booking-row"] > button { border-radius:999px; min-height:32px; padding:0 14px; font-size:13px; }
   [data-testid="booking-when"], [data-testid="booking-detail"] > span { display:block; }
   /* After the appointment: stars at a tap, then - if they like - a few words. */
   .review-card { display:block; background:#fff; border:1px solid var(--line); border-radius:18px; padding:16px; margin:0 0 14px; text-align:center; box-shadow:0 6px 24px #0001; }
@@ -471,6 +471,22 @@
   .timeline .now { position:absolute; inset-inline:-6px 0; border-top:2px solid #d5503f; }
   .timeline .now::before { content:""; position:absolute; inset-inline-start:-4px; top:-5px; width:8px; height:8px; border-radius:50%; background:#d5503f; }
   @media (min-width: 761px) { .today-grid { grid-template-columns:repeat(4, minmax(0, 1fr)); } }
+  /* The customer as the staff know them: dressed as the shop's other dialogs. */
+  dialog.customer-card { width:min(400px, 92vw); border-radius:22px; padding:22px 20px 20px; }
+  .customer-card .card-head { margin:0 0 14px; }
+  .customer-card h2 { margin:0; font-size:20px; font-weight:800; color:var(--ink); }
+  .customer-card .card-head p { margin:2px 0 0; font-size:14px; color:var(--mut); }
+  .customer-card .card-head a { color:var(--ink); font-weight:600; }
+  .customer-card .card-stats { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; margin:0 0 16px; }
+  .customer-card .card-stats div { display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 4px; border-radius:14px; background:#f1efea; }
+  .customer-card .card-stats strong { font-size:20px; font-weight:800; color:var(--ink); }
+  .customer-card .card-stats span { font-size:12px; color:var(--mut); text-align:center; }
+  .customer-card textarea { min-height:84px; margin-bottom:16px; resize:vertical; }
+  .customer-card .actions { display:flex; gap:8px; padding:0; }
+  .customer-card .actions button { flex:1; border-radius:999px; min-height:44px; font-size:14px; }
+  .customer-card [data-testid="card-save"] { background:var(--ink); color:#fff; border:0; }
+  .customer-card [data-testid="card-close"] { background:#f1efea; color:var(--mut); border:0; }
+  .cancel-notes .more { color:#9a4a3f; }
   /* A customer's cancellation the staff have not seen: told here, once, since the row is gone. */
   .cancel-notes { margin:0 0 14px; padding:12px 14px; border:1px solid #f0c9c3; border-radius:16px; background:#fbe9e6; color:#7d2a1f; }
   .cancel-notes strong { display:block; margin:0 0 4px; font-size:14px; }
@@ -724,6 +740,24 @@
       <button data-testid="popup-close" type="button" autofocus>סגירה</button>
     </div>
   </dialog>
+  <dialog data-testid="customer-card" class="customer-card" aria-labelledby="card-name">
+    <div class="card-head">
+      <h2 id="card-name" data-testid="card-name"></h2>
+      <p><span data-testid="card-since"></span><span data-testid="card-phone-line" hidden> · <a data-testid="card-phone" dir="ltr"></a></span></p>
+    </div>
+    <div class="card-stats">
+      <div><strong data-testid="card-visits"></strong><span>ביקורים</span></div>
+      <div><strong data-testid="card-last"></strong><span>ביקור אחרון</span></div>
+      <div><strong data-testid="card-cancellations"></strong><span>ביטולים</span></div>
+      <div><strong data-testid="card-no-shows"></strong><span>לא הגיע</span></div>
+    </div>
+    <label for="card-note">הערה של הצוות</label>
+    <textarea id="card-note" data-testid="card-note" maxlength="1000" placeholder="למשל: מספר 2 בצדדים, לא אוהב ג׳ל"></textarea>
+    <div class="actions">
+      <button data-testid="card-save" type="button">שמירת ההערה</button>
+      <button data-testid="card-close" type="button">סגירה</button>
+    </div>
+  </dialog>
 </main>
 <footer>
   <div class="cut" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.5 8.5L20 18M8.5 15.5L20 6"/></svg><span></span></div>
@@ -807,11 +841,14 @@ function renderCancellations() {
   const seen = seenCancelled();
   const fresh = myBookings.filter((b) => b.status === "cancelled" && b.cancelled_by === "customer" && !seen.has(b.id));
   $("cancel-notes").hidden = fresh.length === 0;
+  // The three nearest; more than that is said in a number - the list must not push the day off the screen.
+  const shown = fresh.slice(0, 3);
   $("cancel-list").replaceChildren(
-    ...fresh.map((b) => {
+    ...shown.map((b) => {
       const who = whoIsComing(b);
       return control("li", { testid: "cancel-note", textContent: `${who ? `${isolate(who)} ביטל/ה` : "בוטל"} את התור של ${dayLabel(b.start_local)} ${clock(b.start_local)} · ${isolate(b.service_name)}` });
     }),
+    ...(fresh.length > shown.length ? [control("li", { className: "more", testid: "cancel-more", textContent: `ועוד ${fresh.length - shown.length} ביטולים` })] : []),
   );
   $("cancel-seen").onclick = () => {
     try {
@@ -859,6 +896,58 @@ $("today-waiting").addEventListener("click", () => {
   const first = myBookings.filter((b) => b.status === "confirmed" && b.approval === "pending" && b.start_local.slice(0, 10) === shopToday())[0];
   if (first) document.querySelector(`[data-testid="booking-row"][data-id="${first.id}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
 });
+
+// ---- The customer as the staff know them ---------------------------------------------
+let cardFor = null;
+function openCustomerCard(customerId) {
+  return busyWhile(async () => {
+    const r = await api("GET", `/customers/${customerId}/card`);
+    if (!r.ok) {
+      say(explain(r), "error");
+      return;
+    }
+    showCard(r.data);
+    if (!$("customer-card").open) $("customer-card").showModal();
+  });
+}
+function showCard(c) {
+  cardFor = c.id;
+  $("card-name").textContent = c.name;
+  $("card-since").textContent = `לקוח מאז ${new Date(c.since).toLocaleDateString("he-IL", { month: "long", year: "numeric", timeZone: shop.timezone })}${c.upcoming ? ` · ${c.upcoming === 1 ? "תור אחד קרוב" : `${c.upcoming} תורים קרובים`}` : ""}`;
+  $("card-phone-line").hidden = !c.phone;
+  $("card-phone").textContent = c.phone || "";
+  if (c.phone) $("card-phone").href = `tel:${c.phone}`;
+  $("card-visits").textContent = String(c.visits);
+  $("card-last").textContent = c.last_visit ? new Date(c.last_visit).toLocaleDateString("he-IL", { day: "numeric", month: "short", timeZone: shop.timezone }) : "—";
+  $("card-cancellations").textContent = String(c.cancellations);
+  $("card-no-shows").textContent = String(c.no_shows);
+  $("card-note").value = c.note;
+}
+$("card-save").addEventListener("click", () => busyWhile(async () => {
+  const r = await api("PUT", `/customers/${cardFor}/note`, { text: $("card-note").value });
+  if (r.ok) showCard(r.data);
+  say(r.ok ? "ההערה נשמרה." : explain(r), r.ok ? "ok" : "error");
+}));
+// Closed by its button, by Escape or by signing out, the card leaves nothing of the customer in the page.
+function clearCustomerCard() {
+  cardFor = null;
+  for (const id of ["card-name", "card-since", "card-phone", "card-visits", "card-last", "card-cancellations", "card-no-shows"]) $(id).textContent = "";
+  $("card-note").value = "";
+}
+function closeCustomerCard() {
+  if ($("customer-card").open) $("customer-card").close();
+  clearCustomerCard();
+}
+$("customer-card").addEventListener("close", clearCustomerCard);
+$("card-close").addEventListener("click", closeCustomerCard);
+
+function markNoShow(b, mark) {
+  return busyWhile(async () => {
+    const r = await api(mark ? "POST" : "DELETE", `/bookings/${b.id}/no-show`);
+    say(r.ok ? (mark ? "סומן: הלקוח לא הגיע." : "הסימון בוטל.") : explain(r), r.ok ? "ok" : "error");
+    await refreshBookings();
+  });
+}
 
 // ---- While a list loads --------------------------------------------------------
 // A list that is slow to arrive is drawn first as its own shape in grey. Only when it is slow: an
@@ -986,6 +1075,7 @@ const FRIENDLY = {
   unauthorized: () => "צריך להתחבר מחדש.",
   forbidden: () => "אין לך הרשאה לפעולה הזו.",
   not_found: () => "לא מצאנו את מה שחיפשת.",
+  not_started: () => "אפשר לסמן שלקוח לא הגיע רק אחרי שעת התור.",
   service_inactive: () => "השירות הזה כבר לא ניתן.",
   not_aligned: () => "תורים מתחילים ברבע שעה עגולה.",
   idempotency_mismatch: () => "משהו השתבש בשליחה. כדאי לנסות שוב.",
@@ -1061,6 +1151,7 @@ const STATUS = { confirmed: "מאושר", cancelled: "בוטל" };
 // Where a booking stands, in the words of whoever is reading: the customer
 // waits for "the barber"; the barber and the owner are the ones who answer.
 function statusText(b) {
+  if (b.no_show) return "לא הגיע";
   if (b.approval === "pending") {
     return me.role === "customer"
       ? `ממתין לאישור של ${isolate(b.barber_name)}`
@@ -1231,6 +1322,7 @@ function signOut() {
   hideDone();
   for (const id of ["bookings", "slots", "hours", "approval-hours", "days-off", "services", "barber", "service", "courses", "courses-admin", "service-2", "products", "products-admin", "timeline", "cancel-list"]) $(id).replaceChildren();
   myBookings = [];
+  closeCustomerCard();
   clearTimeout(staffPoll);
   for (const id of ["today-count", "today-waiting", "today-products", "today-next"]) for (const part of $(id).querySelectorAll("strong, small")) part.textContent = "";
   for (const id of ["display-name", "hours-for", "confirm-text"]) $(id).textContent = "";
@@ -2546,14 +2638,14 @@ async function moveSelected() {
 const PUSH_LATER_KEY = "push-not-now";
 const PUSH_ASK_HOURS = 24;
 let pushInfo = { key: null, subscribed: false };
-const pushRole = () => (me.role === "barber" ? "barber" : "customer");
+const pushRole = () => (me.role === "customer" ? "customer" : "barber");
 const pushSupported = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 const onIphone = () => /iPhone|iPad/.test(navigator.userAgent) && !navigator.standalone;
 const keyBytes = (text) => Uint8Array.from(atob(text.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
 
 async function loadPush() {
   pushInfo = { key: null, subscribed: false };
-  if (!me || (me.role !== "customer" && me.role !== "barber")) return;
+  if (!me) return;
   const r = await api("GET", "/push/key");
   if (!r.ok) return;
   pushInfo.key = r.data.key;
@@ -2584,7 +2676,7 @@ function pushCard(all) {
   // Asked only after a booking was made, and for a day from then: a booking ahead that stands
   // and is that new. Moving or cancelling one is not a reason to ask. A barber is always asked.
   const madeLately = (b) => Date.now() - Date.parse(b.created_at) < PUSH_ASK_HOURS * 3600000;
-  const ahead = me.role === "barber" || all.some((b) => b.status === "confirmed" && Date.parse(b.end) > Date.now() && madeLately(b));
+  const ahead = me.role !== "customer" || all.some((b) => b.status === "confirmed" && Date.parse(b.end) > Date.now() && madeLately(b));
   if (!ahead || pushLater() || (pushSupported() && Notification.permission === "denied")) return null;
   const card = control("li", { className: "push-card", testid: "push-card" });
   const row = control("div", { className: "row-buttons" });
@@ -2611,7 +2703,7 @@ function pushCard(all) {
   yes.addEventListener("click", enablePush);
   row.append(yes, later);
   card.append(
-    control("h3", { textContent: me.role === "barber" ? "לקבל התראה על בקשה חדשה?" : "לקבל עדכון כשיש תשובה על התור, ותזכורת לפניו?" }),
+    control("h3", { textContent: me.role === "customer" ? "לקבל עדכון כשיש תשובה על התור, ותזכורת לפניו?" : "לקבל התראה על תור חדש, בקשה וביטול?" }),
     control("p", { textContent: "ההתראה לא מכילה פרטים, רק שיש חדש." }),
     row,
   );
@@ -2841,7 +2933,18 @@ async function refreshBookings() {
         row.append(answer);
       }
     }
-    if (b.status === "confirmed" && me.role !== "barber" && (me.role !== "customer" || canCancel)) {
+    // The staff: once its time has come, a booking can be marked as not come to - and the mark taken back.
+    if (b.status === "confirmed" && me.role !== "customer" && Date.parse(b.start) <= Date.now()) {
+      const mark = control("button", { type: "button", className: "ghost", testid: b.no_show ? "undo-no-show" : "no-show", textContent: b.no_show ? "ביטול הסימון" : "לא הגיע", "aria-label": `${b.no_show ? "ביטול סימון לא הגיע" : "לא הגיע"} לתור של ${when.textContent}` });
+      mark.addEventListener("click", () => markNoShow(b, !b.no_show));
+      row.append(mark);
+    }
+    if (b.customer_id && me.role !== "customer") {
+      const open = control("button", { type: "button", className: "ghost", testid: "open-card", textContent: "כרטיס לקוח", "aria-label": `כרטיס הלקוח ${b.customer_name || ""}` });
+      open.addEventListener("click", () => openCustomerCard(b.customer_id));
+      row.append(open);
+    }
+    if (b.status === "confirmed" && me.role !== "barber" && (me.role === "customer" ? canCancel : Date.parse(b.start) > Date.now())) {
       const cancel = document.createElement("button");
       cancel.type = "button";
       cancel.className = "ghost";

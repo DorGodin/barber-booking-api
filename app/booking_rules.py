@@ -73,7 +73,13 @@ def is_flagged(session: Session, config: Settings, customer_id: str, now: dateti
         .select_from(BookingMove)
         .where(BookingMove.customer_id == customer_id, BookingMove.moved_at >= since)
     )
-    return cancels >= config.flag_cancels or moves >= config.flag_moves
+    # A booking the customer did not come to counts as one they cancelled.
+    no_shows = session.scalar(
+        select(func.count())
+        .select_from(Booking)
+        .where(Booking.customer_id == customer_id, Booking.no_show.is_(True), Booking.start_utc >= since)
+    )
+    return cancels + no_shows >= config.flag_cancels or moves >= config.flag_moves
 
 
 def decide_by(config: Settings, asked: datetime, start: datetime) -> datetime:

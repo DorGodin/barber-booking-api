@@ -151,7 +151,8 @@ def test_the_barber_and_the_owner_see_the_review_in_the_diary(client, owner, cus
 def test_the_diary_can_leave_out_what_is_over_and_the_customers_list_keeps_it(
     client, owner, customer, barber, services
 ):
-    over = past_booking(client, customer, barber, services[HAIRCUT]["id"])
+    # Yesterday: today's bookings, over or not, are in the day the diary shows.
+    over = past_booking(client, customer, barber, services[HAIRCUT]["id"], hours_ago=30)
     ahead = book(client, customer, barber, services[HAIRCUT]["id"], at(local_day(3), "10:00")).json()["id"]
 
     def ids(headers, **params):

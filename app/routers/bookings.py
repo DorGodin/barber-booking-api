@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, time, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, Query, Response
 from sqlalchemy import func, select
@@ -36,6 +36,7 @@ from app.models import (
     new_id,
 )
 from app.push import PushHub
+from app.reminders import when_words
 from app.scheduling import Interval
 from app.schemas import BookingIn, BookingMoveIn, GroupBookingIn, GuestBookingIn, ReviewIn, ReviewTextIn
 from app.views import booking_view, page
@@ -58,6 +59,23 @@ def _view(session: Session, booking: Booking, config: Settings) -> dict:
             .order_by(BookingProduct.id)
         ).all(),
     )
+
+
+def _tell_staff(
+    session: Session, background: BackgroundTasks, hub: PushHub, booking: Booking, title: str, body: str
+) -> None:
+    """Wake the barber and the owner - a customer booked, asked, or cancelled - with the words for
+    it, fetched by their browsers from this server. Nothing travels in the push itself."""
+    owners = session.scalars(select(User.id).where(User.role == "owner", User.active.is_(True))).all()
+    background.add_task(hub.tell, list(dict.fromkeys([booking.barber_id, *owners])), (title, body))
+
+
+def _who_and_when(session: Session, booking: Booking, config: Settings) -> str:
+    who = booking.for_name or (
+        session.get(User, booking.customer_id).display_name if booking.customer_id else ""
+    )
+    service = session.get(Service, booking.service_id).name
+    return f"{who} · {when_words(booking.start_utc, datetime.now(UTC), config)} · {service}"
 
 
 def _refuse_clashes(
@@ -157,7 +175,11 @@ def create_booking(
         session.add(booking)
         session.flush()
         if booking.approval == "pending":
-            background.add_task(hub.tell, [booking.barber_id])
+            _tell_staff(
+                session, background, hub, booking, "בקשה חדשה ביומן", _who_and_when(session, booking, config)
+            )
+        else:
+            _tell_staff(session, background, hub, booking, "תור חדש", _who_and_when(session, booking, config))
         if idempotency_key is not None:
             session.add(
                 IdempotencyKey(
@@ -223,8 +245,15 @@ def create_group_booking(
             session.flush()
             made.append(booking)
             cursor = wanted.end
-        if any(b.approval == "pending" for b in made):
-            background.add_task(hub.tell, [body.barber_id])
+        title = "בקשה חדשה ביומן" if any(b.approval == "pending" for b in made) else "תור חדש"
+        _tell_staff(
+            session,
+            background,
+            hub,
+            made[0],
+            title,
+            " + ".join(_who_and_when(session, b, config) for b in made),
+        )
         return {"group_id": group_id, "bookings": [_view(session, b, config) for b in made]}
 
 
@@ -242,8 +271,13 @@ def list_bookings(
     """`upcoming` leaves out what is over - a diary is read for what is still to come,
     and a shop's past soon outgrows any page of it."""
     query = select(Booking)
-    if upcoming:
+    if upcoming and user.role == "customer":
         query = query.where(Booking.end_utc > datetime.now(UTC))
+    elif upcoming:
+        # The staff see the whole of the shop's today, so a customer who did not come can be marked
+        # after the booking's time.
+        local = datetime.now(UTC).astimezone(config.shop_tz)
+        query = query.where(Booking.end_utc > datetime.combine(local.date(), time.min, tzinfo=config.shop_tz))
     if user.role == "customer":
         query = query.where(Booking.customer_id == user.id)
     elif user.role == "barber":
@@ -271,9 +305,11 @@ def get_booking(
 @router.post("/bookings/{booking_id}/cancel")
 def cancel_booking(
     booking_id: str,
+    background: BackgroundTasks,
     user: User = Depends(current_user),
     session: Session = Depends(db),
     config: Settings = Depends(settings),
+    hub: PushHub = Depends(push_hub),
 ):
     now = datetime.now(UTC)
     with write_lock(session):
@@ -293,6 +329,48 @@ def cancel_booking(
         booking.status = "cancelled"
         booking.cancelled_at = now
         booking.cancelled_by = user.id
+        if user.role == "customer":
+            _tell_staff(
+                session, background, hub, booking, "ביטול תור", _who_and_when(session, booking, config)
+            )
+        return _view(session, booking, config)
+
+
+def _started_booking(session: Session, booking_id: str, user: User, now: datetime) -> Booking:
+    booking = visible_booking_or_404(session, booking_id, user)
+    if booking.status != "confirmed":
+        raise DomainError(409, "already_cancelled", "that booking is cancelled")
+    if booking.start_utc > now:
+        raise DomainError(409, "not_started", "a booking is marked once its time has come")
+    return booking
+
+
+@router.post("/bookings/{booking_id}/no-show")
+def mark_no_show(
+    booking_id: str,
+    user: User = Depends(require("barber", "owner")),
+    session: Session = Depends(db),
+    config: Settings = Depends(settings),
+):
+    """The customer did not come. Marked by the barber or the owner once the time has come; marked
+    twice, it stays marked."""
+    with write_lock(session):
+        booking = _started_booking(session, booking_id, user, datetime.now(UTC))
+        booking.no_show = True
+        return _view(session, booking, config)
+
+
+@router.delete("/bookings/{booking_id}/no-show")
+def unmark_no_show(
+    booking_id: str,
+    user: User = Depends(require("barber", "owner")),
+    session: Session = Depends(db),
+    config: Settings = Depends(settings),
+):
+    """A mark made by mistake is taken back."""
+    with write_lock(session):
+        booking = _started_booking(session, booking_id, user, datetime.now(UTC))
+        booking.no_show = False
         return _view(session, booking, config)
 
 
@@ -356,7 +434,7 @@ def decline_booking(
 
 def _own_finished_booking(session: Session, booking_id: str, user: User, now: datetime) -> Booking:
     booking = visible_booking_or_404(session, booking_id, user)
-    if booking.status != "confirmed" or approval_state(booking, now) == "declined":
+    if booking.status != "confirmed" or booking.no_show or approval_state(booking, now) == "declined":
         raise DomainError(409, "not_reviewable", "only a booking that stood can be reviewed")
     if booking.end_utc > now:
         raise DomainError(409, "not_over_yet", "a booking can be reviewed once it is over")

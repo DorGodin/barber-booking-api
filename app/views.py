@@ -114,6 +114,8 @@ def booking_view(
         # change the offset is what tells 01:30 from 01:30.
         "start_local": booking.start_utc.astimezone(tz).isoformat(),
         "status": booking.status,
+        # Marked by the staff: the customer did not come.
+        "no_show": booking.no_show,
         "price_minor": booking.price_minor,
         "currency": booking.currency,
         "created_at": iso_utc(booking.created_at),

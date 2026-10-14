@@ -101,6 +101,10 @@ class ReviewIn(BaseModel):
     text: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)] | None = None
 
 
+class NoteIn(BaseModel):
+    text: Annotated[str, StringConstraints(strip_whitespace=True, max_length=1000)]
+
+
 class ReviewTextIn(BaseModel):
     text: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)]
 
