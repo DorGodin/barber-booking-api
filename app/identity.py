@@ -14,6 +14,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.home_screen import splash_links
 from app.phones import normalize
 
 IMAGE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,80}\.(jpe?g|png|webp)")
@@ -124,6 +125,14 @@ def header_html(identity: Identity) -> str:
         f'<p class="tagline" lang="en" dir="ltr">{e(identity.tagline)}</p>'
         + (f'<p class="since" data-testid="shop-line">{e(line)}</p>' if line else "")
     )
+
+
+def head_html(identity: Identity) -> str:
+    """The icon an iPhone puts on its home screen - without it, a picture of the page - and the splash
+    it shows while the shop opens from there, both drawn from the profile picture."""
+    if not identity.profile:
+        return ""
+    return '<link rel="apple-touch-icon" href="/icons/180.png">' + splash_links()
 
 
 def contact_html(identity: Identity) -> str:

@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+{{shop_head}}
 <title>{{shop_title}}</title>
 <style>
   /* White, black buttons, a dark gold for the line under the brand; the barber
@@ -189,6 +192,15 @@
   .push-card .row-buttons { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
   .push-card .row-buttons button { border-radius:999px; min-height:44px; padding:0 18px; font-size:14px; }
   .push-card .row-buttons .soft { background:#f1efea; color:var(--mut); border:0; }
+  /* The home screen band: the shop's black, as it opens from there. */
+  .install { grid-column:1 / -1; display:grid; grid-template-columns:52px 1fr; gap:4px 12px; align-items:center; padding:16px; border-radius:16px; background:var(--ink); color:#fff; }
+  .install img { grid-row:span 2; width:52px; height:52px; border-radius:12px; object-fit:cover; }
+  .install strong { font-size:15px; }
+  .install > span { font-size:13px; color:#bdb7ac; }
+  .install .how { grid-column:1 / -1; display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px; padding-top:10px; border-top:1px solid #ffffff22; font-size:13px; color:#e9e5dc; }
+  .install .how svg { width:16px; height:16px; vertical-align:-2px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .install .add { background:#fff; color:var(--ink); border:0; border-radius:999px; min-height:44px; padding:0 16px; font-size:13px; font-weight:600; }
+  .install .later { background:transparent; border:0; color:#bdb7ac; font-size:13px; min-height:44px; padding:0 8px; }
   .push-card.on { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 14px; text-align:start; }
   .push-card.on span { font-size:14px; color:var(--mut); }
   /* Booking for two: the second person's service and name, under the first's. */
@@ -325,7 +337,8 @@
     [data-role="customer"]:not([data-tab="courses"]) [data-testid="courses-panel"] { display:none; }
     [data-role="customer"][data-tab="products"] [data-testid="left-panel"],
     [data-role="customer"][data-tab="products"] [data-testid="right-panel"],
-    [data-role="customer"]:not([data-tab="products"]) [data-testid="products-panel"] { display:none; }
+    [data-role="customer"]:not([data-tab="products"]) [data-testid="products-panel"],
+    [data-role="customer"]:not([data-tab="mine"]) [data-testid="install-card"] { display:none; }
     /* Four tabs share a phone's width: each keeps its words on one line, and the longer name gets the wider tab. */
     .tabbar button { flex:1 1 auto; padding:0 2px; white-space:nowrap; }
     /* The page ends above the tabs, and whatever the keyboard reaches stays
@@ -640,6 +653,7 @@
         <p class="muted" data-testid="no-bookings" hidden>עוד אין תורים.</p>
         <p class="muted" data-testid="more-bookings" hidden></p>
       </div>
+      <section class="install" data-testid="install-card" aria-label="הוספה למסך הבית" hidden></section>
       <div class="panel" data-testid="courses-panel" id="courses-section" data-section hidden>
         <h2>קורסים</h2>
         <div class="courses" data-testid="courses"></div>
@@ -1320,14 +1334,14 @@ function signOut() {
   setCompanion(false);
   stopMoving();
   hideDone();
-  for (const id of ["bookings", "slots", "hours", "approval-hours", "days-off", "services", "barber", "service", "courses", "courses-admin", "service-2", "products", "products-admin", "timeline", "cancel-list"]) $(id).replaceChildren();
+  for (const id of ["bookings", "slots", "hours", "approval-hours", "days-off", "services", "barber", "service", "courses", "courses-admin", "service-2", "products", "products-admin", "timeline", "cancel-list", "install-card"]) $(id).replaceChildren();
   myBookings = [];
   closeCustomerCard();
   clearTimeout(staffPoll);
   for (const id of ["today-count", "today-waiting", "today-products", "today-next"]) for (const part of $(id).querySelectorAll("strong, small")) part.textContent = "";
   for (const id of ["display-name", "hours-for", "confirm-text"]) $(id).textContent = "";
   $("guest-name").value = "";
-  for (const id of ["confirm", "no-slots", "no-bookings", "no-days-off", "app", "owner", "owner-nav", "whoami", "guest-field", "barber-left", "today", "cancel-notes"]) $(id).hidden = true;
+  for (const id of ["confirm", "no-slots", "no-bookings", "no-days-off", "app", "owner", "owner-nav", "whoami", "guest-field", "barber-left", "today", "cancel-notes", "install-card"]) $(id).hidden = true;
   say("", "ok");
   clearForms();
   $("auth").hidden = false;
@@ -2663,6 +2677,11 @@ function pushLater() {
   }
 }
 
+// A booking ahead that stands and was made within the day - the customer's reason to be asked anything.
+const madeLately = (b) => Date.now() - Date.parse(b.created_at) < PUSH_ASK_HOURS * 3600000;
+const freshBookings = (all) => all.filter((b) => b.status === "confirmed" && Date.parse(b.end) > Date.now() && madeLately(b));
+const askedLately = (all) => me.role !== "customer" || freshBookings(all).length > 0;
+
 function pushCard(all) {
   if (!pushInfo.key) return null;
   if (pushInfo.subscribed) {
@@ -2675,9 +2694,7 @@ function pushCard(all) {
   }
   // Asked only after a booking was made, and for a day from then: a booking ahead that stands
   // and is that new. Moving or cancelling one is not a reason to ask. A barber is always asked.
-  const madeLately = (b) => Date.now() - Date.parse(b.created_at) < PUSH_ASK_HOURS * 3600000;
-  const ahead = me.role !== "customer" || all.some((b) => b.status === "confirmed" && Date.parse(b.end) > Date.now() && madeLately(b));
-  if (!ahead || pushLater() || (pushSupported() && Notification.permission === "denied")) return null;
+  if (!askedLately(all) || pushLater() || (pushSupported() && Notification.permission === "denied")) return null;
   const card = control("li", { className: "push-card", testid: "push-card" });
   const row = control("div", { className: "row-buttons" });
   const later = control("button", { type: "button", className: "soft", testid: "push-later", textContent: "לא עכשיו" });
@@ -2687,17 +2704,7 @@ function pushCard(all) {
     } catch {}
     refreshBookings();
   });
-  if (!pushSupported()) {
-    if (!onIphone()) return null;
-    card.dataset.state = "install";
-    card.append(
-      control("h3", { textContent: "רוצים עדכונים באייפון?" }),
-      control("p", { textContent: "כדי לקבל התראות צריך להוסיף את האתר למסך הבית: לוחצים על שיתוף, ואז על ״הוספה למסך הבית״." }),
-    );
-    row.append(later);
-    card.append(row);
-    return card;
-  }
+  if (!pushSupported()) return null;
   card.dataset.state = "ask";
   const yes = control("button", { type: "button", testid: "push-on", textContent: "כן, לעדכן אותי" });
   yes.addEventListener("click", enablePush);
@@ -2708,6 +2715,91 @@ function pushCard(all) {
     row,
   );
   return card;
+}
+
+// ---- On the home screen --------------------------------------------------------------------
+// Put on the home screen, the page opens like an app, on the shop's black, and on an iPhone it is the
+// only way to be sent notifications. Offered by a card: to a customer for a day after each booking,
+// to the staff until they add it. Chrome offers its own install button (beforeinstallprompt); an
+// iPhone has none, so the card says where Safari keeps it.
+const INSTALL_LATER_KEY = "install-not-now";
+let installPrompt = null;
+const installed = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  installPrompt = event;
+  if (me) refreshBookings();
+});
+window.addEventListener("appinstalled", () => {
+  installPrompt = null;
+  if (me) refreshBookings();
+});
+
+// "Not now": when, and the bookings it was said about - the next booking is a new reason to offer.
+function installLater() {
+  try {
+    return { at: 0, ids: [], ...JSON.parse(localStorage.getItem(INSTALL_LATER_KEY) || "{}") };
+  } catch {
+    return { at: 0, ids: [] };
+  }
+}
+
+// A band of its own under the bookings: the shop's black, its icon, and how to add it - Safari's two
+// taps on an iPhone, Chrome's own install where it offers one. Says whether it is shown.
+function renderInstall(all) {
+  const band = $("install-card");
+  band.replaceChildren();
+  band.hidden = true;
+  // An iPhone's Safari sends no notifications to a page that is not on the home screen; that is how it is told.
+  const iphone = onIphone() && !pushSupported();
+  if (!me || installed() || (!iphone && !installPrompt)) return false;
+  const later = installLater();
+  // A customer: after each booking, for a day - "not now" waits for the next booking. The staff: a day's rest.
+  const due = me.role === "customer"
+    ? freshBookings(all).some((b) => !later.ids.includes(b.id))
+    : Date.now() - later.at > PUSH_ASK_HOURS * 3600000;
+  if (!due) return false;
+  const picture = document.querySelector('[data-testid="shop-profile"]');
+  if (picture) band.append(control("img", { src: picture.getAttribute("src"), alt: "" }));
+  band.append(
+    control("strong", { textContent: `${isolate(shop.brand)} במסך הבית` }),
+    control("span", { textContent: me.role === "customer" ? "כניסה בלחיצה, ועדכונים על התור" : "כניסה בלחיצה, והתראות על תורים וביטולים" }),
+  );
+  const how = control("div", { className: "how" });
+  if (installPrompt) {
+    const add = control("button", { type: "button", className: "add", testid: "install-now", textContent: "הוספה למסך הבית" });
+    add.addEventListener("click", async () => {
+      const asked = installPrompt;
+      installPrompt = null;
+      await asked.prompt();
+      await refreshBookings();
+    });
+    how.append(add);
+  } else {
+    // Safari's share button, drawn as it looks there.
+    const share = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    share.setAttribute("viewBox", "0 0 24 24");
+    share.setAttribute("aria-hidden", "true");
+    for (const d of ["M12 3v12M7 8l5-5 5 5", "M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"]) {
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", d);
+      share.append(path);
+    }
+    const steps = control("span", { testid: "install-steps" });
+    steps.append(share, " שיתוף ← ״הוספה למסך הבית״");
+    how.append(steps);
+  }
+  const no = control("button", { type: "button", className: "later", testid: "install-later", textContent: "לא עכשיו" });
+  no.addEventListener("click", () => {
+    try {
+      localStorage.setItem(INSTALL_LATER_KEY, JSON.stringify({ at: Date.now(), ids: freshBookings(all).map((b) => b.id) }));
+    } catch {}
+    refreshBookings();
+  });
+  how.append(no);
+  band.append(how);
+  band.hidden = false;
+  return true;
 }
 
 function enablePush() {
@@ -2871,7 +2963,8 @@ async function refreshBookings() {
     const card = reviewCard(r.ok ? r.data.content : []);
     if (card) list.appendChild(card);
   }
-  const notify = pushCard(r.ok ? r.data.content : []);
+  // One offer at a time: the home screen first, then notifications.
+  const notify = renderInstall(r.ok ? r.data.content : []) ? null : pushCard(r.ok ? r.data.content : []);
   if (notify) list.prepend(notify);
   for (const b of rows) {
     const row = document.createElement("li");
