@@ -90,11 +90,15 @@ def booking_view(
     now: datetime | None = None,
     review=None,
     products=(),
+    customer_name: str | None = None,
 ) -> dict:
     now = now or now_utc()
     return {
         "id": booking.id,
         "customer_id": booking.customer_id,
+        # Who is coming, for the barber and the owner - the name the customer signed in with.
+        # Nobody else sees a booking that is not theirs: somebody else's is not found.
+        "customer_name": customer_name,
         "for_name": booking.for_name,
         "group_id": booking.group_id,
         "guest_name": booking.guest_name,
