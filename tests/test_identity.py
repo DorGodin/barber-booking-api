@@ -3,12 +3,16 @@ reach it and its pictures - all from settings, all checked, all escaped."""
 
 from __future__ import annotations
 
+import io
+import re
 import secrets
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from PIL import Image
 
+from app import home_screen
 from app.config import Settings
 from app.identity import identity_from
 from app.main import create_app
@@ -33,7 +37,7 @@ def shop(tmp_path: Path, monkeypatch, env: dict, brand: str = "TomGoldin") -> Te
     media = tmp_path / "media"
     media.mkdir(exist_ok=True)
     (media / "cover.png").write_bytes(b"\x89PNG cover")
-    (media / "profile.png").write_bytes(b"\x89PNG profile")
+    Image.new("RGB", (300, 260), "white").save(media / "profile.png")
     (media / "secret.txt").write_text("not a picture")
     config = Settings(
         database_url=f"sqlite:///{tmp_path / 'shop.db'}",
@@ -176,3 +180,57 @@ def test_the_ways_to_reach_the_shop_stand_at_the_foot_of_the_page(tmp_path, monk
     assert 'data-testid="shop-whatsapp"' in footer
     assert footer.index('data-testid="shop-whatsapp"') < footer.index('data-testid="privacy-link"')
     assert 'data-testid="shop-whatsapp"' not in page[: page.index("<footer>")]
+
+
+def test_on_the_home_screen_the_shop_opens_on_its_black_with_icons_drawn_from_its_picture(
+    tmp_path, monkeypatch
+):
+    with shop(tmp_path, monkeypatch, FULL) as client:
+        page = client.get("/").text
+        manifest = client.get("/manifest.webmanifest").json()
+        pictures = {icon["src"]: client.get(icon["src"]) for icon in manifest["icons"]}
+        touch = client.get("/icons/180.png")
+        splash = client.get("/splash/1179x2556.png")
+
+    assert '<link rel="apple-touch-icon" href="/icons/180.png">' in page
+    assert (manifest["background_color"], manifest["theme_color"], manifest["display"]) == (
+        "#111111",
+        "#111111",
+        "standalone",
+    )
+    assert {icon.get("purpose") for icon in manifest["icons"]} == {None, "maskable"}
+    for icon in manifest["icons"]:
+        answer = pictures[icon["src"]]
+        width, height = (int(n) for n in icon["sizes"].split("x"))
+        assert answer.headers["content-type"] == "image/png"
+        assert Image.open(io.BytesIO(answer.content)).size == (width, height)
+    assert Image.open(io.BytesIO(touch.content)).size == (180, 180)
+    assert Image.open(io.BytesIO(splash.content)).size == (1179, 2556)
+
+
+def test_an_iphone_finds_a_splash_for_each_screen_it_is_told_of(tmp_path, monkeypatch):
+    with shop(tmp_path, monkeypatch, FULL) as client:
+        page = client.get("/").text
+        sizes = re.findall(r'rel="apple-touch-startup-image" href="/splash/(\d+)x(\d+)\.png"', page)
+        answers = [client.get(f"/splash/{w}x{h}.png") for w, h in sizes]
+        unknown = client.get("/splash/100x100.png")
+
+    assert len(sizes) == len(set(sizes)) >= 10
+    for (width, height), answer in zip(sizes, answers, strict=True):
+        assert Image.open(io.BytesIO(answer.content)).size == (int(width), int(height))
+    assert unknown.status_code == 404
+
+
+def test_hebrew_is_drawn_in_its_order_with_its_numbers_the_right_way_round():
+    assert home_screen._visual("שביט 8, נס ציונה") == "הנויצ סנ ,8 טיבש"
+    assert home_screen._visual("רחוב 12") == "12 בוחר"
+
+
+def test_a_shop_without_a_picture_puts_no_icon_and_no_splash_on_the_home_screen(tmp_path, monkeypatch):
+    with shop(tmp_path, monkeypatch, {}) as client:
+        page = client.get("/").text
+        icon = client.get("/icons/192.png")
+        splash = client.get("/splash/1179x2556.png")
+
+    assert "apple-touch" not in page and "{{shop_head}}" not in page
+    assert icon.status_code == splash.status_code == 404

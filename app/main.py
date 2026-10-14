@@ -10,14 +10,22 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from sqlalchemy import select
 
-from app import backup
+from app import backup, home_screen
 from app.config import Settings
 from app.db import IMMEDIATE, make_engine, make_sessionmaker
 from app.errors import DomainError, domain_error_handler, not_found
-from app.identity import IMAGE_TYPES, contact_html, header_html, identity_from, media_file, under_brand
+from app.identity import (
+    IMAGE_TYPES,
+    contact_html,
+    head_html,
+    header_html,
+    identity_from,
+    media_file,
+    under_brand,
+)
 from app.migrate import migrate
 from app.models import Course, Product, User
 from app.push import PushHub, PushSender
@@ -200,6 +208,7 @@ def create_app(
             PAGE.read_text(encoding="utf-8")
             .replace("{{shop_header}}", header_html(identity))
             .replace("{{shop_contact}}", contact_html(identity))
+            .replace("{{shop_head}}", head_html(identity))
             .replace("{{shop_title}}", html_text.escape(f"{identity.brand} {identity.tagline.title()}"))
         )
         return HTMLResponse(html, headers={"Content-Security-Policy": page_policy(html)})
@@ -228,8 +237,16 @@ def create_app(
         be sent notifications."""
         icons = []
         if identity.profile:
-            kind = IMAGE_TYPES[identity.profile.rsplit(".", 1)[-1].lower()]
-            icons = [{"src": f"/media/{identity.profile}", "sizes": "any", "type": kind}]
+            icons = [
+                {"src": "/icons/192.png", "sizes": "192x192", "type": "image/png"},
+                {"src": "/icons/512.png", "sizes": "512x512", "type": "image/png"},
+                {
+                    "src": "/icons/maskable-512.png",
+                    "sizes": "512x512",
+                    "type": "image/png",
+                    "purpose": "maskable",
+                },
+            ]
         return JSONResponse(
             {
                 "name": f"{identity.brand} {identity.tagline.title()}",
@@ -238,12 +255,35 @@ def create_app(
                 "dir": "rtl",
                 "start_url": "/",
                 "display": "standalone",
-                "background_color": "#ffffff",
+                # The splash a phone draws while the page opens: the shop's black, its logo and name.
+                "background_color": "#111111",
                 "theme_color": "#111111",
                 "icons": icons,
             },
             media_type="application/manifest+json",
         )
+
+    def profile_picture() -> Path:
+        path = media_dir / identity.profile if identity.profile else None
+        if path is None or not path.is_file():
+            raise not_found("picture")
+        return path
+
+    @app.get("/icons/{name}.png", include_in_schema=False)
+    def home_icon(name: str):
+        """The shop's icon for a home screen, drawn from its profile picture."""
+        if name not in home_screen.ICONS:
+            raise not_found("picture")
+        body = home_screen.icon(profile_picture(), name)
+        return Response(body, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+
+    @app.get("/splash/{size}.png", include_in_schema=False)
+    def home_splash(size: str):
+        """What an iPhone shows while the shop opens from its home screen, one picture per screen."""
+        if size not in home_screen.splash_sizes():
+            raise not_found("picture")
+        body = home_screen.splash(profile_picture(), size, identity.brand, identity.tagline, identity.address)
+        return Response(body, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
 
     @app.get("/media/{name}", include_in_schema=False)
     def media(name: str):

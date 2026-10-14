@@ -133,6 +133,18 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **A customer is asked for notifications only after booking, for 24 hours** (`pushCard`, `PUSH_ASK_HOURS`): a
   booking ahead that stands and was made that lately. Moving or cancelling is no reason to ask; the row that
   turns them off stays for whoever said yes.
+- **The shop is offered for the home screen by a band of its own under the bookings** (`renderInstall`, the owner's
+  choice of 2026-10-14): the shop's black, its icon, and on an iPhone - whose Safari sends no notifications outside
+  the home screen - Safari's two taps; where Chrome offers its own install (`beforeinstallprompt`), a button for it.
+  A customer for a day after each booking - "not now" waits for the next booking - the staff until they add it,
+  "not now" resting a day. On a phone it shows under "my bookings" only. One offer at a time: while it shows, the
+  notifications card does not.
+- **What a phone shows of the shop from its home screen is drawn from the profile picture** (`app/home_screen.py`,
+  Pillow): the icons the manifest names (a maskable one keeps the logo whole inside Android's circle), the
+  `apple-touch-icon`, and an iPhone's splash - black, the logo, the brand, the address - one picture per screen it is
+  told of, drawn when first asked and kept in memory. Android draws its own splash from `background_color` and the
+  maskable icon. Hebrew is drawn without a shaping engine: `_visual` puts it in drawing order, and each run takes
+  the font file that holds it.
 - **The service choice says the name and the price; the minutes stand on the label's line** (`serviceLabel`,
   `showLengths`): a phone's field cut the price off. **A tab pressed clears the message** of the last screen.
 - **A product is kept for a booking, never sold here** (`/products`, `app/routers/products.py`, `booking_products`):
