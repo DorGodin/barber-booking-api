@@ -96,9 +96,10 @@
      four letters. A radio group, like the times: one Tab stop, the arrows move. */
   .pills { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
   /* The barbers: a round picture each, the name under it; the one chosen ringed in black. */
-  .pills { gap:12px 14px; }
-  .pills button { display:flex; flex-direction:column; align-items:center; gap:6px; min-width:64px; padding:2px 2px 0; border:0; border-radius:12px; background:none; color:var(--mut); font-size:13px; min-height:44px; }
-  .pills .face { position:relative; width:60px; height:60px; border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, var(--tone, #8a6d3b), #1c1c1c); box-shadow:0 0 0 2.5px #fff, 0 0 0 4px var(--line); color:#fff; font-size:22px; font-weight:700; }
+  /* Four in a row on a common phone: the shop's four barbers side by side. */
+  .pills { gap:12px 8px; }
+  .pills button { display:flex; flex-direction:column; align-items:center; gap:6px; min-width:60px; padding:2px 2px 0; border:0; border-radius:12px; background:none; color:var(--mut); font-size:13px; min-height:44px; }
+  .pills .face { position:relative; width:56px; height:56px; border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, var(--tone, #8a6d3b), #1c1c1c); box-shadow:0 0 0 2.5px #fff, 0 0 0 4px var(--line); color:#fff; font-size:22px; font-weight:700; }
   .pills .face::before { content:attr(data-initial); }
   .pills .face img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
   .pills button[aria-checked="true"] { color:var(--ink); font-weight:700; }
