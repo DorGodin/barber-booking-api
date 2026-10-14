@@ -37,3 +37,15 @@ def test_only_a_picture_and_only_the_owner(client, owner, customer, barber):
     assert put(client, customer, barber).status_code == 403
     assert client.delete(f"/barbers/{barber}/photo", headers=customer).status_code == 403
     assert put(client, owner, "usr_nobody").status_code == 404
+
+
+def test_a_replaced_or_removed_picture_leaves_no_file_behind(client, owner, barber):
+    """Not seen from outside - an unreferenced file is never served - but a shop that changes its
+    barbers' pictures would fill its disk."""
+    folder = client.app.state.media_dir
+    first = put(client, owner, barber).json()["photo_url"].removeprefix("/media/")
+    second = put(client, owner, barber).json()["photo_url"].removeprefix("/media/")
+
+    assert not (folder / first).exists() and (folder / second).exists()
+    client.delete(f"/barbers/{barber}/photo", headers=owner)
+    assert not (folder / second).exists()
