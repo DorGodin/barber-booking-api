@@ -471,6 +471,11 @@
   .timeline .now { position:absolute; inset-inline:-6px 0; border-top:2px solid #d5503f; }
   .timeline .now::before { content:""; position:absolute; inset-inline-start:-4px; top:-5px; width:8px; height:8px; border-radius:50%; background:#d5503f; }
   @media (min-width: 761px) { .today-grid { grid-template-columns:repeat(4, minmax(0, 1fr)); } }
+  /* A customer's cancellation the staff have not seen: told here, once, since the row is gone. */
+  .cancel-notes { margin:0 0 14px; padding:12px 14px; border:1px solid #f0c9c3; border-radius:16px; background:#fbe9e6; color:#7d2a1f; }
+  .cancel-notes strong { display:block; margin:0 0 4px; font-size:14px; }
+  .cancel-notes ul { margin:0 0 8px; }
+  .cancel-notes li { display:block; padding:2px 0; border:0; font-size:14px; }
   /* Opened by the same cut line as the top of the page. */
   footer { max-width:1000px; margin:auto auto 24px; padding:0 0 0; font-size:14px; text-align:center; }
   footer .cut { margin:0 auto 14px; }
@@ -599,6 +604,11 @@
       </div>
       <div class="panel" data-testid="right-panel" id="bookings-section" data-section>
         <section class="today" data-testid="today" hidden>
+          <div class="cancel-notes" data-testid="cancel-notes" role="status" hidden>
+            <strong>ביטולים חדשים</strong>
+            <ul data-testid="cancel-list"></ul>
+            <button type="button" class="ghost" data-testid="cancel-seen">הבנתי</button>
+          </div>
           <h2 data-testid="today-title"></h2>
           <div class="today-grid">
             <div class="today-card" data-testid="today-count"><strong></strong><span>תורים היום</span><small></small></div>
@@ -743,7 +753,21 @@ let inFlight = 0;
 // holds; the list under it keeps every booking and its buttons.
 const HOUR_HEIGHT = 84;
 const minutesOf = (local) => Number(local.slice(11, 13)) * 60 + Number(local.slice(14, 16));
-const whoIsComing = (b) => b.guest_name || b.customer_name || "";
+// The person in the chair: a walk-in's name, a child's in a booking for two, else the customer's.
+const whoIsComing = (b) => b.guest_name || b.for_name || b.customer_name || "";
+// Today on the shop's clock, now - not when the page was opened: a diary stays open past midnight.
+const shopToday = () => new Date().toLocaleDateString("en-CA", { timeZone: shop.timezone });
+const endOf = (b) => minutesOf(b.start_local) + (Date.parse(b.end) - Date.parse(b.start)) / 60000;
+const hhmm = (minutes) => `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+const SEEN_CANCELLED_KEY = "seen-cancellations";
+function seenCancelled() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(SEEN_CANCELLED_KEY) || "[]"));
+  } catch {
+    return new Set();
+  }
+}
+let staffPoll = null;
 function shopNowMinutes() {
   const [h, m] = new Date().toLocaleTimeString("en-GB", { timeZone: shop.timezone, hour12: false }).split(":");
   return Number(h) * 60 + Number(m);
@@ -751,9 +775,14 @@ function shopNowMinutes() {
 function renderToday() {
   const box = $("today");
   box.hidden = !me || me.role === "customer";
+  clearTimeout(staffPoll);
   if (box.hidden) return;
+  // The diary refreshes itself every minute: a customer's booking or cancellation, the line for now.
+  staffPoll = setTimeout(() => refreshBookings(), 60000);
+  renderCancellations();
+  const today = shopToday();
   const day = myBookings
-    .filter((b) => b.status === "confirmed" && b.start_local.slice(0, 10) === shop.today)
+    .filter((b) => b.status === "confirmed" && b.start_local.slice(0, 10) === today)
     .sort((a, b) => a.start.localeCompare(b.start));
   const waiting = day.filter((b) => b.approval === "pending");
   const kept = day.flatMap((b) => b.products);
@@ -763,14 +792,33 @@ function renderToday() {
     $(id).querySelector("strong").textContent = number;
     $(id).querySelector("small").textContent = words;
   };
-  $("today-title").textContent = `היום, ${dayLabel(`${shop.today}T00:00`)}`;
-  card("today-count", String(day.length), day.length ? `${clock(day[0].start_local)}–${clock(day[day.length - 1].start_local)}` : "אין תורים");
+  $("today-title").textContent = `היום, ${dayLabel(`${today}T00:00`)}`;
+  card("today-count", String(day.length), day.length ? `${clock(day[0].start_local)}–${hhmm(Math.max(...day.map(endOf)))}` : "אין תורים");
   card("today-waiting", String(waiting.length), waiting.map((b) => clock(b.start_local)).join(" · ") || "אין");
   $("today-waiting").toggleAttribute("data-none", waiting.length === 0);
   $("today-waiting").disabled = waiting.length === 0;
   card("today-products", String(kept.reduce((n, p) => n + p.quantity, 0)), kept.map(keptWords).join(", ") || "אין");
   card("today-next", next ? clock(next.start_local) : "—", next ? [whoIsComing(next), next.service_name].filter(Boolean).join(" · ") : "אין עוד היום");
   drawTimeline(day, now);
+}
+// The diary no longer lists a cancelled booking, so a customer's cancellation is told here until the
+// staff say they have seen it. One the shop made itself needs no telling.
+function renderCancellations() {
+  const seen = seenCancelled();
+  const fresh = myBookings.filter((b) => b.status === "cancelled" && b.cancelled_by === "customer" && !seen.has(b.id));
+  $("cancel-notes").hidden = fresh.length === 0;
+  $("cancel-list").replaceChildren(
+    ...fresh.map((b) => {
+      const who = whoIsComing(b);
+      return control("li", { testid: "cancel-note", textContent: `${who ? `${isolate(who)} ביטל/ה` : "בוטל"} את התור של ${dayLabel(b.start_local)} ${clock(b.start_local)} · ${isolate(b.service_name)}` });
+    }),
+  );
+  $("cancel-seen").onclick = () => {
+    try {
+      localStorage.setItem(SEEN_CANCELLED_KEY, JSON.stringify([...seen, ...fresh.map((b) => b.id)].slice(-300)));
+    } catch {}
+    renderCancellations();
+  };
 }
 function drawTimeline(day, now) {
   const line = $("timeline");
@@ -779,7 +827,7 @@ function drawTimeline(day, now) {
   line.hidden = day.length === 0;
   if (!day.length) return;
   // From the hour of the first booking or nine, to the hour after the last or eight in the evening.
-  const ends = day.map((b) => minutesOf(b.start_local) + (Date.parse(b.end) - Date.parse(b.start)) / 60000);
+  const ends = day.map(endOf);
   const from = Math.min(9, Math.floor(minutesOf(day[0].start_local) / 60));
   const to = Math.max(20, Math.ceil(Math.max(...ends) / 60));
   line.style.height = `${(to - from) * HOUR_HEIGHT}px`;
@@ -808,7 +856,7 @@ function drawTimeline(day, now) {
   }
 }
 $("today-waiting").addEventListener("click", () => {
-  const first = myBookings.filter((b) => b.status === "confirmed" && b.approval === "pending" && b.start_local.slice(0, 10) === shop.today)[0];
+  const first = myBookings.filter((b) => b.status === "confirmed" && b.approval === "pending" && b.start_local.slice(0, 10) === shopToday())[0];
   if (first) document.querySelector(`[data-testid="booking-row"][data-id="${first.id}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
 });
 
@@ -1181,10 +1229,13 @@ function signOut() {
   setCompanion(false);
   stopMoving();
   hideDone();
-  for (const id of ["bookings", "slots", "hours", "approval-hours", "days-off", "services", "barber", "service", "courses", "courses-admin", "service-2", "products", "products-admin"]) $(id).replaceChildren();
+  for (const id of ["bookings", "slots", "hours", "approval-hours", "days-off", "services", "barber", "service", "courses", "courses-admin", "service-2", "products", "products-admin", "timeline", "cancel-list"]) $(id).replaceChildren();
+  myBookings = [];
+  clearTimeout(staffPoll);
+  for (const id of ["today-count", "today-waiting", "today-products", "today-next"]) for (const part of $(id).querySelectorAll("strong, small")) part.textContent = "";
   for (const id of ["display-name", "hours-for", "confirm-text"]) $(id).textContent = "";
   $("guest-name").value = "";
-  for (const id of ["confirm", "no-slots", "no-bookings", "no-days-off", "app", "owner", "owner-nav", "whoami", "guest-field", "barber-left"]) $(id).hidden = true;
+  for (const id of ["confirm", "no-slots", "no-bookings", "no-days-off", "app", "owner", "owner-nav", "whoami", "guest-field", "barber-left", "today", "cancel-notes"]) $(id).hidden = true;
   say("", "ok");
   clearForms();
   $("auth").hidden = false;
@@ -2717,7 +2768,9 @@ async function refreshBookings() {
   if (!current()) return;
   const list = $("bookings");
   list.replaceChildren();
-  const rows = (r.ok ? r.data.content : []).filter((b) => me.role !== "customer" || shownToCustomer(b));
+  // A customer sees a cancellation for a moment; the staff's diary never lists one - a customer's
+  // cancellation is told above it instead (renderCancellations).
+  const rows = (r.ok ? r.data.content : []).filter((b) => (me.role === "customer" ? shownToCustomer(b) : b.status !== "cancelled"));
   tellAboutAnswers(r.ok ? r.data.content : []);
   myBookings = r.ok ? r.data.content : [];
   renderToday();
