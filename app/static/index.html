@@ -449,6 +449,28 @@
     .done h2 { animation-delay:.18s; } .done .when { animation-delay:.26s; } .done .muted { animation-delay:.32s; } .done .done-actions { animation-delay:.42s; }
     .done .bit { position:absolute; left:50%; top:50%; width:8px; height:8px; margin:-4px; border-radius:2px; pointer-events:none; animation:fly .95s .3s cubic-bezier(.15, .7, .3, 1) both; }
   }
+  /* ---- The staff's day: four cards, then the day by its hours. A summary - every booking is in the
+     list under it, with its buttons; the timeline is drawn for the eye and hidden from a screen reader. */
+  .today { margin:0 0 18px; }
+  .today h2 { margin:0 0 10px; font-size:18px; color:var(--ink); }
+  .today-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; margin:0 0 16px; }
+  .today-card { display:flex; flex-direction:column; align-items:flex-start; gap:2px; min-height:96px; padding:14px; border:1px solid var(--line); border-radius:16px; background:#fff; color:var(--ink); text-align:start; font:inherit; }
+  .today-card strong { font-size:28px; line-height:1.1; font-weight:800; }
+  .today-card span { font-size:14px; color:var(--mut); font-weight:600; }
+  .today-card small { margin-top:auto; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; color:var(--mut); }
+  button.today-card { cursor:pointer; }
+  .today-card.gold { background:#fbf3df; border-color:#efd9a2; } .today-card.gold strong { color:#8a5a00; }
+  .today-card.gold[data-none] { background:#fff; border-color:var(--line); } .today-card.gold[data-none] strong { color:var(--ink); }
+  .today-card.dark { background:#161616; border-color:#161616; } .today-card.dark strong { color:#fff; } .today-card.dark span, .today-card.dark small { color:#cfcac0; }
+  .timeline { position:relative; margin-inline-start:48px; border-inline-start:1px solid var(--line); }
+  .timeline .hour { position:absolute; inset-inline:0; border-top:1px dashed #e7e4dc; }
+  .timeline .hour span { position:absolute; right:-48px; top:-9px; width:42px; text-align:left; font-size:12px; color:var(--mut); }
+  .timeline .slot-block { position:absolute; inset-inline:8px 4px; overflow:hidden; padding:5px 10px; border-radius:12px; background:#161616; color:#fff; line-height:1.35; box-shadow:0 4px 12px #0000001f; cursor:pointer; }
+  .timeline .slot-block.pending { background:#fbf3df; color:#5c3d00; border:1.5px dashed #c79a3a; box-shadow:none; }
+  .timeline .slot-block b { display:block; font-size:13px; } .timeline .slot-block i { display:block; font-style:normal; font-size:12px; opacity:.85; }
+  .timeline .now { position:absolute; inset-inline:-6px 0; border-top:2px solid #d5503f; }
+  .timeline .now::before { content:""; position:absolute; inset-inline-start:-4px; top:-5px; width:8px; height:8px; border-radius:50%; background:#d5503f; }
+  @media (min-width: 761px) { .today-grid { grid-template-columns:repeat(4, minmax(0, 1fr)); } }
   /* Opened by the same cut line as the top of the page. */
   footer { max-width:1000px; margin:auto auto 24px; padding:0 0 0; font-size:14px; text-align:center; }
   footer .cut { margin:0 auto 14px; }
@@ -576,6 +598,17 @@
         </div>
       </div>
       <div class="panel" data-testid="right-panel" id="bookings-section" data-section>
+        <section class="today" data-testid="today" hidden>
+          <h2 data-testid="today-title"></h2>
+          <div class="today-grid">
+            <div class="today-card" data-testid="today-count"><strong></strong><span>תורים היום</span><small></small></div>
+            <button type="button" class="today-card gold" data-testid="today-waiting"><strong></strong><span>ממתינים לאישור</span><small></small></button>
+            <div class="today-card" data-testid="today-products"><strong></strong><span>מוצרים להכין</span><small></small></div>
+            <div class="today-card dark" data-testid="today-next"><strong></strong><span>התור הבא</span><small></small></div>
+          </div>
+          <div class="timeline" data-testid="timeline" aria-hidden="true"></div>
+          <p class="muted" data-testid="timeline-empty" hidden>אין תורים היום.</p>
+        </section>
         <h2 data-testid="bookings-title">התורים שלי</h2>
         <ul data-testid="bookings"></ul>
         <p class="muted" data-testid="no-bookings" hidden>עוד אין תורים.</p>
@@ -704,6 +737,81 @@ let moving = null;
 // is current. A screen reader waits for it; so does a test, instead of guessing
 // how long a refresh takes. A counter, because two refreshes can overlap.
 let inFlight = 0;
+// ---- The staff's day ---------------------------------------------------------------
+// Above the diary, for the owner and a barber: today in four cards - how many, how many wait for a
+// yes, what to have ready, who is next - and today by its hours. Read from the list the diary already
+// holds; the list under it keeps every booking and its buttons.
+const HOUR_HEIGHT = 84;
+const minutesOf = (local) => Number(local.slice(11, 13)) * 60 + Number(local.slice(14, 16));
+const whoIsComing = (b) => b.guest_name || b.customer_name || "";
+function shopNowMinutes() {
+  const [h, m] = new Date().toLocaleTimeString("en-GB", { timeZone: shop.timezone, hour12: false }).split(":");
+  return Number(h) * 60 + Number(m);
+}
+function renderToday() {
+  const box = $("today");
+  box.hidden = !me || me.role === "customer";
+  if (box.hidden) return;
+  const day = myBookings
+    .filter((b) => b.status === "confirmed" && b.start_local.slice(0, 10) === shop.today)
+    .sort((a, b) => a.start.localeCompare(b.start));
+  const waiting = day.filter((b) => b.approval === "pending");
+  const kept = day.flatMap((b) => b.products);
+  const now = shopNowMinutes();
+  const next = day.find((b) => minutesOf(b.start_local) >= now);
+  const card = (id, number, words) => {
+    $(id).querySelector("strong").textContent = number;
+    $(id).querySelector("small").textContent = words;
+  };
+  $("today-title").textContent = `היום, ${dayLabel(`${shop.today}T00:00`)}`;
+  card("today-count", String(day.length), day.length ? `${clock(day[0].start_local)}–${clock(day[day.length - 1].start_local)}` : "אין תורים");
+  card("today-waiting", String(waiting.length), waiting.map((b) => clock(b.start_local)).join(" · ") || "אין");
+  $("today-waiting").toggleAttribute("data-none", waiting.length === 0);
+  $("today-waiting").disabled = waiting.length === 0;
+  card("today-products", String(kept.reduce((n, p) => n + p.quantity, 0)), kept.map(keptWords).join(", ") || "אין");
+  card("today-next", next ? clock(next.start_local) : "—", next ? [whoIsComing(next), next.service_name].filter(Boolean).join(" · ") : "אין עוד היום");
+  drawTimeline(day, now);
+}
+function drawTimeline(day, now) {
+  const line = $("timeline");
+  line.replaceChildren();
+  $("timeline-empty").hidden = day.length > 0;
+  line.hidden = day.length === 0;
+  if (!day.length) return;
+  // From the hour of the first booking or nine, to the hour after the last or eight in the evening.
+  const ends = day.map((b) => minutesOf(b.start_local) + (Date.parse(b.end) - Date.parse(b.start)) / 60000);
+  const from = Math.min(9, Math.floor(minutesOf(day[0].start_local) / 60));
+  const to = Math.max(20, Math.ceil(Math.max(...ends) / 60));
+  line.style.height = `${(to - from) * HOUR_HEIGHT}px`;
+  for (let h = from; h <= to; h += 1) {
+    const mark = control("div", { className: "hour" });
+    mark.style.top = `${(h - from) * HOUR_HEIGHT}px`;
+    mark.append(control("span", { textContent: `${String(h).padStart(2, "0")}:00` }));
+    line.append(mark);
+  }
+  day.forEach((b, i) => {
+    const start = minutesOf(b.start_local);
+    const block = control("div", { className: b.approval === "pending" ? "slot-block pending" : "slot-block", testid: "timeline-booking" });
+    block.dataset.id = b.id;
+    block.style.top = `${((start - from * 60) / 60) * HOUR_HEIGHT + 1}px`;
+    block.style.height = `${((ends[i] - start) / 60) * HOUR_HEIGHT - 3}px`;
+    const what = [b.service_name, b.approval === "pending" && "ממתין לאישור", b.products.length && `${b.products.reduce((n, p) => n + p.quantity, 0)} מוצרים`].filter(Boolean).join(" · ");
+    block.append(control("b", { textContent: [clock(b.start_local), whoIsComing(b)].filter(Boolean).join(" · ") }), control("i", { textContent: what }));
+    // A tap takes the eye to the booking in the list, where its buttons are.
+    block.addEventListener("click", () => document.querySelector(`[data-testid="booking-row"][data-id="${b.id}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" }));
+    line.append(block);
+  });
+  if (now >= from * 60 && now <= to * 60) {
+    const mark = control("div", { className: "now", testid: "timeline-now" });
+    mark.style.top = `${((now - from * 60) / 60) * HOUR_HEIGHT}px`;
+    line.append(mark);
+  }
+}
+$("today-waiting").addEventListener("click", () => {
+  const first = myBookings.filter((b) => b.status === "confirmed" && b.approval === "pending" && b.start_local.slice(0, 10) === shop.today)[0];
+  if (first) document.querySelector(`[data-testid="booking-row"][data-id="${first.id}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+});
+
 // ---- While a list loads --------------------------------------------------------
 // A list that is slow to arrive is drawn first as its own shape in grey. Only when it is slow: an
 // answer inside SKELETON_AFTER shows nothing, so a fast shop never flickers. The list itself is
@@ -2612,6 +2720,7 @@ async function refreshBookings() {
   const rows = (r.ok ? r.data.content : []).filter((b) => me.role !== "customer" || shownToCustomer(b));
   tellAboutAnswers(r.ok ? r.data.content : []);
   myBookings = r.ok ? r.data.content : [];
+  renderToday();
   if (me.role === "customer") renderProducts();
   if (me.role === "customer") {
     const card = reviewCard(r.ok ? r.data.content : []);
@@ -2635,7 +2744,9 @@ async function refreshBookings() {
     detail.dataset.testid = "booking-detail";
     // A guest's name is shown: the owner and the barber need to know who is
     // coming. A customer's is not in the booking at all.
-    const who = b.guest_name ? ` · ${isolate(b.guest_name)} (בלי חשבון)` : "";
+    const who = b.guest_name
+      ? ` · ${isolate(b.guest_name)} (בלי חשבון)`
+      : b.customer_name && me.role !== "customer" ? ` · ${isolate(b.customer_name)}` : "";
     const forWho = b.for_name ? ` · עבור ${isolate(b.for_name)}` : "";
     detail.textContent = `${isolate(b.service_name)} אצל ${isolate(b.barber_name)}${who}${forWho} · ${money(b.price_minor, b.currency)}`;
     const standing = document.createElement("span");

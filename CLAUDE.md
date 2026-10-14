@@ -174,6 +174,10 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **What the page says floats** (`say()`): a dark pill over the foot of the screen that fades after `SAY_FOR`.
   Faded, never removed, and never `display:none` even when empty - a live region a screen reader cannot
   find when its words arrive is not read out. Its mark (`✓`, `!`) has empty alternative text.
+- **The staff's day sits above the diary** (`renderToday`, `drawTimeline`): four cards and today by its hours,
+  read from the list the diary already holds. A summary only - the list under it keeps every booking and its
+  buttons; the timeline is `aria-hidden`, and a tap on a block takes the eye to the row. The staff see who is
+  coming: `customer_name` in a booking's view (a customer only ever sees their own).
 - **Motion is extra, all of it inside `@media (prefers-reduced-motion: no-preference)`**, and the confetti
   checks the same in script. Nothing waits for an animation to end, and nothing is shown only by one.
   The outside page tests run without motion; `test_fresh_look.py` asks for it.

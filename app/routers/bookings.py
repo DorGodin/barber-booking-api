@@ -50,6 +50,7 @@ def _view(session: Session, booking: Booking, config: Settings) -> dict:
         session.get(User, booking.barber_id).display_name,
         config.shop_tz,
         review=session.scalar(select(Review).where(Review.booking_id == booking.id)),
+        customer_name=session.get(User, booking.customer_id).display_name if booking.customer_id else None,
         products=session.execute(
             select(Product, BookingProduct.quantity)
             .join(BookingProduct, BookingProduct.product_id == Product.id)
