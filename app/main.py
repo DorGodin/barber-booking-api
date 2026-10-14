@@ -19,7 +19,7 @@ from app.db import IMMEDIATE, make_engine, make_sessionmaker
 from app.errors import DomainError, domain_error_handler, not_found
 from app.identity import IMAGE_TYPES, contact_html, header_html, identity_from, media_file, under_brand
 from app.migrate import migrate
-from app.models import Course, Product
+from app.models import Course, Product, User
 from app.push import PushHub, PushSender
 from app.push import sender_from as push_sender_from
 from app.reminders import reminders
@@ -247,11 +247,12 @@ def create_app(
 
     @app.get("/media/{name}", include_in_schema=False)
     def media(name: str):
-        """The shop's cover and profile pictures, and the pictures of its courses and its
-        products - nothing else."""
+        """The shop's cover and profile pictures, and the pictures of its courses, its products
+        and its barbers - nothing else."""
         with app.state.sessionmaker() as session:
             course_images = set(session.scalars(select(Course.image).where(Course.image.is_not(None))))
             course_images |= set(session.scalars(select(Product.image).where(Product.image.is_not(None))))
+            course_images |= set(session.scalars(select(User.photo).where(User.photo.is_not(None))))
         path = media_file(media_dir, identity, name, course_images)
         if path is None:
             raise not_found("picture")

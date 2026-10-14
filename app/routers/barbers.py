@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import secrets
 from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import delete, select
@@ -22,12 +23,13 @@ from app.booking_rules import (
 )
 from app.config import Settings
 from app.db import write_lock
-from app.deps import current_user, db, require, settings
+from app.deps import current_user, db, media_dir, require, settings
 from app.errors import DomainError
 from app.models import BarberHours, Service, TimeOff, User
 from app.phones import normalize
+from app.routers.courses import picture
 from app.scheduling import available_starts
-from app.schemas import BarberIn, BarberPatch, HoursIn, TimeOffIn
+from app.schemas import BarberIn, BarberPatch, HoursIn, ImageIn, TimeOffIn
 from app.security import hash_password
 from app.views import barber_view, iso_utc, page
 
@@ -110,6 +112,46 @@ def create_barber(body: BarberIn, _: User = Depends(require("owner")), session: 
         session.add(barber)
         session.flush()
         session.add(BarberHours(barber_id=barber.id, hours_json=json.dumps(DEFAULT_HOURS)))
+        return barber_view(barber, for_owner=True)
+
+
+def _forget_photo(directory: Path, barber: User) -> None:
+    if barber.photo:
+        (directory / barber.photo).unlink(missing_ok=True)
+        barber.photo = None
+
+
+@router.put("/barbers/{barber_id}/photo")
+def set_barber_photo(
+    barber_id: str,
+    body: ImageIn,
+    _: User = Depends(require("owner")),
+    session: Session = Depends(db),
+    directory: Path = Depends(media_dir),
+):
+    """The owner's picture of a barber, shown beside their name. Accepted by its bytes, as a
+    course's picture is; the file name is the server's own."""
+    raw, extension = picture(body)
+    with write_lock(session):
+        barber = barber_or_404(session, barber_id)
+        directory.mkdir(parents=True, exist_ok=True)
+        name = f"barber-{barber.id}-{secrets.token_hex(4)}.{extension}"
+        (directory / name).write_bytes(raw)
+        _forget_photo(directory, barber)
+        barber.photo = name
+        return barber_view(barber, for_owner=True)
+
+
+@router.delete("/barbers/{barber_id}/photo")
+def remove_barber_photo(
+    barber_id: str,
+    _: User = Depends(require("owner")),
+    session: Session = Depends(db),
+    directory: Path = Depends(media_dir),
+):
+    with write_lock(session):
+        barber = barber_or_404(session, barber_id)
+        _forget_photo(directory, barber)
         return barber_view(barber, for_owner=True)
 
 

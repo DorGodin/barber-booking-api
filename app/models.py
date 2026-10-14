@@ -61,6 +61,9 @@ class User(Base):
     # The person's mobile, 0501234567: who they are when they sign in with a
     # code. Unique - two people may share a name, never a phone.
     phone: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    # A barber's picture, beside their name where customers choose: a file name in the media
+    # folder, written by the server when the owner uploads one - never a value a client chooses.
+    photo: Mapped[str | None] = mapped_column(String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=now_utc)
     # A barber who left: kept, with every booking they had, but offered to no
     # one and signed in nowhere. server_default so the rows that exist when the
