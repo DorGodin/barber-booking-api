@@ -64,6 +64,8 @@ class User(Base):
     # A barber's picture, beside their name where customers choose: a file name in the media
     # folder, written by the server when the owner uploads one - never a value a client chooses.
     photo: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # What the staff keep in mind about a customer - "number 2 at the sides" - theirs alone to read.
+    staff_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=now_utc)
     # A barber who left: kept, with every booking they had, but offered to no
     # one and signed in nowhere. server_default so the rows that exist when the
@@ -205,6 +207,9 @@ class Booking(Base):
     # booking afterwards: moved, cancelled and answered one by one.
     for_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
     group_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    # The customer did not come: marked by the staff once the booking has started. Counts with the
+    # customer's cancellations toward being asked to wait for the barber's yes.
+    no_show: Mapped[bool] = mapped_column(default=False, server_default=false())
     # When the customer was reminded of it; None until they are. A move clears it.
     reminded_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 

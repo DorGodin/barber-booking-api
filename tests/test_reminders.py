@@ -182,10 +182,11 @@ def test_only_the_customer_who_has_the_booking_is_reminded(pushed, passwords):  
     subscribe(client, other)
     subscribe(client, barber_headers, "barber")
     made = book(client, me, barber, haircut, at(local_day(3), "10:00")).json()
+    told_of_the_booking = list(fake.sent)
 
     remind(client, start_of(client, made["id"]) - timedelta(minutes=100))
 
-    assert fake.sent == []
+    assert fake.sent == told_of_the_booking, "the barber was told of the booking; nobody else is reminded"
 
 
 def test_a_shop_that_turns_reminders_off_sends_none(pushed, passwords):  # noqa: F811

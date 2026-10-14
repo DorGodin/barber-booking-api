@@ -130,7 +130,9 @@ def test_subscribing_twice_is_one_subscription_and_it_follows_the_person(pushed,
     made = book(client, me, barber, haircut, at(local_day(3), "15:00")).json()
     client.post(f"/bookings/{made['id']}/approve", headers=owner)
 
-    assert fake.sent == []
+    # The browser is the owner's now: told once, of the request; the answer is the customer's news,
+    # and the customer no longer has this browser.
+    assert fake.sent == [endpoint]
 
 
 def test_a_customer_is_told_when_the_barber_answers(pushed, passwords):
@@ -159,17 +161,36 @@ def test_a_customer_is_told_of_a_no_too_and_only_once_for_the_same_answer(pushed
     assert fake.sent == [endpoint, endpoint]
 
 
-def test_the_barber_is_told_of_a_request_and_not_of_an_ordinary_booking(pushed, passwords):
+def test_the_barber_is_told_of_every_booking_a_customer_makes_in_the_words_for_it(pushed, passwords):
     client, fake = pushed
     _, barber, barber_headers, haircut = shop(client, passwords)
     me = fresh(client)
     endpoint = subscribe(client, barber_headers, "barber")
 
     book(client, me, barber, haircut, at(local_day(3), "10:00"))
-    assert fake.sent == []
+    plain = client.post("/push/notice", json={"endpoint": endpoint}).json()
     book(client, me, barber, haircut, at(local_day(3), "15:00"))
+    asked = client.post("/push/notice", json={"endpoint": endpoint}).json()
+
+    assert fake.sent == [endpoint, endpoint]
+    assert plain["title"] == "תור חדש" and "10:00" in plain["body"]
+    assert asked["title"] == "בקשה חדשה ביומן" and "15:00" in asked["body"]
+
+
+def test_the_barber_is_told_when_a_customer_cancels_and_not_when_the_owner_does(pushed, passwords):
+    client, fake = pushed
+    owner, barber, barber_headers, haircut = shop(client, passwords)
+    me = fresh(client)
+    first = book(client, me, barber, haircut, at(local_day(3), "10:00")).json()
+    second = book(client, me, barber, haircut, at(local_day(4), "10:00")).json()
+    endpoint = subscribe(client, barber_headers, "barber")
+
+    client.post(f"/bookings/{first['id']}/cancel", headers=me)
+    told = client.post("/push/notice", json={"endpoint": endpoint}).json()
+    client.post(f"/bookings/{second['id']}/cancel", headers=owner)
 
     assert fake.sent == [endpoint]
+    assert told["title"] == "ביטול תור" and "10:00" in told["body"]
 
 
 def test_a_move_into_the_hours_tells_the_barber_again(pushed, passwords):
@@ -179,9 +200,10 @@ def test_a_move_into_the_hours_tells_the_barber_again(pushed, passwords):
     subscribe(client, barber_headers, "barber")
     made = book(client, me, barber, haircut, at(local_day(3), "10:00")).json()
 
+    told_of_the_booking = len(fake.sent)
     client.post(f"/bookings/{made['id']}/move", headers=me, json={"start": at(local_day(3), "15:00")})
 
-    assert len(fake.sent) == 1
+    assert len(fake.sent) == told_of_the_booking + 1
 
 
 def test_a_push_that_fails_never_breaks_the_booking(pushed, passwords):

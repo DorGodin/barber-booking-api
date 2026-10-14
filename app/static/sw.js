@@ -3,7 +3,7 @@
 const role = new URL(self.location).searchParams.get("role");
 const WORDS = {
   customer: ["עדכון על התור שלך", "פתחו את האפליקציה לפרטים."],
-  barber: ["בקשה חדשה ביומן", "יש בקשה שמחכה לאישור שלך."],
+  barber: ["עדכון ביומן", "תור חדש, בקשה או ביטול - פתחו את היומן."],
 };
 
 // The push itself carries no words. When the shop left some for this browser - a reminder - they are
