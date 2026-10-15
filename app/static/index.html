@@ -124,6 +124,22 @@
   .pills button.left { color:var(--mut); }
   .pills button.left .face { filter:grayscale(1); opacity:.55; box-shadow:0 0 0 2.5px #fff, 0 0 0 4px var(--line); outline:1.5px dashed var(--mut); outline-offset:4px; }
   .pills button:focus-visible { outline:2px solid var(--ink); outline-offset:3px; }
+  /* The service is chosen from a list of the page's own, opening downward over what is under it: an iPhone
+     opens its own list upward when the field is low on the screen, and folds a long service in two. */
+  .picker { position:relative; margin-top:4px; }
+  .picker-button { display:flex; align-items:center; gap:10px; width:100%; min-height:46px; padding:9px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); font:inherit; font-size:16px; text-align:start; }
+  .picker-button span { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .picker-button small, .picker-list small { color:var(--mut); font-size:14px; white-space:nowrap; }
+  .picker-button::after { content:""; width:12px; height:8px; flex:none; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%231d4e5f' stroke-width='2'/%3E%3C/svg%3E") no-repeat center; }
+  .picker-button[aria-expanded="true"] { border-color:var(--ink); box-shadow:0 0 0 1px var(--ink); }
+  .picker-button:disabled { background:#f4f2ee; color:var(--mut); }
+  .picker-list { position:absolute; inset-inline:0; top:calc(100% + 6px); z-index:6; margin:0; padding:4px 0; list-style:none; background:#fff; border:1px solid var(--line); border-radius:10px; box-shadow:0 12px 30px rgba(0,0,0,.16); }
+  .picker-list li { display:flex; align-items:center; gap:10px; min-height:44px; padding:8px 14px; font-size:16px; cursor:pointer; }
+  .picker-list li + li { border-top:1px solid #eee; }
+  .picker-list li span { flex:1; }
+  .picker-list li[aria-selected="true"] { font-weight:700; background:#f6f4f0; }
+  .picker-list li[aria-selected="true"]::before { content:"✓"; }
+  .picker-list li:focus-visible { outline:2px solid var(--ink); outline-offset:-2px; }
   .cal-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:4px 0 6px; }
   .cal-head h3 { margin:0; font-size:16px; color:var(--ink); }
   .cal-nav { width:44px; height:44px; padding:0; display:flex; align-items:center; justify-content:center; }
@@ -637,12 +653,11 @@
             <p data-testid="moving-text" tabindex="-1"></p>
             <button data-testid="stop-moving" type="button" class="ghost">השארת המועד הקיים</button>
           </div>
-          <div class="field"><div class="label-row"><label for="service">שירות</label><span data-testid="service-length"></span></div><select id="service" data-testid="service"></select></div>
+          <div class="field"><label id="service-label" for="service-button">שירות</label><select id="service" data-testid="service" hidden></select><div class="picker"><button type="button" class="picker-button" id="service-button" data-testid="service-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="service-list" aria-labelledby="service-label service-button"><span data-testid="service-name"></span><small data-testid="service-meta"></small></button><ul class="picker-list" id="service-list" data-testid="service-list" role="listbox" aria-label="רשימת השירותים" tabindex="-1" hidden></ul></div></div>
           <div class="field" data-testid="companion-field" hidden>
             <button type="button" class="ghost" data-testid="add-person">+ הוספת אדם נוסף (ילד או חבר)</button>
             <div class="companion" data-testid="companion" hidden>
-              <div class="label-row"><label for="service-2">שירות לאדם הנוסף</label><span data-testid="service-2-length"></span></div>
-              <select id="service-2" data-testid="service-2"></select>
+              <label id="service-2-label" for="service-2-button">שירות לאדם הנוסף</label><select id="service-2" data-testid="service-2" hidden></select><div class="picker"><button type="button" class="picker-button" id="service-2-button" data-testid="service-2-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="service-2-list" aria-labelledby="service-2-label service-2-button"><span data-testid="service-2-name"></span><small data-testid="service-2-meta"></small></button><ul class="picker-list" id="service-2-list" data-testid="service-2-list" role="listbox" aria-label="רשימת השירותים לאדם הנוסף" tabindex="-1" hidden></ul></div>
               <label for="person-name">שם (לא חובה)</label>
               <input id="person-name" data-testid="person-name" maxlength="80" autocomplete="off">
               <button type="button" class="ghost" data-testid="remove-person">הסרת האדם הנוסף</button>
@@ -1542,6 +1557,7 @@ function signOut() {
   stopMoving();
   hideDone();
   for (const id of ["bookings", "slots", "hours", "approval-hours", "days-off", "services", "barber", "service", "courses", "courses-admin", "service-2", "products", "products-admin", "timeline", "cancel-list", "install-card"]) $(id).replaceChildren();
+  for (const id of ["service", "service-2"]) { closePicker(id, false); drawPicker(id); }
   myBookings = [];
   closeCustomerCard();
   clearTimeout(staffPoll);
@@ -2285,23 +2301,76 @@ async function reloadServices() {
 // What can be booked: the active services only. The owner's list holds the
 // withdrawn ones too, to manage them - offered here, the times for one were
 // refused, and the refusal replaced whatever the owner had just been told.
-const serviceLabel = (s) => `${isolate(s.name)} · ${shortMoney(s.price_minor, s.currency)}`;
-function showLengths() {
-  for (const id of ["service", "service-2"]) {
-    const minutes = serviceOf($(id).value).duration_minutes;
-    $(`${id}-length`).textContent = minutes ? `${minutes} דק׳` : "";
-  }
+const serviceMeta = (s) => `${s.duration_minutes} דק׳ · ${shortMoney(s.price_minor, s.currency)}`;
+// The <select> keeps the value the page reads and sets; the button and its list only show it and change it.
+// Whoever sets a select's value, its options or disabled draws its picker again.
+function drawPicker(id) {
+  const s = serviceOf($(id).value);
+  $(`${id}-name`).textContent = s.name ? isolate(s.name) : "";
+  $(`${id}-meta`).textContent = s.name ? serviceMeta(s) : "";
+  $(`${id}-button`).disabled = $(id).disabled;
 }
-for (const id of ["service", "service-2"]) $(id).addEventListener("change", showLengths);
+function closePicker(id, refocus) {
+  $(`${id}-list`).hidden = true;
+  $(`${id}-button`).setAttribute("aria-expanded", "false");
+  if (refocus) $(`${id}-button`).focus();
+}
+function openPicker(id) {
+  const list = $(`${id}-list`);
+  list.replaceChildren(...[...$(id).options].map((o) => {
+    const s = serviceOf(o.value);
+    const item = control("li", { role: "option", tabIndex: -1, testid: `${id}-option` });
+    item.dataset.value = o.value;
+    item.setAttribute("aria-selected", String(o.value === $(id).value));
+    item.append(control("span", { textContent: isolate(s.name) }), control("small", { textContent: serviceMeta(s) }));
+    return item;
+  }));
+  list.hidden = false;
+  $(`${id}-button`).setAttribute("aria-expanded", "true");
+  // All of it on the screen, clear of the tabs at the foot (the page's scroll-padding).
+  list.scrollIntoView({ block: "nearest" });
+  (list.querySelector('[aria-selected="true"]') || list.firstElementChild)?.focus({ preventScroll: true });
+}
+function pickService(id, value) {
+  closePicker(id, true);
+  if (value === $(id).value) return;
+  $(id).value = value;
+  drawPicker(id);
+  $(id).dispatchEvent(new Event("change"));
+}
+for (const id of ["service", "service-2"]) {
+  const button = $(`${id}-button`), list = $(`${id}-list`);
+  button.addEventListener("click", () => (list.hidden ? openPicker(id) : closePicker(id, false)));
+  button.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); openPicker(id); }
+  });
+  list.addEventListener("click", (e) => {
+    const item = e.target.closest("li");
+    if (item) pickService(id, item.dataset.value);
+  });
+  list.addEventListener("keydown", (e) => {
+    const items = [...list.children], at = items.indexOf(document.activeElement);
+    const go = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: items.length - 1 }[e.key];
+    if (go !== undefined) { e.preventDefault(); items[Math.max(0, Math.min(items.length - 1, go))]?.focus(); }
+    else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (at >= 0) pickService(id, items[at].dataset.value); }
+    else if (e.key === "Escape") { e.preventDefault(); closePicker(id, true); }
+    else if (e.key === "Tab") closePicker(id, false);
+  });
+  // A tap anywhere else closes it, choosing nothing.
+  document.addEventListener("pointerdown", (e) => {
+    if (!list.hidden && !e.target.closest(`#${id}-list, #${id}-button`)) closePicker(id, false);
+  });
+}
 function fillServiceChoice() {
   const chosen = $("service").value;
   const bookable = services.filter((s) => s.active);
-  $("service").replaceChildren(...bookable.map((s) => option(s.id, serviceLabel(s))));
+  $("service").replaceChildren(...bookable.map((s) => option(s.id, s.name)));
   if (bookable.some((s) => s.id === chosen)) $("service").value = chosen;
   const second = $("service-2").value;
-  $("service-2").replaceChildren(...bookable.map((s) => option(s.id, serviceLabel(s))));
+  $("service-2").replaceChildren(...bookable.map((s) => option(s.id, s.name)));
   if (bookable.some((s) => s.id === second)) $("service-2").value = second;
-  showLengths();
+  drawPicker("service");
+  drawPicker("service-2");
 }
 
 function saveService(service, priceInput, activeInput, approvalInput, anytimeInput) {
@@ -2793,9 +2862,9 @@ function startMoving(b) {
     showTab("book");
     setBarber(b.barber_id);
     $("service").value = b.service_id;
-    showLengths();
     lockBarber(true);
     $("service").disabled = true;
+    drawPicker("service");
     $("date").value = b.start_local.slice(0, 10);
     shownMonth = $("date").value.slice(0, 7);
     $("left-title").textContent = "שינוי מועד";
@@ -2839,6 +2908,7 @@ function stopMoving() {
   moving = null;
   lockBarber(false);
   $("service").disabled = false;
+  drawPicker("service");
   $("moving").hidden = true;
   $("moving-text").textContent = "";
   $("left-title").textContent = "קביעת תור";
