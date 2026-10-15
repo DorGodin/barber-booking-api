@@ -18,7 +18,7 @@ from app.sms import SmsFailed
 
 # The seeded menu by duration, read from the seed itself, so renaming a service
 # there never breaks a test here.
-HAIRCUT, TRIM, COMBO = (name for name, _minutes, _price in MENU)
+HAIRCUT, TRIM, COMBO = (name for name, _minutes, _price in MENU[:3])
 
 TZ = ZoneInfo("Asia/Jerusalem")
 PASSWORDS = {role: secrets.token_urlsafe(12) for role in ("owner", "barber", "customer")}

@@ -25,7 +25,20 @@ from app.security import hash_password
 
 OWNER = ("owner", "בעל המספרה")
 CUSTOMERS = (("customer", "דנה"), ("yael", "יעל"))
-MENU = (("תספורת", 30, 8000), ("סידור זקן", 15, 4000), ("תספורת וזקן", 45, 11000))
+# The shop's own menu, as it stood on Calmark (2026-10-15). The first three - a haircut, a beard and the two -
+# are what the tests book; the minutes are the owner's.
+MENU = (
+    ("תספורת גבר", 30, 8000),
+    ("סידור זקן קומפלט", 15, 4000),
+    ("תספורת + זקן", 45, 10000),
+    ("תספורת ילד", 30, 7000),
+    ("גילוח פנים סטנדרטי", 15, 4000),
+    ("גילוח פנים כמו פעם", 45, 14000),
+    ("תספורת לאישה", 60, 15000),
+    ("תספורת חירום", 30, 20000),
+)
+# Out of the shop's hours, and only when the barber says yes.
+EMERGENCY = "תספורת חירום"
 
 # Who works which days. Avi is in every day the shop is open - Friday's short
 # day included; the others take turns, so each day has a different line-up.
@@ -158,7 +171,14 @@ def _seed(session: Session, config: Settings) -> None:
         session.add(BarberHours(barber_id=barber.id, hours_json=json.dumps(hours)))
         barbers.append((barber, days))
     services = [
-        Service(name=name, duration_minutes=minutes, price_minor=price) for name, minutes, price in MENU
+        Service(
+            name=name,
+            duration_minutes=minutes,
+            price_minor=price,
+            any_time=name == EMERGENCY,
+            requires_approval=name == EMERGENCY,
+        )
+        for name, minutes, price in MENU
     ]
     session.add_all(services)
     session.flush()
