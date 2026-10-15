@@ -173,8 +173,12 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   told of, drawn when first asked and kept in memory. Android draws its own splash from `background_color` and the
   maskable icon. Hebrew is drawn without a shaping engine: `_visual` puts it in drawing order, and each run takes
   the font file that holds it.
-- **The service choice says the name and the price; the minutes stand on the label's line** (`serviceLabel`,
-  `showLengths`): a phone's field cut the price off. **A tab pressed clears the message** of the last screen.
+- **A service is chosen from the page's own list, which opens under its field** (`drawPicker`, `openPicker`; the owner's
+  choice of 2026-10-15): an iPhone opened its own list upward when the field was low and folded a long line in two. The
+  `<select>` stays, hidden, as the value the page reads and sets - whoever sets its value, options or `disabled` calls
+  `drawPicker`. The field and every row say the name, and beside it the minutes and the price; a long name is cut, never
+  them. The list is a `listbox` worked by the keyboard too (arrows, Home, End, Enter, Escape). **A tab pressed clears the
+  message** of the last screen.
 - **A product is kept for a booking, never sold here** (`/products`, `app/routers/products.py`, `booking_products`):
   the owner keeps the shelf and marks what ran out - nothing is counted, nothing is paid. A customer's button
   appears only with a booking ahead and keeps the product for the nearest one; the booking names what is kept
