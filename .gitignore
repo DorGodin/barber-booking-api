@@ -5,6 +5,7 @@ __pycache__/
 *.pyc
 .env
 *.db
+barber-test-fcm.json
 *.db-wal
 *.db-shm
 backups/

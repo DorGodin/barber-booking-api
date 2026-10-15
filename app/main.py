@@ -28,6 +28,7 @@ from app.identity import (
 )
 from app.migrate import migrate
 from app.models import Course, Product, User
+from app.native_push import NativeSender, native_sender_from
 from app.push import PushHub, PushSender
 from app.push import sender_from as push_sender_from
 from app.reminders import reminders
@@ -141,7 +142,10 @@ def _media_next_to(database_url: str) -> Path:
 
 
 def create_app(
-    config: Settings | None = None, sms: SmsSender | None = None, push_sender: PushSender | None = None
+    config: Settings | None = None,
+    sms: SmsSender | None = None,
+    push_sender: PushSender | None = None,
+    native_sender: NativeSender | None = None,
 ) -> FastAPI:
     config = config or Settings.from_env()
     engine = make_engine(config.database_url)
@@ -170,6 +174,7 @@ def create_app(
         or push_sender_from(
             config.vapid_private_key, config.vapid_public_key, config.vapid_subject, config.push_extra_hosts
         ),
+        native_sender or native_sender_from(config.fcm_credentials, config.fcm_project_id, config.fcm_url),
     )
     app.add_exception_handler(DomainError, domain_error_handler)
 

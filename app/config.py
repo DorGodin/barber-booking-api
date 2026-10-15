@@ -59,6 +59,11 @@ class Settings:
     vapid_public_key: str = ""
     vapid_subject: str = "mailto:owner@example.com"
     push_extra_hosts: str = ""
+    # The shop's app on a phone, through Firebase: its service account's JSON file, and (for tests and
+    # development) another address for Firebase. No file: no phone notifications.
+    fcm_credentials: str = ""
+    fcm_project_id: str = ""
+    fcm_url: str = ""
     signups_per_address: int = 5
     signup_window_minutes: int = 60
     # Where a text message is posted: a provider's URL, or "console" to print it
@@ -139,6 +144,9 @@ class Settings:
             vapid_public_key=os.environ.get("VAPID_PUBLIC_KEY", ""),
             vapid_subject=os.environ.get("VAPID_SUBJECT", "mailto:owner@example.com"),
             push_extra_hosts=os.environ.get("PUSH_EXTRA_HOSTS", ""),
+            fcm_credentials=os.environ.get("FCM_CREDENTIALS", ""),
+            fcm_project_id=os.environ.get("FCM_PROJECT_ID", ""),
+            fcm_url=os.environ.get("FCM_URL", ""),
             signups_per_address=int(os.environ.get("SIGNUPS_PER_ADDRESS", "5")),
             signup_window_minutes=int(os.environ.get("SIGNUP_WINDOW_MINUTES", "60")),
             backup_dir=os.environ.get("BACKUP_DIR", ""),

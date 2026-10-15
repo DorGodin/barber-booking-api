@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
@@ -9,7 +11,7 @@ from app.config import Settings
 from app.db import write_lock
 from app.deps import current_user, db, push_hub, settings
 from app.errors import DomainError
-from app.models import PushNotice, PushSubscription, User, now_utc
+from app.models import PushDevice, PushNotice, PushSubscription, User, now_utc
 from app.push import PushHub, endpoint_allowed
 
 router = APIRouter(tags=["push"])
@@ -17,6 +19,15 @@ router = APIRouter(tags=["push"])
 
 class EndpointIn(BaseModel):
     endpoint: str = Field(min_length=1, max_length=500)
+
+
+class DeviceIn(BaseModel):
+    platform: Literal["ios", "android"]
+    token: str = Field(min_length=20, max_length=512, pattern=r"^[A-Za-z0-9_:\-]+$")
+
+
+class DeviceOut(BaseModel):
+    token: str = Field(min_length=1, max_length=512)
 
 
 def _extra_hosts(config: Settings) -> tuple[str, ...]:
@@ -83,3 +94,33 @@ def unsubscribe(body: EndpointIn, user: User = Depends(current_user), session: S
             )
         )
     return {"subscribed": False}
+
+
+@router.post("/push/devices", status_code=201)
+def register_device(
+    body: DeviceIn,
+    user: User = Depends(current_user),
+    session: Session = Depends(db),
+    hub: PushHub = Depends(push_hub),
+):
+    """The shop's app on a phone, after the person allowed notifications: the token Firebase gave it."""
+    if hub.native is None:
+        raise DomainError(404, "push_unavailable", "this shop does not send notifications")
+    with write_lock(session):
+        row = session.scalar(select(PushDevice).where(PushDevice.token == body.token))
+        if row is None:
+            session.add(PushDevice(user_id=user.id, platform=body.platform, token=body.token))
+        else:
+            # The same phone, signed in as someone else now: the news follows the person.
+            row.user_id, row.platform = user.id, body.platform
+    return {"registered": True}
+
+
+@router.post("/push/devices/remove")
+def remove_device(body: DeviceOut, user: User = Depends(current_user), session: Session = Depends(db)):
+    """Signing out on a phone, or turning notifications off there: that phone is told nothing more."""
+    with write_lock(session):
+        session.execute(
+            delete(PushDevice).where(PushDevice.token == body.token, PushDevice.user_id == user.id)
+        )
+    return {"registered": False}

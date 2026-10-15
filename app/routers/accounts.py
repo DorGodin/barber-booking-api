@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from app.config import Settings
 from app.db import write_lock
 from app.deps import db, push_hub, require, settings
-from app.models import Booking, OtpCode, PushNotice, PushSubscription, User
+from app.models import Booking, OtpCode, PushDevice, PushNotice, PushSubscription, User
 from app.push import PushHub
 from app.routers.bookings import _tell_staff, _who_and_when
 
@@ -48,6 +48,7 @@ def delete_my_account(
         subscriptions = select(PushSubscription.id).where(PushSubscription.user_id == user.id)
         session.execute(delete(PushNotice).where(PushNotice.subscription_id.in_(subscriptions)))
         session.execute(delete(PushSubscription).where(PushSubscription.user_id == user.id))
+        session.execute(delete(PushDevice).where(PushDevice.user_id == user.id))
         if user.phone:
             session.execute(delete(OtpCode).where(OtpCode.phone == user.phone))
         user.display_name, user.phone, user.staff_note = "", None, None
