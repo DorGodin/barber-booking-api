@@ -266,8 +266,18 @@
   .push-card.on { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 14px; text-align:start; }
   .push-card.on span { font-size:14px; color:var(--mut); }
   /* Booking for two: the second person's service and name, under the first's. */
-  .companion { margin-top:8px; padding:12px; border:1px dashed var(--line); border-radius:12px; }
-  .companion select, .companion input { margin-bottom:8px; }
+  .companion { margin-top:8px; padding:12px; border:2px solid var(--gold); border-radius:12px; background:#fbf8f2; }
+  /* Booking for two is told at a glance: a badge beside the title, and the second person's own card,
+     headed by their name as it is typed. */
+  .title-row { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+  .title-row h2 { margin:0; }
+  .pair-badge { padding:2px 10px; border-radius:999px; background:var(--gold); color:#fff; font-size:13px; font-weight:600; }
+  .companion-head { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .companion-head strong { display:block; font-size:16px; }
+  .companion-head small { color:var(--mut); font-size:13px; }
+  .companion-face { width:36px; height:36px; flex:none; border-radius:50%; background:var(--gold); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; }
+  .companion-face::before { content:attr(data-initial); }
+  .companion .picker, .companion input { margin-bottom:8px; }
   .late-note { flex:1 1 100%; font-size:14px; color:var(--mut); line-height:1.6; }
   .late-note a { display:inline-flex; align-items:center; min-height:44px; padding:0 16px; margin-top:6px; border-radius:999px; background:#f1efea; color:var(--ink); font-weight:600; text-decoration:none; }
   .switch { display:flex; align-items:center; gap:8px; margin:0 0 12px; }
@@ -642,7 +652,7 @@
     </nav>
     <div class="grid">
       <div class="panel" data-testid="left-panel">
-        <h2 data-testid="left-title">קביעת תור</h2>
+        <div class="title-row"><h2 data-testid="left-title">קביעת תור</h2><span class="pair-badge" data-testid="pair-badge" hidden>2 אנשים</span></div>
         <div class="field">
           <span class="label" id="barber-label">ספר</span>
           <input type="hidden" id="barber" data-testid="barber">
@@ -657,9 +667,10 @@
           <div class="field" data-testid="companion-field" hidden>
             <button type="button" class="ghost" data-testid="add-person">+ הוספת אדם נוסף (ילד או חבר)</button>
             <div class="companion" data-testid="companion" hidden>
-              <label id="service-2-label" for="service-2-button">שירות לאדם הנוסף</label><select id="service-2" data-testid="service-2" hidden></select><div class="picker"><button type="button" class="picker-button" id="service-2-button" data-testid="service-2-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="service-2-list" aria-labelledby="service-2-label service-2-button"><span data-testid="service-2-name"></span><small data-testid="service-2-meta"></small></button><ul class="picker-list" id="service-2-list" data-testid="service-2-list" role="listbox" aria-label="רשימת השירותים לאדם הנוסף" tabindex="-1" hidden></ul></div>
+              <div class="companion-head"><span class="companion-face" data-testid="companion-face" aria-hidden="true"></span><div><strong data-testid="companion-title"></strong><small>מיד אחרי התור שלך, אצל אותו ספר</small></div></div>
               <label for="person-name">שם (לא חובה)</label>
               <input id="person-name" data-testid="person-name" maxlength="80" autocomplete="off">
+              <label id="service-2-label" data-testid="service-2-label" for="service-2-button">השירות לאדם הנוסף</label><select id="service-2" data-testid="service-2" hidden></select><div class="picker"><button type="button" class="picker-button" id="service-2-button" data-testid="service-2-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="service-2-list" aria-labelledby="service-2-label service-2-button"><span data-testid="service-2-name"></span><small data-testid="service-2-meta"></small></button><ul class="picker-list" id="service-2-list" data-testid="service-2-list" role="listbox" aria-label="רשימת השירותים לאדם הנוסף" tabindex="-1" hidden></ul></div>
               <button type="button" class="ghost" data-testid="remove-person">הסרת האדם הנוסף</button>
             </div>
           </div>
@@ -2887,7 +2898,17 @@ function setCompanion(on) {
   $("companion").hidden = !on;
   $("add-person").hidden = on;
   if (!on) $("person-name").value = "";
+  drawCompanion();
 }
+// The second person's card is headed by their name as it is typed, and the badge says the booking is for two.
+function drawCompanion() {
+  const name = $("person-name").value.trim();
+  $("pair-badge").hidden = !companion;
+  $("companion-face").dataset.initial = name ? [...name][0] : "+";
+  $("companion-title").textContent = name ? `התור של ${isolate(name)}` : "תור נוסף";
+  $("service-2-label").textContent = name ? `השירות של ${isolate(name)}` : "השירות לאדם הנוסף";
+}
+$("person-name").addEventListener("input", drawCompanion);
 $("add-person").addEventListener("click", () => busyWhile(async () => {
   setCompanion(true);
   await refresh();
