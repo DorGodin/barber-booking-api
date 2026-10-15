@@ -63,8 +63,11 @@ def _on_white(logo: Image.Image, size: int, margin: float) -> Image.Image:
     """The logo whole, centred on a white square - a maskable icon keeps it inside the circle Android cuts."""
     canvas = Image.new("RGB", (size, size), WHITE)
     room = round(size * (1 - 2 * margin))
-    fitted = logo.copy()
-    fitted.thumbnail((room, room), Image.LANCZOS)
+    # Up or down to fill the room - a small picture is enlarged too, never left small in the square.
+    ratio = min(room / logo.width, room / logo.height)
+    fitted = logo.resize(
+        (max(1, round(logo.width * ratio)), max(1, round(logo.height * ratio))), Image.LANCZOS
+    )
     canvas.paste(fitted, ((size - fitted.width) // 2, (size - fitted.height) // 2), fitted)
     return canvas
 
