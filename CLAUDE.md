@@ -187,6 +187,9 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   **A kept product has a number, one to nine, that is set and never added** (`KeepIn`): fewer of a product
   that ran out may be kept, never more. The booking's row says what is kept, the same words for the customer and in the
   diary; it is changed on the shelf only. The shelf's buttons are 36px by the owner's choice. The buttons under a booking are 32px and centred, also the owner's (2026-10-14). With no booking ahead the shelf says to book first.
+- **Booking for two is told at a glance** (`drawCompanion`, the owner's choice of 2026-10-15): a "2 אנשים" badge beside
+  the title, and the second person's card in the shop's gold, headed "תור נוסף" and then "התור של" their name as it is
+  typed (isolated, set as text), over "מיד אחרי התור שלך, אצל אותו ספר"; its service field is "השירות של" that name.
 - **A group booking is all or none, in one step under the write lock** (`/bookings/group`): the
   listing for two (`also=`) and the booking must agree, so a time offered for two always books. It counts
   as one toward the limit; afterwards each booking is its own.
