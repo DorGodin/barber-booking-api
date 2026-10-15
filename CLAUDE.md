@@ -157,8 +157,10 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **A customer's screen has no bar on top**: the name, the phone and signing out are in the personal area, with
   a copy of the page's foot (the ways to reach the shop, the statement, the policy) that a signed-in phone does
   not show otherwise. The staff keep the bar.
-- **A sign-up takes a name of up to 25 characters and a mobile of ten digits starting 05** - the page keeps the
-  field to ten digits (a pasted +972 becomes them) and says so before sending; the server checks again.
+- **A sign-up takes a name of up to 25 characters and a mobile of ten digits starting 05.** Every phone field - the
+  sign-in, a barber's and a new barber's (`PHONE_FIELDS`) - keeps to ten digits (a pasted +972 becomes them), says
+  "המספר חייב להתחיל ב־05" under the field as soon as the start is wrong and holds its button, and says
+  "המספר חייב להכיל 10 ספרות" when a short one is sent. The server checks again.
 - **The shop is offered for the home screen by a band of its own under the bookings** (`renderInstall`, the owner's
   choice of 2026-10-14): the shop's black, its icon, and on an iPhone - whose Safari sends no notifications outside
   the home screen - Safari's two taps; where Chrome offers its own install (`beforeinstallprompt`), a button for it.

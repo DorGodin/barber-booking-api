@@ -568,6 +568,8 @@
   .moving { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:12px; padding:8px 12px; border:1px solid var(--brand); border-radius:6px; }
   .moving p { flex:1 1 220px; margin:0; }
   .error { color:var(--bad); }
+  .field-error { margin:6px 0 0; font-size:14px; }
+  input[aria-invalid="true"] { border-color:var(--bad); }
 </style>
 </head>
 <body>
@@ -588,7 +590,7 @@
     <form class="panel otp" data-testid="code-request-form" novalidate>
       <h2>ברוכים הבאים</h2>
       <div class="field"><label for="full-name">שם מלא</label><input id="full-name" data-testid="full-name" autocomplete="name" maxlength="25" required></div>
-      <div class="field"><label for="phone">מספר טלפון</label><input id="phone" data-testid="phone" type="tel" inputmode="numeric" autocomplete="tel-national" dir="ltr" placeholder="0501234567" required></div>
+      <div class="field"><label for="phone">מספר טלפון</label><input id="phone" aria-describedby="phone-error" data-testid="phone" type="tel" inputmode="numeric" autocomplete="tel-national" dir="ltr" placeholder="0501234567" required><p class="error field-error" data-testid="phone-error" id="phone-error" role="alert" hidden></p></div>
       <button data-testid="send-code" type="submit">שלחו לי קוד</button>
       <p class="muted hint">קוד קצר ב־SMS, ואת/ה כבר בדרך לכיסא.</p>
       <p data-testid="code-request-error" class="error" role="alert" hidden></p>
@@ -742,7 +744,7 @@
         </div>
         <h3>כניסה</h3>
         <p class="muted" data-testid="barber-phone-note"></p>
-        <div class="field"><label for="barber-phone">הטלפון הנייד של הספר</label><input id="barber-phone" data-testid="barber-phone" type="tel" inputmode="tel" autocomplete="off" dir="ltr" placeholder="0501234567"></div>
+        <div class="field"><label for="barber-phone">הטלפון הנייד של הספר</label><input id="barber-phone" aria-describedby="barber-phone-error" data-testid="barber-phone" type="tel" inputmode="tel" autocomplete="off" dir="ltr" placeholder="0501234567"><p class="error field-error" data-testid="barber-phone-error" id="barber-phone-error" role="alert" hidden></p></div>
         <button data-testid="save-barber-phone" type="button" class="ghost">שמירת הטלפון</button>
         <h3>ימי חופש</h3>
         <ul data-testid="days-off"></ul>
@@ -790,7 +792,7 @@
         <button data-testid="add-service" type="button">הוספת השירות</button>
         <h3>ספר חדש</h3>
         <div class="field"><label for="new-barber-name">שם הספר</label><input id="new-barber-name" data-testid="new-barber-name" maxlength="80"></div>
-        <div class="field"><label for="new-barber-phone">הטלפון הנייד של הספר (איתו הוא נכנס)</label><input id="new-barber-phone" data-testid="new-barber-phone" type="tel" inputmode="tel" autocomplete="off" dir="ltr" placeholder="0501234567"></div>
+        <div class="field"><label for="new-barber-phone">הטלפון הנייד של הספר (איתו הוא נכנס)</label><input id="new-barber-phone" aria-describedby="new-barber-phone-error" data-testid="new-barber-phone" type="tel" inputmode="tel" autocomplete="off" dir="ltr" placeholder="0501234567"><p class="error field-error" data-testid="new-barber-phone-error" id="new-barber-phone-error" role="alert" hidden></p></div>
         <button data-testid="add-barber" type="button">הוספת הספר</button>
       </div>
     </div>
@@ -2089,6 +2091,8 @@ function renderBarberActivity(barberId) {
   // The barber signs in as a customer does: this mobile, and the code sent to it.
   const phone = barberOf(barberId).phone || "";
   $("barber-phone").value = phone;
+  showPhoneProblem("barber-phone", "");
+  $("save-barber-phone").disabled = false;
   $("barber-phone-note").textContent = phone ? "הספר נכנס עם הטלפון הזה ועם הקוד שנשלח אליו." : "עוד אין לספר טלפון, ולכן הוא לא יכול להיכנס.";
 }
 
@@ -2128,6 +2132,7 @@ async function reloadBarbers(barberId) {
 }
 
 function saveBarberPhone() {
+  if (!phoneReady("barber-phone")) return;
   return busyWhile(async () => {
     const barberId = $("barber").value;
     const r = await api("PATCH", `/barbers/${barberId}`, { phone: $("barber-phone").value.trim() });
@@ -2221,6 +2226,7 @@ function removeDayOff(day) {
 }
 
 function addBarber() {
+  if (!phoneReady("new-barber-phone")) return;
   return busyWhile(async () => {
     const body = { display_name: $("new-barber-name").value.trim(), phone: $("new-barber-phone").value.trim() };
     const r = await api("POST", "/barbers", body);
@@ -2232,6 +2238,7 @@ function addBarber() {
     fillBarberChoice();
     setBarber(r.data.id);
     for (const id of ["new-barber-name", "new-barber-phone"]) $(id).value = "";
+    showPhoneProblem("new-barber-phone", "");
     say(`הספר ${isolate(r.data.display_name)} נוסף, בשעות העבודה של המספרה.`, "ok");
     await refresh();
   });
@@ -3394,24 +3401,48 @@ function cancelBooking(b) {
 }
 
 // A mobile is ten digits: whatever is typed or pasted - dashes, spaces, +972 - becomes them, and no more.
-$("phone").addEventListener("input", () => {
-  let digits = $("phone").value.replace(/\D/g, "");
-  if (digits.startsWith("972")) digits = `0${digits.slice(3)}`;
-  if ($("phone").value !== digits.slice(0, 10)) $("phone").value = digits.slice(0, 10);
-});
+// A mobile is ten digits starting 05 - the only kind an SMS reaches. Whatever is typed or pasted (dashes, spaces,
+// +972) becomes the digits; a wrong start is said under the field as it is typed, and its button waits; a number
+// too short is said when it is sent. The server checks again.
+const PHONE_START = "המספר חייב להתחיל ב־05";
+const PHONE_LENGTH = "המספר חייב להכיל 10 ספרות";
+function phoneProblem(value, sending) {
+  if (value && !"05".startsWith(value.slice(0, 2))) return PHONE_START;
+  if (sending && value.length !== 10) return PHONE_LENGTH;
+  return "";
+}
+function showPhoneProblem(field, problem) {
+  $(`${field}-error`).textContent = problem;
+  $(`${field}-error`).hidden = !problem;
+  $(field).setAttribute("aria-invalid", problem ? "true" : "false");
+}
+// The button of each phone field, and whether the field may be left empty (a barber without a phone).
+const PHONE_FIELDS = { phone: ["send-code", false], "barber-phone": ["save-barber-phone", true], "new-barber-phone": ["add-barber", true] };
+for (const [field, [button]] of Object.entries(PHONE_FIELDS)) {
+  $(field).addEventListener("input", () => {
+    let digits = $(field).value.replace(/\D/g, "");
+    if (digits.startsWith("972")) digits = `0${digits.slice(3)}`;
+    if ($(field).value !== digits.slice(0, 10)) $(field).value = digits.slice(0, 10);
+    const problem = phoneProblem($(field).value, false);
+    showPhoneProblem(field, problem);
+    $(button).disabled = Boolean(problem);
+  });
+}
+// Called as the field is sent: true when it may go, else the problem is said and the field takes the focus.
+function phoneReady(field) {
+  const value = $(field).value;
+  const problem = PHONE_FIELDS[field][1] && !value ? "" : phoneProblem(value, true);
+  showPhoneProblem(field, problem);
+  if (problem) $(field).focus();
+  return !problem;
+}
 
 $("code-request-form").addEventListener("submit", (e) => {
   $("account-deleted").hidden = true;
   e.preventDefault();
   otp.name = $("full-name").value.trim();
   otp.phone = $("phone").value;
-  // An SMS reaches a mobile only: 05 and eight more digits. Said at once; the server checks again.
-  if (!/^05\d{8}$/.test(otp.phone)) {
-    $("code-request-error").textContent = FRIENDLY.bad_phone();
-    $("code-request-error").hidden = false;
-    $("phone").focus();
-    return;
-  }
+  if (!phoneReady("phone")) return;
   askForCode($("code-request-error"));
 });
 $("code-form").addEventListener("submit", (e) => {
