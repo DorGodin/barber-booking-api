@@ -192,6 +192,22 @@
   .push-card .row-buttons { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
   .push-card .row-buttons button { border-radius:999px; min-height:44px; padding:0 18px; font-size:14px; }
   .push-card .row-buttons .soft { background:#f1efea; color:var(--mut); border:0; }
+  /* The customer's own account, and the way to delete it. */
+  .deleted-note { max-width:420px; margin:0 auto 12px; padding:12px 16px; border-radius:16px; background:var(--ink); color:#fff; font-size:14px; font-weight:600; text-align:center; }
+  .account { grid-column:1 / -1; }
+  .account dl { margin:0 0 6px; }
+  .account dl div { display:flex; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid var(--line); font-size:14px; }
+  .account dt { color:var(--ink); } .account dd { margin:0; color:var(--mut); }
+  .account a { display:flex; align-items:center; min-height:44px; border-bottom:1px solid var(--line); color:var(--ink); font-size:14px; text-decoration:none; }
+  .account .account-delete { display:block; width:100%; margin-top:22px; background:none; border:0; color:var(--bad); font-size:14px; min-height:44px; }
+  dialog.delete-dialog { width:min(340px, 88vw); border-radius:22px; text-align:center; }
+  .delete-dialog .icon { display:flex; margin:26px auto 0; width:52px; height:52px; border-radius:50%; background:#fbeaea; color:var(--bad); align-items:center; justify-content:center; font-size:26px; font-weight:700; }
+  .delete-dialog h2 { margin:12px 22px 6px; font-size:18px; color:var(--ink); }
+  .delete-dialog ul { margin:0 24px; padding:0 18px 0 0; text-align:start; color:var(--mut); font-size:14px; line-height:1.7; }
+  .delete-dialog .actions { display:flex; flex-direction:column; gap:8px; padding:16px 24px 24px; }
+  .delete-dialog .actions button { width:100%; min-height:44px; border-radius:999px; border:0; font-size:14px; }
+  .delete-dialog [data-testid="delete-confirm"] { background:var(--bad); color:#fff; }
+  .delete-dialog [data-testid="delete-cancel"] { background:#f1efea; color:var(--mut); }
   /* The home screen band: the shop's black, as it opens from there. */
   .install { grid-column:1 / -1; display:grid; grid-template-columns:52px 1fr; gap:4px 12px; align-items:center; padding:16px; border-radius:16px; background:var(--ink); color:#fff; }
   .install img { grid-row:span 2; width:52px; height:52px; border-radius:12px; object-fit:cover; }
@@ -326,8 +342,8 @@
      2026-10-04). A computer has room for both, side by side, and no tabs. */
   .tabbar { display:none; }
   @media (max-width: 760px) {
-    [data-testid="app"][data-role="customer"] .tabbar { display:flex; position:fixed; left:0; right:0; bottom:0; z-index:9; gap:8px; padding:4px 24px calc(4px + env(safe-area-inset-bottom)); background:var(--bg); border-top:1px solid var(--line); }
-    .tabbar button { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-height:52px; background:none; border:0; color:var(--mut); font-size:12px; }
+    [data-testid="app"][data-role="customer"] .tabbar { display:flex; position:fixed; left:0; right:0; bottom:0; z-index:9; gap:2px; padding:4px 8px calc(4px + env(safe-area-inset-bottom)); background:var(--bg); border-top:1px solid var(--line); }
+    .tabbar button { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-height:52px; background:none; border:0; color:var(--mut); font-size:11px; }
     .tabbar button svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
     .tabbar button[aria-current="page"] { color:var(--ink); font-weight:700; }
     [data-role="customer"][data-tab="book"] [data-testid="right-panel"],
@@ -338,8 +354,11 @@
     [data-role="customer"][data-tab="products"] [data-testid="left-panel"],
     [data-role="customer"][data-tab="products"] [data-testid="right-panel"],
     [data-role="customer"]:not([data-tab="products"]) [data-testid="products-panel"],
-    [data-role="customer"]:not([data-tab="mine"]) [data-testid="install-card"] { display:none; }
-    /* Four tabs share a phone's width: each keeps its words on one line, and the longer name gets the wider tab. */
+    [data-role="customer"]:not([data-tab="mine"]) [data-testid="install-card"],
+    [data-role="customer"]:not([data-tab="account"]) [data-testid="account-panel"],
+    [data-role="customer"][data-tab="account"] [data-testid="left-panel"],
+    [data-role="customer"][data-tab="account"] [data-testid="right-panel"] { display:none; }
+    /* Five tabs share a phone's width: each keeps its words on one line, and the longer name gets the wider tab. */
     .tabbar button { flex:1 1 auto; padding:0 2px; white-space:nowrap; }
     /* The page ends above the tabs, and whatever the keyboard reaches stays
        above them too (WCAG 2.4.11). */
@@ -535,6 +554,7 @@
 
 <main>
   <section class="auth" data-testid="auth">
+    <p class="deleted-note" data-testid="account-deleted" role="status" hidden>החשבון נמחק.</p>
     <form class="panel otp" data-testid="code-request-form" novalidate>
       <h2>ברוכים הבאים</h2>
       <div class="field"><label for="full-name">שם מלא</label><input id="full-name" data-testid="full-name" autocomplete="name" maxlength="80" required></div>
@@ -654,6 +674,15 @@
         <p class="muted" data-testid="more-bookings" hidden></p>
       </div>
       <section class="install" data-testid="install-card" aria-label="הוספה למסך הבית" hidden></section>
+      <div class="panel account" data-testid="account-panel" id="account-section" data-section hidden>
+        <h2>החשבון שלי</h2>
+        <dl>
+          <div><dt>שם</dt><dd data-testid="account-name"></dd></div>
+          <div><dt>טלפון</dt><dd data-testid="account-phone" dir="ltr"></dd></div>
+        </dl>
+        <a href="/privacy" data-testid="account-privacy">מדיניות פרטיות</a>
+        <button type="button" class="account-delete" data-testid="account-delete">מחיקת החשבון</button>
+      </div>
       <div class="panel" data-testid="courses-panel" id="courses-section" data-section hidden>
         <h2>קורסים</h2>
         <div class="courses" data-testid="courses"></div>
@@ -740,6 +769,7 @@
       <button type="button" data-testid="tab-mine" data-tab="mine"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="5" cy="6" r="1"/><circle cx="5" cy="12" r="1"/><circle cx="5" cy="18" r="1"/></svg>התורים שלי</button>
       <button type="button" data-testid="tab-courses" data-tab="courses"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg>קורסים</button>
       <button type="button" data-testid="tab-products" data-tab="products"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3h4v3l2.5 3v10.5a1.5 1.5 0 0 1-1.5 1.5H9a1.5 1.5 0 0 1-1.5-1.5V9L10 6z"/><path d="M7.5 13h9"/></svg>מוצרים</button>
+      <button type="button" data-testid="tab-account" data-tab="account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>איזור אישי</button>
     </nav>
   </section>
 
@@ -752,6 +782,19 @@
     <div class="actions">
       <button data-testid="popup-action" type="button" hidden></button>
       <button data-testid="popup-close" type="button" autofocus>סגירה</button>
+    </div>
+  </dialog>
+  <dialog data-testid="delete-dialog" class="delete-dialog" aria-labelledby="delete-title">
+    <div class="icon" aria-hidden="true">!</div>
+    <h2 id="delete-title">למחוק את החשבון?</h2>
+    <ul>
+      <li>התורים הקרובים שלך יבוטלו, והמספרה תקבל על כך הודעה.</li>
+      <li>השם, הטלפון וההתראות שלך יימחקו.</li>
+      <li>אי אפשר לשחזר את החשבון אחר כך.</li>
+    </ul>
+    <div class="actions">
+      <button type="button" data-testid="delete-confirm">מחיקת החשבון</button>
+      <button type="button" data-testid="delete-cancel" autofocus>ביטול</button>
     </div>
   </dialog>
   <dialog data-testid="customer-card" class="customer-card" aria-labelledby="card-name">
@@ -802,7 +845,7 @@ let inFlight = 0;
 const HOUR_HEIGHT = 84;
 const minutesOf = (local) => Number(local.slice(11, 13)) * 60 + Number(local.slice(14, 16));
 // The person in the chair: a walk-in's name, a child's in a booking for two, else the customer's.
-const whoIsComing = (b) => b.guest_name || b.for_name || b.customer_name || "";
+const whoIsComing = (b) => b.guest_name || b.for_name || b.customer_name || (b.customer_deleted ? "לקוח שנמחק" : "");
 // Today on the shop's clock, now - not when the page was opened: a diary stays open past midnight.
 const shopToday = () => new Date().toLocaleDateString("en-CA", { timeZone: shop.timezone });
 const endOf = (b) => minutesOf(b.start_local) + (Date.parse(b.end) - Date.parse(b.start)) / 60000;
@@ -954,6 +997,23 @@ function closeCustomerCard() {
 }
 $("customer-card").addEventListener("close", clearCustomerCard);
 $("card-close").addEventListener("click", closeCustomerCard);
+
+// ---- The customer's own account ---------------------------------------------------------
+// Deleted in the app, as both stores require: asked once in a dialog, then the server empties the account
+// and cancels what is ahead, and this browser signs out.
+$("account-delete").addEventListener("click", () => $("delete-dialog").showModal());
+$("delete-cancel").addEventListener("click", () => $("delete-dialog").close());
+$("delete-confirm").addEventListener("click", () => busyWhile(async () => {
+  const r = await api("DELETE", "/me");
+  $("delete-dialog").close();
+  if (!r.ok) {
+    say(explain(r), "error");
+    return;
+  }
+  signOut();
+  // The sign-in screen says it: the floating message belongs to the signed-in screen, gone with it.
+  $("account-deleted").hidden = false;
+}));
 
 function markNoShow(b, mark) {
   return busyWhile(async () => {
@@ -1341,7 +1401,9 @@ function signOut() {
   for (const id of ["today-count", "today-waiting", "today-products", "today-next"]) for (const part of $(id).querySelectorAll("strong, small")) part.textContent = "";
   for (const id of ["display-name", "hours-for", "confirm-text"]) $(id).textContent = "";
   $("guest-name").value = "";
-  for (const id of ["confirm", "no-slots", "no-bookings", "no-days-off", "app", "owner", "owner-nav", "whoami", "guest-field", "barber-left", "today", "cancel-notes", "install-card"]) $(id).hidden = true;
+  for (const id of ["confirm", "no-slots", "no-bookings", "no-days-off", "app", "owner", "owner-nav", "whoami", "guest-field", "barber-left", "today", "cancel-notes", "install-card", "account-panel"]) $(id).hidden = true;
+  for (const id of ["account-name", "account-phone"]) $(id).textContent = "";
+  if ($("delete-dialog").open) $("delete-dialog").close();
   say("", "ok");
   clearForms();
   $("auth").hidden = false;
@@ -1382,6 +1444,9 @@ async function start() {
   $("book-panel").hidden = me.role === "barber";
   $("courses-panel").hidden = !customer;
   $("products-panel").hidden = !customer;
+  $("account-panel").hidden = !customer;
+  $("account-name").textContent = me.display_name;
+  $("account-phone").textContent = me.phone || "";
   $("guest-field").hidden = me.role !== "owner";
   $("companion-field").hidden = !customer;
   $("left-title").textContent = customer ? "קביעת תור" : me.role === "owner" ? "התורים וקביעת תור בשם" : "היומן שלך";
@@ -3032,7 +3097,7 @@ async function refreshBookings() {
       mark.addEventListener("click", () => markNoShow(b, !b.no_show));
       row.append(mark);
     }
-    if (b.customer_id && me.role !== "customer") {
+    if (b.customer_id && !b.customer_deleted && me.role !== "customer") {
       const open = control("button", { type: "button", className: "ghost", testid: "open-card", textContent: "כרטיס לקוח", "aria-label": `כרטיס הלקוח ${b.customer_name || ""}` });
       open.addEventListener("click", () => openCustomerCard(b.customer_id));
       row.append(open);
@@ -3142,6 +3207,7 @@ function cancelBooking(b) {
 }
 
 $("code-request-form").addEventListener("submit", (e) => {
+  $("account-deleted").hidden = true;
   e.preventDefault();
   otp.name = $("full-name").value.trim();
   otp.phone = $("phone").value;

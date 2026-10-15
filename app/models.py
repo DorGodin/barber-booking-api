@@ -71,6 +71,8 @@ class User(Base):
     # one and signed in nowhere. server_default so the rows that exist when the
     # column arrives are active too.
     active: Mapped[bool] = mapped_column(default=True, server_default=true())
+    # A customer who deleted their account: the row stays, emptied, for the bookings that were theirs.
+    deleted_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
 
 class OtpCode(Base):

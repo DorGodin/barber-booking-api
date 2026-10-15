@@ -22,7 +22,7 @@ router = APIRouter(tags=["customers"])
 def _customer_or_404(session: Session, customer_id: str, viewer: User) -> User:
     """Somebody the viewer may not know of is not found, not forbidden - as a booking is."""
     customer = session.get(User, customer_id)
-    if customer is None or customer.role != "customer":
+    if customer is None or customer.role != "customer" or customer.deleted_at:
         raise not_found("customer")
     if viewer.role == "barber" and not session.scalar(
         select(Booking.id).where(Booking.customer_id == customer.id, Booking.barber_id == viewer.id).limit(1)

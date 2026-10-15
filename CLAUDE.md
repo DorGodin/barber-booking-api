@@ -133,6 +133,12 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **A customer is asked for notifications only after booking, for 24 hours** (`pushCard`, `PUSH_ASK_HOURS`): a
   booking ahead that stands and was made that lately. Moving or cancelling is no reason to ask; the row that
   turns them off stays for whoever said yes.
+- **A customer deletes their own account in the app** (`DELETE /me`, `app/routers/accounts.py`; the "איזור אישי" tab,
+  the fifth on a phone), as both stores require: one dialog asks, then the bookings ahead are cancelled and the
+  staff told as of any customer's cancellation; the name, the phone, the staff's note, the notifications and
+  any waiting code go. The row stays, emptied and closed (`deleted_at`), so the bookings that are over keep
+  their place in the diary and the counts - `customer_deleted`, shown as "לקוח שנמחק" - and the reviews stay.
+  The same phone signs up again as someone new. The staff are not deleted here; the owner manages them.
 - **The shop is offered for the home screen by a band of its own under the bookings** (`renderInstall`, the owner's
   choice of 2026-10-14): the shop's black, its icon, and on an iPhone - whose Safari sends no notifications outside
   the home screen - Safari's two taps; where Chrome offers its own install (`beforeinstallprompt`), a button for it.
