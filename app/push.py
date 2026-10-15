@@ -95,16 +95,18 @@ class PushHub:
     break a booking: a push that fails is forgotten, one the service says is gone removes
     the subscription."""
 
-    def __init__(self, maker: sessionmaker[Session], sender: PushSender | None) -> None:
-        self.maker, self.sender = maker, sender
+    def __init__(self, maker: sessionmaker[Session], sender: PushSender | None, native=None) -> None:
+        self.maker, self.sender, self.native = maker, sender, native
 
     @property
     def available(self) -> bool:
+        """Browsers can be told: the page offers notifications."""
         return self.sender is not None
 
     def tell(self, user_ids: list[str], notice: tuple[str, str] | None = None) -> None:
         """Wake each of these people's browsers. With a `notice` - a title and words - each browser is
         also left the words to fetch when it wakes; without one it shows its fixed wording."""
+        self.tell_phones(user_ids)
         if self.sender is None:
             return
         from app.models import PushNotice, PushSubscription
@@ -128,6 +130,31 @@ class PushHub:
             if gone:
                 session.execute(delete(PushNotice).where(PushNotice.subscription_id.in_(gone)))
                 session.execute(delete(PushSubscription).where(PushSubscription.id.in_(gone)))
+                session.commit()
+
+    def tell_phones(self, user_ids: list[str]) -> None:
+        """Each of these people's phones with the app: the fixed words of their role. A device the
+        service says is gone is forgotten; any other failure is forgotten too."""
+        if self.native is None:
+            return
+        from app.models import PushDevice, User
+        from app.native_push import words_for
+
+        with self.maker() as session:
+            rows = session.execute(
+                select(PushDevice, User.role)
+                .join(User, User.id == PushDevice.user_id)
+                .where(PushDevice.user_id.in_(user_ids))
+            ).all()
+            gone = []
+            for device, role in rows:
+                try:
+                    if not self.native.send(device.token, *words_for(role)):
+                        gone.append(device.id)
+                except Exception:  # noqa: BLE001 - a push must never break what it reports
+                    continue
+            if gone:
+                session.execute(delete(PushDevice).where(PushDevice.id.in_(gone)))
                 session.commit()
 
 

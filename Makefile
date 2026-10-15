@@ -4,6 +4,7 @@ PORT ?= 8100
 
 TEST_PORT ?= 8101
 TEST_DB   ?= barber-test.db
+TEST_FCM  ?= barber-test-fcm.json
 
 .PHONY: install run run-test test lock migration backup restore hooks docker-up docker-down reset-db reset-test-db
 
@@ -16,9 +17,10 @@ run:            ## start the API on http://127.0.0.1:8100 (reads .env)
 	@test -f .env || { echo "no .env - run: cp .env.example .env"; exit 1; }
 	set -a; . ./.env; set +a; $(PY) -m uvicorn app.main:create_app --factory --port $(PORT) --workers 2
 
-run-test:       ## a second copy for the QA suites, on 8101 with its own database, its SMS to qa-api-starter's fake provider
+run-test:       ## a second copy for the QA suites, on 8101 with its own database, its SMS and its phone notifications to qa-api-starter's fakes
 	@test -f .env || { echo "no .env - run: cp .env.example .env"; exit 1; }
-	set -a; . ./.env; set +a; DATABASE_URL=sqlite:///./$(TEST_DB) SMS_URL=$${QA_SMS_URL:-http://127.0.0.1:8109/messages} OWNER_PHONE=$${QA_OWNER_PHONE:-0500000001} $(PY) -m uvicorn app.main:create_app --factory --port $(TEST_PORT) --workers 2
+	@test -f $(TEST_FCM) || $(PY) -m app.fcm_dev_account $(TEST_FCM) $${QA_FCM_URL:-http://127.0.0.1:8110}/token
+	set -a; . ./.env; set +a; DATABASE_URL=sqlite:///./$(TEST_DB) SMS_URL=$${QA_SMS_URL:-http://127.0.0.1:8109/messages} OWNER_PHONE=$${QA_OWNER_PHONE:-0500000001} FCM_CREDENTIALS=$(TEST_FCM) FCM_URL=$${QA_FCM_URL:-http://127.0.0.1:8110} $(PY) -m uvicorn app.main:create_app --factory --port $(TEST_PORT) --workers 2
 
 test:           ## the product's own tests, including the two-worker race
 	$(PY) -m pytest -q

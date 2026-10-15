@@ -195,3 +195,8 @@ def test_codes_older_than_a_day_are_cleared(client, texts):
 
     with client.app.state.sessionmaker() as session:
         assert [r.phone for r in session.query(OtpCode)] == ["0500000002"]
+
+
+def test_a_name_is_at_most_twenty_five_characters(client):
+    assert ask(client, name="א" * 25).status_code == 202
+    assert ask(client, phone="0541112233", name="א" * 26).status_code == 422

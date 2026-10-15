@@ -240,6 +240,20 @@ class PushSubscription(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=now_utc)
 
 
+class PushDevice(Base):
+    """The shop's app on a phone: the token Firebase gave it. The words a phone shows are fixed by role,
+    so nothing is kept for it to fetch."""
+
+    __tablename__ = "push_devices"
+    __table_args__ = (CheckConstraint("platform IN ('ios', 'android')", name="ck_push_devices_platform"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    platform: Mapped[str] = mapped_column(String(16))
+    token: Mapped[str] = mapped_column(String(512), unique=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=now_utc)
+
+
 class PushNotice(Base):
     """What one browser is to be told the next time the push service wakes it. The push carries no
     words, so the service worker asks for them - with its own address, which only that browser has -

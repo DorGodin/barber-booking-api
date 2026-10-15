@@ -16,7 +16,7 @@ class LoginIn(BaseModel):
 
 
 class CodeRequestIn(BaseModel):
-    full_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=80)]
+    full_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=25)]
     # Checked and normalised by app.phones, which says what is wrong with it.
     phone: str = Field(max_length=20)
 

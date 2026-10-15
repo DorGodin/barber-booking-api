@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#111111">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -11,6 +11,9 @@
 <style>
   /* White, black buttons, a dark gold for the line under the brand; the barber
      pole's red and blue are the only other colours. Every pair passes WCAG AA. */
+  /* The phone's clock and home bar, inside the shop's app (viewport-fit=cover); 0 in a browser. An older Android
+     WebView has no env() for them, so Capacitor writes --safe-area-inset-* instead: whichever is larger. */
+  :root { --safe-top:max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px)); --safe-bottom:max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px)); }
   :root { --ink:#111; --mut:#6b655a; --line:#dedad2; --bg:#fff; --brand:#111; --gold:#8a6a1f; --ok:#1f5a2c; --bad:#a8323a; --pole-red:#a8323a; --pole-blue:#2f4a7a; --pole:12px; --off:#bdb7ac; }
   @media (min-width: 761px) { :root { --pole:22px; } }
   * { box-sizing: border-box; }
@@ -20,6 +23,8 @@
   /* The shop's own letters: Rubik, kept here - the page asks no other site for anything. */
   @font-face { font-family:"Rubik"; font-style:normal; font-weight:300 900; font-display:swap; src:url("/fonts/rubik-hebrew.woff2") format("woff2"); unicode-range:U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
   @font-face { font-family:"Rubik"; font-style:normal; font-weight:300 900; font-display:swap; src:url("/fonts/rubik-latin.woff2") format("woff2"); unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  /* A word longer than its line - a name typed without spaces - breaks rather than widening the page. */
+  body { overflow-wrap:break-word; }
   body { margin:0; font-family: "Rubik", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background:var(--bg); color:var(--ink); }
   /* A barber pole down each side, turning in opposite directions. Decoration:
      hidden from screen readers, and still for anyone who asked for less motion. */
@@ -29,10 +34,15 @@
   .pole.right { right:0; border-left:2px solid var(--ink); }
   .pole.left { left:0; border-right:2px solid var(--ink); animation-direction:reverse; }
   @keyframes pole { to { background-position:0 28px; } }
-  body { padding:0 calc(var(--pole) + 2px); min-height:100vh; min-height:100dvh; display:flex; flex-direction:column; }
+  /* In the shop's app the page runs under the phone's clock and home bar (viewport-fit=cover): the poles go
+     to the very top, the content starts below the clock, and the foot stays clear of the home bar. */
+  /* Behind the clock a white band stays put, so what scrolls up passes under it; the poles stand above it. */
+  body::before { content:""; position:fixed; top:0; left:0; right:0; height:var(--safe-top); background:var(--bg); z-index:9; }
+  body { box-sizing:border-box; padding:var(--safe-top) calc(var(--pole) + 2px) 0; min-height:100vh; min-height:100dvh; display:flex; flex-direction:column; }
   .bar, main, footer, body > .cut { width:100%; }
   header { position:relative; text-align:center; padding:0 16px 4px; }
-  header .cover { display:block; width:calc(100% + 32px); margin:0 -16px; height:150px; object-fit:cover; }
+  /* Lower under a phone's clock (inside the app), so the page's foot clears the home bar; 150px everywhere else. */
+  header .cover { display:block; width:calc(100% + 32px); margin:0 -16px; height:calc(150px - var(--safe-top) / 1.5); object-fit:cover; }
   header .profile { display:block; width:76px; height:76px; border-radius:50%; object-fit:cover; border:3px solid #fff; margin:-38px auto 0; position:relative; }
   header .brand { margin:14px 0 0; font-size:30px; line-height:1; letter-spacing:.5px; }
   header .tagline { margin:4px 0 0; font-size:11px; font-weight:700; letter-spacing:5px; }
@@ -41,14 +51,14 @@
      round picture slides under it instead of being cut in half at the top of
      the screen. White as the page, no line under it: the apps it is meant to
      feel like have none. Under the poles, which run the whole height. */
-  .mini { position:fixed; top:0; left:0; right:0; z-index:9; height:52px; display:flex; align-items:center; justify-content:center; background:var(--bg); font-size:20px; font-weight:700; letter-spacing:.5px;
+  .mini { position:fixed; top:0; left:0; right:0; z-index:9; box-sizing:border-box; height:calc(52px + var(--safe-top)); padding-top:var(--safe-top); display:flex; align-items:center; justify-content:center; background:var(--bg); font-size:20px; font-weight:700; letter-spacing:.5px;
     visibility:hidden; transform:translateY(-100%); transition:transform .2s, visibility .2s; }
   /* It slides, it never fades: half see-through, its name would fail contrast. */
   .mini.on { visibility:visible; transform:none; }
   @media (prefers-reduced-motion: reduce) { .mini { transition:none; } }
   /* Whatever the page scrolls to - a field the keyboard reaches, a section -
      lands below the bar, never under it (WCAG 2.4.11, focus not obscured). */
-  html { scroll-padding-top:64px; }
+  html { scroll-padding-top:calc(64px + var(--safe-top)); }
   .cut { display:flex; align-items:center; gap:6px; max-width:1000px; margin:8px auto 14px; padding:0 16px; }
   .cut span { flex:1; border-top:2px dashed var(--ink); }
   .cut svg { width:18px; height:18px; fill:none; stroke:var(--ink); stroke-width:1.8; transform:scaleX(-1); transform-origin:center; animation:snip 1.6s ease-in-out infinite; }
@@ -57,7 +67,11 @@
   .bar { display:flex; justify-content:flex-end; align-items:center; gap:8px; max-width:1000px; margin:0 auto; padding:8px 16px 0; min-height:44px; }
   /* Only when someone is signed in: signed out, it was an empty strip over the cover. */
   .bar:has(> [data-testid="whoami"][hidden]) { display:none; }
+  body:has([data-testid="app"][data-role="customer"]:not([hidden])) .bar { display:none; }
   [data-testid="whoami"] { display:flex; align-items:center; gap:8px; text-align:left; }
+  /* A long name - one unbroken word - is cut with an ellipsis, never wider than the screen. */
+  [data-testid="whoami"] { min-width:0; max-width:100%; }
+  [data-testid="display-name"] { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .bar button { background:#f1efea; color:var(--mut); border:5px solid transparent; background-clip:padding-box; border-radius:999px; min-height:44px; padding:0 11px; font-size:13px; }
   main { max-width:1000px; margin:10px auto 24px; padding:0 16px; }
   /* minmax(0, 1fr), not 1fr: a 1fr track grows to its widest content, so one
@@ -192,14 +206,30 @@
   .push-card .row-buttons { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
   .push-card .row-buttons button { border-radius:999px; min-height:44px; padding:0 18px; font-size:14px; }
   .push-card .row-buttons .soft { background:#f1efea; color:var(--mut); border:0; }
+  /* The trouble popup: over the page, as the shop's other dialogs are - the page stays where it was behind it. */
+  dialog.trouble { width:min(340px, 88vw); border-radius:22px; text-align:center; }
+  .trouble-box { padding:26px 22px 22px; }
+  .trouble svg { display:none; width:64px; height:64px; margin:0 auto 14px; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+  .trouble[data-kind="offline"] .offline-icon { display:block; stroke:var(--mut); }
+  .trouble[data-kind="server"] .server-icon { display:block; stroke:var(--bad); }
+  .trouble h2 { margin:0 0 6px; font-size:22px; color:var(--ink); }
+  .trouble p { margin:0 0 22px; color:var(--mut); line-height:1.6; }
+  .trouble-booking { display:flex; flex-direction:column; gap:4px; margin:0 0 22px; padding:16px; border:1px solid var(--line); border-radius:16px; text-align:start; }
+  .trouble-booking small { color:var(--mut); font-size:13px; } .trouble-booking strong { font-size:20px; font-weight:800; color:var(--ink); } .trouble-booking span { color:var(--mut); font-size:14px; }
+  .trouble button, .trouble .trouble-reach { display:flex; align-items:center; justify-content:center; width:100%; min-height:48px; border-radius:999px; font-size:15px; font-weight:600; text-decoration:none; }
+  .trouble .trouble-close { background:var(--ink); color:#fff; border:0; }
+  .trouble .trouble-reach { margin-top:8px; background:#f1efea; color:var(--ink); }
   /* The customer's own account, and the way to delete it. */
   .deleted-note { max-width:420px; margin:0 auto 12px; padding:12px 16px; border-radius:16px; background:var(--ink); color:#fff; font-size:14px; font-weight:600; text-align:center; }
   .account { grid-column:1 / -1; }
   .account dl { margin:0 0 6px; }
-  .account dl div { display:flex; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid var(--line); font-size:14px; }
-  .account dt { color:var(--ink); } .account dd { margin:0; color:var(--mut); }
-  .account a { display:flex; align-items:center; min-height:44px; border-bottom:1px solid var(--line); color:var(--ink); font-size:14px; text-decoration:none; }
-  .account .account-delete { display:block; width:100%; margin-top:22px; background:none; border:0; color:var(--bad); font-size:14px; min-height:44px; }
+  .account dl div { display:flex; flex-direction:column; gap:2px; padding:12px 0; border-bottom:1px solid var(--line); }
+  .account dt { color:var(--mut); font-size:13px; } .account dd { margin:0; color:var(--ink); font-size:16px; font-weight:600; text-align:right; }
+  .account .account-logout { display:block; margin:22px auto 0; min-height:44px; padding:0 26px; border-radius:999px; background:var(--ink); color:#fff; border:0; font-size:14px; font-weight:600; }
+  .account .account-delete { display:block; width:100%; margin-top:6px; background:none; border:0; color:var(--bad); font-size:14px; min-height:44px; }
+  /* The foot of the page - the ways to reach the shop, the statement and the policy - which a customer's
+     phone does not show once signed in: here instead, the same. */
+  .account-foot { margin-top:14px; font-size:14px; text-align:center; }
   dialog.delete-dialog { width:min(340px, 88vw); border-radius:22px; text-align:center; }
   .delete-dialog .icon { display:flex; margin:26px auto 0; width:52px; height:52px; border-radius:50%; background:#fbeaea; color:var(--bad); align-items:center; justify-content:center; font-size:26px; font-weight:700; }
   .delete-dialog h2 { margin:12px 22px 6px; font-size:18px; color:var(--ink); }
@@ -261,7 +291,7 @@
   #phone { text-align:right; }
   .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
   /* The message: a dark pill floating over the foot of the screen, above the tabs on a phone. */
-  [data-testid="message"] { position:fixed; z-index:40; inset-inline:16px; bottom:24px; max-width:520px; margin:0 auto; display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:22px; background:#161616; color:#fff !important; font-size:14px; font-weight:600; box-shadow:0 10px 30px #00000040; }
+  [data-testid="message"] { position:fixed; z-index:40; inset-inline:16px; bottom:calc(24px + var(--safe-bottom)); max-width:520px; margin:0 auto; display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:22px; background:#161616; color:#fff !important; font-size:14px; font-weight:600; box-shadow:0 10px 30px #00000040; }
   /* Empty, it is there and unseen - never display:none: a live region a screen reader cannot
      find when its words arrive is not read out. */
   [data-testid="message"]:empty { padding:0; background:none; box-shadow:none; pointer-events:none; }
@@ -269,7 +299,7 @@
   [data-testid="message"]::before { content:"!" / ""; flex:none; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#d5503f; color:#fff; font-size:13px; font-weight:800; }
   [data-testid="message"][data-kind="ok"]::before { content:"✓" / ""; background:#2f9a5d; }
   [data-testid="message"].faded { opacity:0; pointer-events:none; }
-  body:has([data-testid="app"][data-role="customer"]:not([hidden])) [data-testid="message"] { bottom:88px; }
+  body:has([data-testid="app"][data-role="customer"]:not([hidden])) [data-testid="message"] { bottom:calc(88px + var(--safe-bottom)); }
   .owner { margin-top:18px; }
   h3 { margin:18px 0 8px; font-size:14px; color:var(--brand); }
   table.hours { width:100%; border-collapse:collapse; margin-bottom:12px; }
@@ -318,7 +348,7 @@
   /* The owner's screen is four long sections stacked on a phone. A menu that
      stays on top jumps to each; scroll-margin keeps a section's title from
      landing underneath it. */
-  .owner-nav { position:sticky; top:52px; z-index:5; display:flex; gap:8px; margin:0 -16px 16px; padding:8px 16px; background:var(--bg); border-bottom:1px solid var(--line); }
+  .owner-nav { position:sticky; top:calc(52px + var(--safe-top)); z-index:5; display:flex; gap:8px; margin:0 -16px 16px; padding:8px 16px; background:var(--bg); border-bottom:1px solid var(--line); }
   .owner-nav a { flex:1; display:flex; align-items:center; justify-content:center; padding:0 8px; border:1.5px solid var(--line); border-radius:999px; background:#fff; color:var(--ink); text-decoration:none; font-size:14px; white-space:nowrap; }
   @media (min-width: 761px) { .owner-nav { display:none; } }
   @media (max-width: 420px) {
@@ -331,18 +361,18 @@
   /* On a phone the owner's menu stays on top. Whatever the page scrolls to - a
      section from the menu, a field the keyboard reaches - lands below it, never
      under it (WCAG 2.4.11, focus not obscured). */
-  @media (max-width: 760px) { html { scroll-padding-top:72px; } [data-section] { scroll-margin-top:72px; } }
+  @media (max-width: 760px) { html { scroll-padding-top:calc(72px + var(--safe-top)); } [data-section] { scroll-margin-top:calc(72px + var(--safe-top)); } }
   /* The menu stands under the slim bar: the two together are 113px tall. */
   @media (max-width: 760px) {
-    html:has([data-testid="owner-nav"]:not([hidden])) { scroll-padding-top:124px; }
-    html:has([data-testid="owner-nav"]:not([hidden])) [data-section] { scroll-margin-top:124px; }
+    html:has([data-testid="owner-nav"]:not([hidden])) { scroll-padding-top:calc(124px + var(--safe-top)); }
+    html:has([data-testid="owner-nav"]:not([hidden])) [data-section] { scroll-margin-top:calc(124px + var(--safe-top)); }
   }
   /* A customer's phone: two tabs at the foot of the screen - booking, and the
      bookings - one at a time instead of one long, crowded page (approved
      2026-10-04). A computer has room for both, side by side, and no tabs. */
   .tabbar { display:none; }
   @media (max-width: 760px) {
-    [data-testid="app"][data-role="customer"] .tabbar { display:flex; position:fixed; left:0; right:0; bottom:0; z-index:9; gap:2px; padding:4px 8px calc(4px + env(safe-area-inset-bottom)); background:var(--bg); border-top:1px solid var(--line); }
+    [data-testid="app"][data-role="customer"] .tabbar { display:flex; position:fixed; left:0; right:0; bottom:0; z-index:9; gap:2px; padding:4px 8px calc(4px + var(--safe-bottom)); background:var(--bg); border-top:1px solid var(--line); }
     .tabbar button { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-height:52px; background:none; border:0; color:var(--mut); font-size:11px; }
     .tabbar button svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
     .tabbar button[aria-current="page"] { color:var(--ink); font-weight:700; }
@@ -362,7 +392,7 @@
     .tabbar button { flex:1 1 auto; padding:0 2px; white-space:nowrap; }
     /* The page ends above the tabs, and whatever the keyboard reaches stays
        above them too (WCAG 2.4.11). */
-    body:has([data-testid="app"][data-role="customer"]:not([hidden])) { padding-bottom:72px; }
+    body:has([data-testid="app"][data-role="customer"]:not([hidden])) { padding-bottom:calc(72px + var(--safe-bottom)); }
     html:has([data-testid="app"][data-role="customer"]:not([hidden])) { scroll-padding-bottom:80px; }
     body:has([data-testid="app"][data-role="customer"][data-tab="mine"]:not([hidden])) footer { display:none; }
     body:has([data-testid="app"][data-role="customer"]:not([hidden])) footer .legal { display:none; }
@@ -525,16 +555,16 @@
   .cancel-notes ul { margin:0 0 8px; }
   .cancel-notes li { display:block; padding:2px 0; border:0; font-size:14px; }
   /* Opened by the same cut line as the top of the page. */
-  footer { max-width:1000px; margin:auto auto 24px; padding:0 0 0; font-size:14px; text-align:center; }
-  footer .cut { margin:0 auto 14px; }
-  footer .actions { display:flex; justify-content:center; gap:10px; margin-bottom:6px; }
-  footer .action { width:44px; height:44px; border-radius:50%; border:1.5px solid var(--ink); display:flex; align-items:center; justify-content:center; color:var(--ink); }
-  footer .action svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
-  footer .legal { display:flex; justify-content:center; align-items:center; gap:12px; flex-wrap:wrap; }
+  footer { max-width:1000px; margin:auto auto calc(40px + var(--safe-bottom)); padding:0 0 0; font-size:14px; text-align:center; }
+  footer .cut, .account-foot .cut { margin:0 auto 14px; }
+  footer .actions, .account-foot .actions { display:flex; justify-content:center; gap:10px; margin-bottom:6px; }
+  footer .action, .account-foot .action { width:44px; height:44px; border-radius:50%; border:1.5px solid var(--ink); display:flex; align-items:center; justify-content:center; color:var(--ink); }
+  footer .action svg, .account-foot .action svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  footer .legal, .account-foot .legal { display:flex; justify-content:center; align-items:center; gap:12px; flex-wrap:wrap; }
   /* The divider's scissors, between the two links - still here: the page has
      enough that moves. */
-  footer .snips { width:16px; height:16px; fill:none; stroke:var(--ink); stroke-width:1.8; transform:scaleX(-1); }
-  footer a { color:var(--brand); display:inline-flex; align-items:center; min-height:44px; }
+  footer .snips, .account-foot .snips { width:16px; height:16px; fill:none; stroke:var(--ink); stroke-width:1.8; transform:scaleX(-1); }
+  footer a, .account-foot a { color:var(--brand); display:inline-flex; align-items:center; min-height:44px; }
   .moving { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:12px; padding:8px 12px; border:1px solid var(--brand); border-radius:6px; }
   .moving p { flex:1 1 220px; margin:0; }
   .error { color:var(--bad); }
@@ -557,9 +587,9 @@
     <p class="deleted-note" data-testid="account-deleted" role="status" hidden>החשבון נמחק.</p>
     <form class="panel otp" data-testid="code-request-form" novalidate>
       <h2>ברוכים הבאים</h2>
-      <div class="field"><label for="full-name">שם מלא</label><input id="full-name" data-testid="full-name" autocomplete="name" maxlength="80" required></div>
-      <div class="field"><label for="phone">מספר טלפון</label><input id="phone" data-testid="phone" type="tel" inputmode="numeric" autocomplete="tel-national" dir="ltr" placeholder="0501234567" maxlength="20" required></div>
-      <button data-testid="send-code" type="submit">שולחים קוד</button>
+      <div class="field"><label for="full-name">שם מלא</label><input id="full-name" data-testid="full-name" autocomplete="name" maxlength="25" required></div>
+      <div class="field"><label for="phone">מספר טלפון</label><input id="phone" data-testid="phone" type="tel" inputmode="numeric" autocomplete="tel-national" dir="ltr" placeholder="0501234567" required></div>
+      <button data-testid="send-code" type="submit">שלחו לי קוד</button>
       <p class="muted hint">קוד קצר ב־SMS, ואת/ה כבר בדרך לכיסא.</p>
       <p data-testid="code-request-error" class="error" role="alert" hidden></p>
     </form>
@@ -680,8 +710,9 @@
           <div><dt>שם</dt><dd data-testid="account-name"></dd></div>
           <div><dt>טלפון</dt><dd data-testid="account-phone" dir="ltr"></dd></div>
         </dl>
-        <a href="/privacy" data-testid="account-privacy">מדיניות פרטיות</a>
+        <button type="button" class="account-logout" data-testid="account-logout">יציאה מהחשבון</button>
         <button type="button" class="account-delete" data-testid="account-delete">מחיקת החשבון</button>
+        <div class="account-foot" data-testid="account-foot"></div>
       </div>
       <div class="panel" data-testid="courses-panel" id="courses-section" data-section hidden>
         <h2>קורסים</h2>
@@ -783,6 +814,21 @@
       <button data-testid="popup-action" type="button" hidden></button>
       <button data-testid="popup-close" type="button" autofocus>סגירה</button>
     </div>
+  </dialog>
+  <dialog data-testid="trouble" class="trouble" aria-labelledby="trouble-title" aria-describedby="trouble-text">
+    <section class="trouble-box">
+    <svg class="offline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 8.8a15 15 0 0 1 4.2-2.6M9.8 5.2A15 15 0 0 1 22 8.8M5 12.5a10 10 0 0 1 5.1-2.6M16.8 10.9a10 10 0 0 1 2.2 1.6M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/><path d="M3 3l18 18"/></svg>
+    <svg class="server-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.5 8.5L20 18M8.5 15.5L20 6"/></svg>
+    <h2 id="trouble-title" data-testid="trouble-title"></h2>
+    <p id="trouble-text" data-testid="trouble-text"></p>
+    <div class="trouble-booking" data-testid="trouble-booking" hidden>
+      <small>התור הקרוב</small>
+      <strong data-testid="trouble-when"></strong>
+      <span data-testid="trouble-what"></span>
+    </div>
+    <button type="button" class="trouble-close" data-testid="trouble-close" autofocus>חזרה</button>
+    <a class="trouble-reach" data-testid="trouble-reach" hidden>וואטסאפ למספרה</a>
+    </section>
   </dialog>
   <dialog data-testid="delete-dialog" class="delete-dialog" aria-labelledby="delete-title">
     <div class="icon" aria-hidden="true">!</div>
@@ -1001,7 +1047,18 @@ $("card-close").addEventListener("click", closeCustomerCard);
 // ---- The customer's own account ---------------------------------------------------------
 // Deleted in the app, as both stores require: asked once in a dialog, then the server empties the account
 // and cancels what is ahead, and this browser signs out.
+$("account-logout").addEventListener("click", signOut);
 $("account-delete").addEventListener("click", () => $("delete-dialog").showModal());
+{
+  const foot = document.querySelector("body > footer");
+  for (const part of foot.children) {
+    const copy = part.cloneNode(true);
+    for (const el of [copy, ...copy.querySelectorAll("[data-testid]")]) el.removeAttribute("data-testid");
+    $("account-foot").append(copy);
+  }
+  $("account-foot").querySelector('a[href="/privacy"]').dataset.testid = "account-privacy";
+  $("account-foot").querySelector('a[href="/accessibility"]').dataset.testid = "account-accessibility";
+}
 $("delete-cancel").addEventListener("click", () => $("delete-dialog").close());
 $("delete-confirm").addEventListener("click", () => busyWhile(async () => {
   const r = await api("DELETE", "/me");
@@ -1099,15 +1156,94 @@ function ticket(name) {
   return () => latest[name] === mine;
 }
 
+// An answer that does not come is a fault like any other: after API_WAIT_MS the request is given up.
+const API_WAIT_MS = 15000;
+
+async function send(method, path, body, headers) {
+  const stop = new AbortController();
+  const timer = setTimeout(() => stop.abort(), API_WAIT_MS);
+  try {
+    return await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: stop.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// No connection, no answer, or the server failing: the trouble screen says which. When the connection comes back
+// the very same request is sent again - a booking with the same Idempotency-Key, so it is never made twice.
+// Closed, the caller gets a refusal like any other and says it in its own way.
 async function api(method, path, body, extra = {}) {
   const headers = { ...extra };
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers["Content-Type"] = "application/json";
-  const resp = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
-  let data = null;
-  try { data = await resp.json(); } catch { data = null; }
-  return { ok: resp.ok, status: resp.status, data };
+  for (;;) {
+    let resp;
+    try {
+      resp = await send(method, path, body, headers);
+    } catch {
+      if (await trouble("offline")) continue;
+      return { ok: false, status: 0, data: { code: "offline" } };
+    }
+    if (resp.status >= 500) {
+      if (await trouble("server")) continue;
+      return { ok: false, status: resp.status, data: { code: "server_error" } };
+    }
+    let data = null;
+    try { data = await resp.json(); } catch { data = null; }
+    return { ok: resp.ok, status: resp.status, data };
+  }
 }
+
+// ---- When the shop cannot be reached ------------------------------------------------------
+// One screen for every request that fails at once; each waits for it. Resolves true to send again (the
+// connection came back), false when closed.
+let troubleAnswer = null;
+// Closed by the person: what the page asks next on its own - the times again, say - fails quietly, until
+// the person's next tap or key opens the screen again if need be.
+let troubleQuiet = false;
+for (const event of ["pointerdown", "keydown"]) document.addEventListener(event, () => { troubleQuiet = false; }, true);
+function trouble(kind) {
+  const dialog = $("trouble");
+  if (troubleQuiet) return Promise.resolve(false);
+  if (troubleAnswer) return troubleAnswer.promise;
+  let resolve;
+  const promise = new Promise((r) => { resolve = r; });
+  troubleAnswer = { promise, resolve };
+  const offline = kind === "offline";
+  dialog.dataset.kind = kind;
+  $("trouble-title").textContent = offline ? "אין חיבור כרגע" : "משהו השתבש אצלנו";
+  const next = me && me.role === "customer"
+    ? myBookings.filter((b) => b.status === "confirmed" && Date.parse(b.end) > Date.now()).sort((a, b) => a.start.localeCompare(b.start))[0]
+    : null;
+  $("trouble-text").textContent = offline
+    ? (next ? "אבל התור שלך שמור:" : "בדקו את ה־Wi‑Fi או את הגלישה בסלולר, ונסו שוב.")
+    : "זה לא אצלך. נסו שוב בעוד רגע, או כתבו לנו בוואטסאפ.";
+  $("trouble-booking").hidden = !(offline && next);
+  if (offline && next) {
+    $("trouble-when").textContent = `${dayLabel(next.start_local)} · ${clock(next.start_local)}`;
+    $("trouble-what").textContent = `${isolate(next.service_name)} אצל ${isolate(next.barber_name)}`;
+  }
+  const whatsapp = shop && shop.links ? shop.links.whatsapp : null;
+  $("trouble-reach").hidden = !whatsapp;
+  if (whatsapp) $("trouble-reach").href = whatsapp;
+  if (!$("trouble").open) $("trouble").showModal();
+  return promise;
+}
+function troubleDone(again) {
+  if (!troubleAnswer) return;
+  const { resolve } = troubleAnswer;
+  troubleAnswer = null;
+  if ($("trouble").open) $("trouble").close();
+  resolve(again);
+}
+const closeTrouble = () => {
+  troubleDone(false);
+  troubleQuiet = true;
+};
+$("trouble-close").addEventListener("click", closeTrouble);
+$("trouble").addEventListener("cancel", (event) => { event.preventDefault(); closeTrouble(); });
+// The connection is back: what waited is sent again without a tap.
+window.addEventListener("online", () => { if ($("trouble").dataset.kind === "offline") troubleDone(true); });
 
 // A name from the server - a barber, a service, a customer - is often Latin
 // text inside a Hebrew sentence. Without isolation the Unicode bidi algorithm
@@ -1134,7 +1270,7 @@ const FRIENDLY = {
   no_code: () => "צריך לבקש קוד קודם.",
   code_expired: () => "הקוד פג. אפשר לבקש קוד חדש.",
   code_used_up: () => "הקוד ננעל אחרי 3 ניסיונות. אפשר לבקש קוד חדש.",
-  wrong_code: (_, data) => data.attempts_left > 0 ? `הקוד לא נכון. ${data.attempts_left === 1 ? "נשאר ניסיון אחד" : `נשארו ${data.attempts_left} ניסיונות`}.` : "הקוד לא נכון, והוא ננעל. אפשר לבקש קוד חדש.",
+  wrong_code: (_, data) => data.attempts_left > 0 ? "הקוד שגוי, נסו שוב." : "הקוד לא נכון, והוא ננעל. אפשר לבקש קוד חדש.",
   in_past: () => "השעה הזו כבר עברה.",
   beyond_window: () => `אפשר לקבוע תור עד ${shop.booking_window_days} ימים קדימה.`,
   late_move: () => `אפשר לשנות מועד עד ${shop.move_cutoff_hours} שעות לפני. כדי לשנות עכשיו צריך להתקשר למספרה.`,
@@ -1150,6 +1286,8 @@ const FRIENDLY = {
   forbidden: () => "אין לך הרשאה לפעולה הזו.",
   not_found: () => "לא מצאנו את מה שחיפשת.",
   not_started: () => "אפשר לסמן שלקוח לא הגיע רק אחרי שעת התור.",
+  offline: () => "אין חיבור לאינטרנט. כדאי לנסות שוב.",
+  server_error: () => "משהו השתבש אצלנו. כדאי לנסות שוב בעוד רגע.",
   service_inactive: () => "השירות הזה כבר לא ניתן.",
   not_aligned: () => "תורים מתחילים ברבע שעה עגולה.",
   idempotency_mismatch: () => "משהו השתבש בשליחה. כדאי לנסות שוב.",
@@ -1381,6 +1519,13 @@ function signOut() {
   // The server ends this sign-in too, so a copy of the token taken before is
   // worthless. The screen is cleared at once, without waiting for the answer.
   const ending = token;
+  const device = deviceToken();
+  if (ending && device) {
+    fetch("/push/devices/remove", { method: "POST", headers: { Authorization: `Bearer ${ending}`, "Content-Type": "application/json" }, body: JSON.stringify({ token: device }) }).catch(() => {});
+    try {
+      localStorage.removeItem(DEVICE_KEY);
+    } catch {}
+  }
   if (ending) fetch("/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${ending}` } }).catch(() => {});
   token = me = null;
   forget();
@@ -2718,13 +2863,29 @@ const PUSH_LATER_KEY = "push-not-now";
 const PUSH_ASK_HOURS = 24;
 let pushInfo = { key: null, subscribed: false };
 const pushRole = () => (me.role === "customer" ? "customer" : "barber");
-const pushSupported = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+// Inside the shop's app (Capacitor), notifications are the phone's own, through Firebase: the app's plugin asks
+// for the permission and gives the device's token, and the server is told it (`/push/devices`).
+const nativeApp = () => Boolean(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+const firebase = () => window.Capacitor.Plugins.FirebaseMessaging;
+const DEVICE_KEY = "push-device-token";
+const deviceToken = () => {
+  try {
+    return localStorage.getItem(DEVICE_KEY);
+  } catch {
+    return null;
+  }
+};
+const pushSupported = () => nativeApp() || ("serviceWorker" in navigator && "PushManager" in window && "Notification" in window);
 const onIphone = () => /iPhone|iPad/.test(navigator.userAgent) && !navigator.standalone;
 const keyBytes = (text) => Uint8Array.from(atob(text.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
 
 async function loadPush() {
   pushInfo = { key: null, subscribed: false };
   if (!me) return;
+  if (nativeApp()) {
+    pushInfo = { key: "native", subscribed: Boolean(deviceToken()) };
+    return;
+  }
   const r = await api("GET", "/push/key");
   if (!r.ok) return;
   pushInfo.key = r.data.key;
@@ -2759,7 +2920,7 @@ function pushCard(all) {
   }
   // Asked only after a booking was made, and for a day from then: a booking ahead that stands
   // and is that new. Moving or cancelling one is not a reason to ask. A barber is always asked.
-  if (!askedLately(all) || pushLater() || (pushSupported() && Notification.permission === "denied")) return null;
+  if (!askedLately(all) || pushLater() || (!nativeApp() && pushSupported() && Notification.permission === "denied")) return null;
   const card = control("li", { className: "push-card", testid: "push-card" });
   const row = control("div", { className: "row-buttons" });
   const later = control("button", { type: "button", className: "soft", testid: "push-later", textContent: "לא עכשיו" });
@@ -2789,7 +2950,7 @@ function pushCard(all) {
 // iPhone has none, so the card says where Safari keeps it.
 const INSTALL_LATER_KEY = "install-not-now";
 let installPrompt = null;
-const installed = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const installed = () => nativeApp() || matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();
   installPrompt = event;
@@ -2867,9 +3028,27 @@ function renderInstall(all) {
   return true;
 }
 
+async function enableAppPush() {
+  if ((await firebase().requestPermissions()).receive !== "granted") return;
+  const { token: device } = await firebase().getToken();
+  const r = await api("POST", "/push/devices", { platform: window.Capacitor.getPlatform(), token: device });
+  if (r.ok) {
+    try {
+      localStorage.setItem(DEVICE_KEY, device);
+    } catch {}
+  }
+  pushInfo.subscribed = r.ok;
+  say(r.ok ? "מעכשיו נעדכן אתכם בהתראה." : explain(r), r.ok ? "ok" : "error");
+}
+
 function enablePush() {
   return busyWhile(async () => {
     try {
+      if (nativeApp()) {
+        await enableAppPush();
+        await refreshBookings();
+        return;
+      }
       if ((await Notification.requestPermission()) !== "granted") {
         await refreshBookings();
         return;
@@ -2891,6 +3070,14 @@ function enablePush() {
 
 function disablePush() {
   return busyWhile(async () => {
+    try {
+      const device = deviceToken();
+      if (device) {
+        await api("POST", "/push/devices/remove", { token: device });
+        localStorage.removeItem(DEVICE_KEY);
+        await firebase().deleteToken();
+      }
+    } catch {}
     try {
       const registration = await navigator.serviceWorker.getRegistration();
       const subscription = registration && (await registration.pushManager.getSubscription());
@@ -3206,11 +3393,25 @@ function cancelBooking(b) {
   });
 }
 
+// A mobile is ten digits: whatever is typed or pasted - dashes, spaces, +972 - becomes them, and no more.
+$("phone").addEventListener("input", () => {
+  let digits = $("phone").value.replace(/\D/g, "");
+  if (digits.startsWith("972")) digits = `0${digits.slice(3)}`;
+  if ($("phone").value !== digits.slice(0, 10)) $("phone").value = digits.slice(0, 10);
+});
+
 $("code-request-form").addEventListener("submit", (e) => {
   $("account-deleted").hidden = true;
   e.preventDefault();
   otp.name = $("full-name").value.trim();
   otp.phone = $("phone").value;
+  // An SMS reaches a mobile only: 05 and eight more digits. Said at once; the server checks again.
+  if (!/^05\d{8}$/.test(otp.phone)) {
+    $("code-request-error").textContent = FRIENDLY.bad_phone();
+    $("code-request-error").hidden = false;
+    $("phone").focus();
+    return;
+  }
   askForCode($("code-request-error"));
 });
 $("code-form").addEventListener("submit", (e) => {

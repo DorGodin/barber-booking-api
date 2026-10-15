@@ -130,6 +130,12 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   `/sw.js` by role. The server posts only to a push service's own host (`PUSH_HOSTS`, plus
   `PUSH_EXTRA_HOSTS` for development) - a subscription address is typed by a customer, and trusting it is
   a server-side request forgery. Never send a name, a time or a service through it.
+- **The shop's app on a phone is notified through Firebase** (`app/native_push.py`, `push_devices`): the app registers
+  its token (`POST /push/devices`, removed on sign-out with `/push/devices/remove`), and `PushHub.tell` tells every
+  phone of those people too. Firebase hands an iPhone's message to Apple's APNs, so the server speaks to one
+  service. As with Web Push, a phone is told only the fixed words of its person's role - never a name, a time or
+  a service. The server posts only to Firebase's fixed address; the token travels in the body. A device Firebase
+  says is gone is forgotten. `FCM_CREDENTIALS` unset: no phone notifications.
 - **A customer is asked for notifications only after booking, for 24 hours** (`pushCard`, `PUSH_ASK_HOURS`): a
   booking ahead that stands and was made that lately. Moving or cancelling is no reason to ask; the row that
   turns them off stays for whoever said yes.
@@ -139,6 +145,20 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   any waiting code go. The row stays, emptied and closed (`deleted_at`), so the bookings that are over keep
   their place in the diary and the counts - `customer_deleted`, shown as "לקוח שנמחק" - and the reviews stay.
   The same phone signs up again as someone new. The staff are not deleted here; the owner manages them.
+- **A request that fails for the connection or the server opens the trouble popup** (`trouble()`, in `api()`): no
+  connection, no answer within `API_WAIT_MS`, or a 5xx. It names which, shows the customer's next booking when
+  offline, and offers the shop's WhatsApp; "חזרה" closes it (the caller then gets a refusal like any other) and
+  it stays closed until the person's next tap. When the connection returns the same request is sent again - a
+  booking with the same Idempotency-Key, so never twice.
+- **Inside the shop's app the page runs under the phone's clock and home bar** (`viewport-fit=cover`):
+  `--safe-top`/`--safe-bottom` (env(), or Capacitor's `--safe-area-inset-*` on an older Android WebView) keep the
+  content, the slim bar, the owner's menu, the tabs and the floating message clear of them; a white band stays
+  behind the clock with the poles above it. In a browser they are 0 and nothing moves.
+- **A customer's screen has no bar on top**: the name, the phone and signing out are in the personal area, with
+  a copy of the page's foot (the ways to reach the shop, the statement, the policy) that a signed-in phone does
+  not show otherwise. The staff keep the bar.
+- **A sign-up takes a name of up to 25 characters and a mobile of ten digits starting 05** - the page keeps the
+  field to ten digits (a pasted +972 becomes them) and says so before sending; the server checks again.
 - **The shop is offered for the home screen by a band of its own under the bookings** (`renderInstall`, the owner's
   choice of 2026-10-14): the shop's black, its icon, and on an iPhone - whose Safari sends no notifications outside
   the home screen - Safari's two taps; where Chrome offers its own install (`beforeinstallprompt`), a button for it.
