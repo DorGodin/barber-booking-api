@@ -422,6 +422,9 @@
     html:has([data-testid="app"][data-role="customer"]:not([hidden])) { scroll-padding-bottom:80px; }
     body:has([data-testid="app"][data-role="customer"][data-tab="mine"]:not([hidden])) footer { display:none; }
     body:has([data-testid="app"][data-role="customer"]:not([hidden])) footer .legal { display:none; }
+    /* The body's padding already keeps the foot above the tabs and the home bar: the foot's own margin for
+       them would leave a blank band between the contact buttons and the tabs. */
+    body:has([data-testid="app"][data-role="customer"]:not([hidden])) footer { margin-bottom:16px; }
     body:has([data-testid="app"][data-role="customer"]:not([hidden])) footer:not(:has(.actions)) { display:none; }
   }
   /* The courses: a card each, a picture over its words, and a round button that opens WhatsApp. A
