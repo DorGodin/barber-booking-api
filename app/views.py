@@ -15,7 +15,14 @@ def iso_utc(instant: datetime | None) -> str | None:
 
 
 def user_view(user: User) -> dict:
-    return {"id": user.id, "username": user.username, "role": user.role, "display_name": user.display_name}
+    # The person's own phone - this is only ever their own account.
+    return {
+        "id": user.id,
+        "username": user.username,
+        "role": user.role,
+        "display_name": user.display_name,
+        "phone": user.phone,
+    }
 
 
 def barber_view(user: User, for_owner: bool = False) -> dict:
@@ -91,6 +98,7 @@ def booking_view(
     review=None,
     products=(),
     customer_name: str | None = None,
+    customer_deleted: bool = False,
 ) -> dict:
     now = now or now_utc()
     return {
@@ -99,6 +107,8 @@ def booking_view(
         # Who is coming, for the barber and the owner - the name the customer signed in with.
         # Nobody else sees a booking that is not theirs: somebody else's is not found.
         "customer_name": customer_name,
+        # A customer who deleted their account: the booking stays, with no one's name.
+        "customer_deleted": customer_deleted,
         "for_name": booking.for_name,
         "group_id": booking.group_id,
         "guest_name": booking.guest_name,

@@ -45,13 +45,15 @@ router = APIRouter(tags=["bookings"])
 
 
 def _view(session: Session, booking: Booking, config: Settings) -> dict:
+    customer = session.get(User, booking.customer_id) if booking.customer_id else None
     return booking_view(
         booking,
         session.get(Service, booking.service_id).name,
         session.get(User, booking.barber_id).display_name,
         config.shop_tz,
         review=session.scalar(select(Review).where(Review.booking_id == booking.id)),
-        customer_name=session.get(User, booking.customer_id).display_name if booking.customer_id else None,
+        customer_name=customer.display_name if customer and not customer.deleted_at else None,
+        customer_deleted=bool(customer and customer.deleted_at),
         products=session.execute(
             select(Product, BookingProduct.quantity)
             .join(BookingProduct, BookingProduct.product_id == Product.id)
