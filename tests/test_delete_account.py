@@ -63,8 +63,9 @@ def test_only_a_customer_deletes_their_account(client, owner, barber):
 
 
 def test_the_staff_are_told_of_the_bookings_cancelled_and_the_customer_is_told_nothing_more(
-    pushed, passwords
-):  # noqa: F811
+    pushed,  # noqa: F811 - the fixture, imported from tests.test_push
+    passwords,
+):
     client, fake = pushed
     _, barber, barber_headers, haircut = shop(client, passwords)
     me = fresh(client)
