@@ -32,7 +32,8 @@ from app.native_push import NativeSender, native_sender_from
 from app.push import PushHub, PushSender
 from app.push import sender_from as push_sender_from
 from app.reminders import reminders
-from app.routers import accounts, auth, barbers, bookings, courses, customer_cards, products, push, services
+from app.standing import standing as standing_bookings
+from app.routers import accounts, auth, barbers, bookings, courses, customer_cards, products, push, services, standing
 from app.routers import settings as shop_settings
 from app.seed import give_owner_phone, seed_if_empty
 from app.sms import SmsSender, sender_from
@@ -153,12 +154,14 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         prepare_database(engine, app.state.sessionmaker, config)
-        watching = None
+        watching = []
         if app.state.push.available and config.reminder_minutes > 0:
-            watching = asyncio.create_task(reminders(app.state.sessionmaker, app.state.push, config))
+            watching.append(asyncio.create_task(reminders(app.state.sessionmaker, app.state.push, config)))
+        # Standing bookings are made whether or not anyone can be told.
+        watching.append(asyncio.create_task(standing_bookings(app.state.sessionmaker, app.state.push, config)))
         yield
-        if watching is not None:
-            watching.cancel()
+        for task in watching:
+            task.cancel()
         engine.dispose()
 
     app = FastAPI(title="Barber Booking API", version="1.0.0", lifespan=lifespan)
@@ -353,6 +356,7 @@ def create_app(
         accounts.router,
         push.router,
         shop_settings.router,
+        standing.router,
     ):
         app.include_router(router)
     return app

@@ -99,6 +99,7 @@ def booking_view(
     products=(),
     customer_name: str | None = None,
     customer_deleted: bool = False,
+    standing=None,
 ) -> dict:
     now = now or now_utc()
     return {
@@ -141,6 +142,12 @@ def booking_view(
         # What the customer asked the shop to keep for this booking, by name - the
         # barber reads it in the diary, the customer in their list.
         "products": [{"id": p.id, "name": p.name, "quantity": quantity} for p, quantity in products],
+        # The customer's regular time this booking was made for, while it stands - every how many weeks.
+        "standing": (
+            {"id": standing.id, "every_weeks": standing.every_weeks}
+            if standing is not None and standing.stopped_at is None
+            else None
+        ),
         "review": None if review is None else {"stars": review.stars, "text": review.text},
         "reviewable": review is None
         and booking.customer_id is not None
