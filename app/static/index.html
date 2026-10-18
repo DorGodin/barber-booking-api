@@ -637,7 +637,7 @@
     <p class="deleted-note" data-testid="account-deleted" role="status" hidden>החשבון נמחק.</p>
     <form class="panel otp" data-testid="code-request-form" novalidate>
       <h2>ברוכים הבאים</h2>
-      <div class="field"><label for="full-name">שם מלא</label><input id="full-name" data-testid="full-name" autocomplete="name" maxlength="25" required></div>
+      <div class="field"><label for="full-name">שם מלא</label><input id="full-name" aria-describedby="full-name-error" data-testid="full-name" autocomplete="name" maxlength="25" required><p class="error field-error" data-testid="full-name-error" id="full-name-error" role="alert" hidden></p></div>
       <div class="field"><label for="phone">מספר טלפון</label><input id="phone" aria-describedby="phone-error" data-testid="phone" type="tel" inputmode="numeric" autocomplete="tel-national" dir="ltr" placeholder="0501234567" required><p class="error field-error" data-testid="phone-error" id="phone-error" role="alert" hidden></p></div>
       <button data-testid="send-code" type="submit">שלחו לי קוד</button>
       <p class="muted hint">קוד קצר ב־SMS, ואת/ה כבר בדרך לכיסא.</p>
@@ -710,7 +710,7 @@
             <div class="companion" data-testid="companion" hidden>
               <div class="companion-head"><span class="companion-face" data-testid="companion-face" aria-hidden="true"></span><div><strong data-testid="companion-title" tabindex="-1"></strong><small>מיד אחרי התור שלך, אצל אותו ספר</small></div></div>
               <label for="person-name">שם (לא חובה)</label>
-              <input id="person-name" data-testid="person-name" maxlength="80" autocomplete="off">
+              <input id="person-name" aria-describedby="person-name-error" data-testid="person-name" maxlength="80" autocomplete="off"><p class="error field-error" data-testid="person-name-error" id="person-name-error" role="alert" hidden></p>
               <label id="service-2-label" data-testid="service-2-label" for="service-2-button">השירות לאדם הנוסף</label><select id="service-2" data-testid="service-2" hidden></select><div class="picker"><button type="button" class="picker-button" id="service-2-button" data-testid="service-2-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="service-2-list" aria-labelledby="service-2-label service-2-button"><span data-testid="service-2-name"></span><small data-testid="service-2-meta"></small></button><ul class="picker-list" id="service-2-list" data-testid="service-2-list" role="listbox" aria-label="רשימת השירותים לאדם הנוסף" tabindex="-1" hidden></ul></div>
               <p class="companion-when" data-testid="companion-when" hidden><span data-testid="companion-time"></span>✓ פנוי מיד אחריך</p>
               <button type="button" class="ghost" data-testid="remove-person">הסרת האדם הנוסף</button>
@@ -1315,6 +1315,7 @@ const FRIENDLY = {
   barber_inactive: () => "הספר הזה כבר לא עובד במספרה.",
   account_inactive: () => "החשבון הזה כבר לא פעיל. אפשר לפנות לבעל המספרה.",
   bad_phone: () => "מספר הטלפון צריך להיות של נייד: 05 ועוד 8 ספרות, למשל 0501234567.",
+  name_not_letters: () => "השם יכול להכיל רק אותיות",
   code_too_soon: (_, data) => `אפשר לבקש קוד חדש בעוד ${data.retry_after_seconds} שניות.`,
   too_many_codes: (_, data) => `נשלחו יותר מדי קודים. אפשר לנסות שוב בעוד ${Math.max(1, Math.ceil(data.retry_after_seconds / 60))} דקות.`,
   sms_failed: () => "לא הצלחנו לשלוח את ה־SMS. אפשר לנסות שוב.",
@@ -1394,6 +1395,11 @@ function say(text, kind) {
 // never converted with the browser's clock: a customer abroad must see 10:30
 // for a 10:30 appointment, not the hour it is where they are sitting.
 const clock = (local) => local.slice(11, 16);
+// A name is letters - any script, with a space, a hyphen, an apostrophe, a geresh or a dot between them - never a
+// digit: a sign-up's full name and the second person's in a booking for two. Said under the field as it is typed,
+// and its button waits; the server checks again.
+const NAME_LETTERS = "השם יכול להכיל רק אותיות";
+const nameProblem = (value) => (/[^\p{L}\p{M}\s'"׳״.-]/u.test(value) ? NAME_LETTERS : "");
 function dayLabel(local) {
   const [y, m, d] = local.slice(0, 10).split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("he-IL", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
@@ -2141,7 +2147,7 @@ function renderBarberActivity(barberId) {
   // The barber signs in as a customer does: this mobile, and the code sent to it.
   const phone = barberOf(barberId).phone || "";
   $("barber-phone").value = phone;
-  showPhoneProblem("barber-phone", "");
+  showFieldProblem("barber-phone", "");
   $("save-barber-phone").disabled = false;
   $("barber-phone-note").textContent = phone ? "הספר נכנס עם הטלפון הזה ועם הקוד שנשלח אליו." : "עוד אין לספר טלפון, ולכן הוא לא יכול להיכנס.";
 }
@@ -2288,7 +2294,7 @@ function addBarber() {
     fillBarberChoice();
     setBarber(r.data.id);
     for (const id of ["new-barber-name", "new-barber-phone"]) $(id).value = "";
-    showPhoneProblem("new-barber-phone", "");
+    showFieldProblem("new-barber-phone", "");
     say(`הספר ${isolate(r.data.display_name)} נוסף, בשעות העבודה של המספרה.`, "ok");
     await refresh();
   });
@@ -2837,7 +2843,7 @@ function refused(r, slot, failedTitle, context = {}) {
 }
 
 function book() {
-  if (!selected || booking) return;
+  if (!selected || booking || (companion && nameProblem($("person-name").value))) return;
   return busyWhile(bookSelected);
 }
 
@@ -2946,6 +2952,10 @@ function drawCompanion() {
   $("companion-face").dataset.initial = name ? [...name][0] : "+";
   $("companion-title").textContent = name ? `התור של ${isolate(name)}` : "תור נוסף";
   $("service-2-label").textContent = name ? `השירות של ${isolate(name)}` : "השירות לאדם הנוסף";
+  // Their name too is letters only: said as it is typed, and the button that books both waits.
+  const problem = companion ? nameProblem(name) : "";
+  showFieldProblem("person-name", problem);
+  $("book").disabled = Boolean(problem);
 }
 $("person-name").addEventListener("input", drawCompanion);
 // A second person is added once the first person's time is chosen - offered only then, and only to a customer.
@@ -3552,7 +3562,7 @@ function phoneProblem(value, sending) {
   if (sending && value.length !== 10) return PHONE_LENGTH;
   return "";
 }
-function showPhoneProblem(field, problem) {
+function showFieldProblem(field, problem) {
   $(`${field}-error`).textContent = problem;
   $(`${field}-error`).hidden = !problem;
   $(field).setAttribute("aria-invalid", problem ? "true" : "false");
@@ -3565,15 +3575,20 @@ for (const [field, [button]] of Object.entries(PHONE_FIELDS)) {
     if (digits.startsWith("972")) digits = `0${digits.slice(3)}`;
     if ($(field).value !== digits.slice(0, 10)) $(field).value = digits.slice(0, 10);
     const problem = phoneProblem($(field).value, false);
-    showPhoneProblem(field, problem);
-    $(button).disabled = Boolean(problem);
+    showFieldProblem(field, problem);
+    $(button).disabled = Boolean(problem) || (field === "phone" && Boolean(nameProblem($("full-name").value)));
   });
 }
+$("full-name").addEventListener("input", () => {
+  const problem = nameProblem($("full-name").value);
+  showFieldProblem("full-name", problem);
+  $("send-code").disabled = Boolean(problem || phoneProblem($("phone").value, false));
+});
 // Called as the field is sent: true when it may go, else the problem is said and the field takes the focus.
 function phoneReady(field) {
   const value = $(field).value;
   const problem = PHONE_FIELDS[field][1] && !value ? "" : phoneProblem(value, true);
-  showPhoneProblem(field, problem);
+  showFieldProblem(field, problem);
   if (problem) $(field).focus();
   return !problem;
 }
@@ -3583,6 +3598,9 @@ $("code-request-form").addEventListener("submit", (e) => {
   e.preventDefault();
   otp.name = $("full-name").value.trim();
   otp.phone = $("phone").value;
+  const badName = nameProblem(otp.name);
+  showFieldProblem("full-name", badName);
+  if (badName) return $("full-name").focus();
   if (!phoneReady("phone")) return;
   askForCode($("code-request-error"));
 });

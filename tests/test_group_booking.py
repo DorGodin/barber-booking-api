@@ -195,3 +195,11 @@ def test_the_group_cannot_overlap_the_customers_other_booking_elsewhere(
     refused = group(client, customer, barber, two(services, HAIRCUT, HAIRCUT), at(day, "10:00"))
 
     assert refused.status_code == 409 and refused.json()["code"] == "customer_overlap"
+
+
+def test_the_second_persons_name_is_letters_only(client, customer, barber, services):
+    refused = group(client, customer, barber, two(services, name="יוני 2"), at(local_day(4), "10:00"))
+
+    assert refused.status_code == 422 and refused.json()["code"] == "name_not_letters", refused.text
+    allowed = group(client, customer, barber, two(services, name="ג'ורג'"), at(local_day(4), "10:00"))
+    assert allowed.status_code == 201
