@@ -323,6 +323,8 @@
   /* A pill like the row's other buttons, centred (the owner's choice of 2026-10-18). */
   .add-person { display:block; max-width:100%; margin:12px auto 0; min-height:44px; padding:0 18px; border:1.5px solid var(--ink); border-radius:999px; background:#fff; color:var(--ink); font:inherit; font-size:15px; font-weight:600; }
   .companion-when { margin:4px 0 8px; color:#2e6b3a; font-size:13px; }
+  /* Why the time chosen went, in the card itself and until another is chosen - not a message that fades. */
+  .companion-note { margin:6px 0 8px; color:#8a5a00; font-size:13.5px; font-weight:600; }
   .companion-when span { display:inline-block; margin-left:8px; padding:4px 12px; border-radius:999px; background:var(--ink); color:#fff; font-size:14px; direction:ltr; }
   .companion .picker, .companion input { margin-bottom:8px; }
   .late-note { flex:1 1 100%; font-size:14px; color:var(--mut); line-height:1.6; }
@@ -744,6 +746,7 @@
               <input id="person-name" aria-describedby="person-name-error" data-testid="person-name" maxlength="80" autocomplete="off"><p class="error field-error" data-testid="person-name-error" id="person-name-error" role="alert" hidden></p>
               <label id="service-2-label" data-testid="service-2-label" for="service-2-button">השירות לאדם הנוסף</label><select id="service-2" data-testid="service-2" hidden></select><div class="picker"><button type="button" class="picker-button" id="service-2-button" data-testid="service-2-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="service-2-list" aria-labelledby="service-2-label service-2-button"><span data-testid="service-2-name"></span><small data-testid="service-2-meta"></small></button><ul class="picker-list" id="service-2-list" data-testid="service-2-list" role="listbox" aria-label="רשימת השירותים לאדם הנוסף" tabindex="-1" hidden></ul></div>
               <p class="companion-when" data-testid="companion-when" hidden><span data-testid="companion-time"></span>✓ פנוי מיד אחריך</p>
+              <p class="companion-note" data-testid="companion-note" role="status" hidden></p>
               <button type="button" class="ghost" data-testid="remove-person">הסרת האדם הנוסף</button>
             </div>
           </div>
@@ -2656,6 +2659,7 @@ function select(slot, button) {
     $("confirm-text").textContent = `${dayLabel(slot.start_local)} ${clock(slot.start_local)} · ${isolate(service.name)} אצל ${at}`;
   }
   $("companion-when").hidden = !companion;
+  $("companion-note").hidden = true;
   if (!moving) $("book").textContent = companion ? "קביעת שני התורים" : "קביעת התור";
   $("confirm").hidden = false;
   showCompanionField();
@@ -3083,6 +3087,7 @@ function setCompanion(on) {
   $("companion").hidden = !on;
   $("add-person").hidden = on;
   if (!on) $("person-name").value = "";
+  $("companion-note").hidden = true;
   drawCompanion();
   showCompanionField();
 }
@@ -3113,7 +3118,10 @@ async function keepingTime(change) {
   if (!before) return;
   const again = [...$("slots").children].find((b) => b.dataset.start === before.start);
   if (again) again.click();
-  else say(`אין מקום לשניכם ברצף ב־${clock(before.start_local)}. אלה השעות שבהן שניכם נכנסים.`, "error");
+  else if (companion) {
+    $("companion-note").textContent = `⚠ אין מקום לשניכם ברצף ב־${clock(before.start_local)}. בחרו שעה מהרשימה למעלה.`;
+    $("companion-note").hidden = false;
+  }
 }
 $("add-person").addEventListener("click", () => busyWhile(async () => {
   await keepingTime(() => setCompanion(true));

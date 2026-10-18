@@ -200,7 +200,8 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   typed (isolated, set as text), over "מיד אחרי התור שלך, אצל אותו ספר"; its service field is "השירות של" that name.
   **The second person is offered once the first person's time is chosen** (`showCompanionField`, the owner's choice of
   2026-10-18), under the times. Adding, removing or changing them keeps that time when both still fit in it
-  (`keepingTime`); when they do not, the times are where both fit and the customer is told why theirs went. The card
+  (`keepingTime`); when they do not, the times are where both fit and the card says why theirs went (`companion-note`, until
+  another is chosen - not the message that fades). The card
   shows the second time, from the first's end by the shop's clock (`laterClock`), and the button books both.
 - **A customer holds at most five bookings ahead** (`MAX_FUTURE_BOOKINGS`, the owner's choice of 2026-10-18), each person's
   its own - a booking for two takes two places, and with one place left a second person is not offered - told to the
