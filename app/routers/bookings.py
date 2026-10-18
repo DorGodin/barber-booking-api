@@ -35,6 +35,7 @@ from app.models import (
     User,
     new_id,
 )
+from app.names import name_or_error
 from app.push import PushHub
 from app.reminders import when_words
 from app.scheduling import Interval
@@ -209,6 +210,9 @@ def create_group_booking(
             f"at most {config.group_max} people in one go",
             extra={"limit": config.group_max},
         )
+    for person in body.people:
+        if person.name:
+            name_or_error(person.name)
     start = body.start.astimezone(UTC)
     now = datetime.now(UTC)
     with write_lock(session):

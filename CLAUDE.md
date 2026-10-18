@@ -157,7 +157,10 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **A customer's screen has no bar on top**: the name, the phone and signing out are in the personal area, with
   a copy of the page's foot (the ways to reach the shop, the statement, the policy) that a signed-in phone does
   not show otherwise. The staff keep the bar.
-- **A sign-up takes a name of up to 25 characters and a mobile of ten digits starting 05.** Every phone field - the
+- **A sign-up takes a name of up to 25 letters and a mobile of ten digits starting 05.** The name is letters in any script,
+  with a space, hyphen, apostrophe, geresh, gershayim or dot between them - never a digit or a symbol (`nameProblem`,
+  `_name_or_error`): "השם יכול להכיל רק אותיות" under the field as it is typed, its button held, and the server's
+  `name_not_letters`. Every phone field - the
   sign-in, a barber's and a new barber's (`PHONE_FIELDS`) - keeps to ten digits (a pasted +972 becomes them), says
   "המספר חייב להתחיל ב־05" under the field as soon as the start is wrong and holds its button, and says
   "המספר חייב להכיל 10 ספרות" when a short one is sent. The server checks again.
@@ -177,7 +180,9 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   choice of 2026-10-15): an iPhone opened its own list upward when the field was low and folded a long line in two. The
   `<select>` stays, hidden, as the value the page reads and sets - whoever sets its value, options or `disabled` calls
   `drawPicker`. The field and every row say the name, and beside it the minutes and the price; a long name is cut, never
-  them. The list is a `listbox` worked by the keyboard too (arrows, Home, End, Enter, Escape). **A tab pressed clears the
+  them. Both are round (2026-10-18): a pill for the field, the chosen service a black pill, a thin line between the
+  others, one line each - smaller letters on the narrowest phone. The list is a `listbox` worked by the keyboard too
+  (arrows, Home, End, Enter, Escape). **A tab pressed clears the
   message** of the last screen.
 - **A product is kept for a booking, never sold here** (`/products`, `app/routers/products.py`, `booking_products`):
   the owner keeps the shelf and marks what ran out - nothing is counted, nothing is paid. A customer's button
@@ -190,6 +195,10 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **Booking for two is told at a glance** (`drawCompanion`, the owner's choice of 2026-10-15): a "2 אנשים" badge beside
   the title, and the second person's card in the shop's gold, headed "תור נוסף" and then "התור של" their name as it is
   typed (isolated, set as text), over "מיד אחרי התור שלך, אצל אותו ספר"; its service field is "השירות של" that name.
+  **The second person is offered once the first person's time is chosen** (`showCompanionField`, the owner's choice of
+  2026-10-18), under the times. Adding, removing or changing them keeps that time when both still fit in it
+  (`keepingTime`); when they do not, the times are where both fit and the customer is told why theirs went. The card
+  shows the second time, from the first's end by the shop's clock (`laterClock`), and the button books both.
 - **A customer holds at most five bookings ahead** (`MAX_FUTURE_BOOKINGS`, the owner's choice of 2026-10-18), each person's
   its own - a booking for two takes two places, and with one place left a second person is not offered - told to the
   page in `/shop` as `bookings_ahead_limit`. At the limit the booking

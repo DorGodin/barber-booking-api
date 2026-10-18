@@ -16,6 +16,7 @@ from app.deps import current_user, db, settings, sms
 from app.errors import DomainError
 from app.login_limits import forget_failures, record_failure, seconds_locked
 from app.models import OtpCode, RevokedToken, Signup, User
+from app.names import name_or_error
 from app.phones import normalize
 from app.schemas import AccountIn, CodeRequestIn, CodeVerifyIn, LoginIn
 from app.security import hash_password, issue_token, read_token, verify_password
@@ -147,6 +148,7 @@ def request_code(
     reaches a real person's phone, so a phone gets a new code at most once a
     minute and a few an hour, and one address only so many codes an hour."""
     phone = _phone_or_error(body.phone)
+    name_or_error(body.full_name)
     ip = request.client.host if request.client else "unknown"
     now = datetime.now(UTC)
     hour = timedelta(hours=1)
