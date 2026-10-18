@@ -93,9 +93,9 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   the brand, the line under it, a button for each way to reach the shop that is set, and the
   shop's own cover and profile pictures, served from `/media` - only those two files. A link
   must be `https://` and a phone Israeli, or the server refuses to start, naming the setting.
-- **The accessibility statement and the privacy policy have a way back, top left** (`back-top`, the owner's choice of
-  2026-10-18): in the app there is no browser bar, so it leads to `/#account` and a signed-in customer lands on their
-  personal area. The standing offer's "לא תודה" folds it back to its one button.
+- **The accessibility statement and the privacy policy have a way back, top left** (`back-top`, a black circle with a
+  white arrow, below the phone's clock - the owner's choice of 2026-10-18): in the app there is no browser bar, so it leads to `/#account` and a signed-in customer lands on their
+  personal area. The standing offer's "לא תודה" folds it back to its one button; its three choices share one row, a pill.
 - **The contact buttons stand at the foot of the page**, above the links to the accessibility
   statement and the privacy policy (`/privacy`). The policy says only what the code does - what
   is kept, why, for how long (codes a day, failed sign-ins a quarter hour, sign-ups an hour) -
