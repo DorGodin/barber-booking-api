@@ -127,19 +127,31 @@
   /* The service is chosen from a list of the page's own, opening downward over what is under it: an iPhone
      opens its own list upward when the field is low on the screen, and folds a long service in two. */
   .picker { position:relative; margin-top:4px; }
-  .picker-button { display:flex; align-items:center; gap:10px; width:100%; min-height:46px; padding:9px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); font:inherit; font-size:16px; text-align:start; }
+  /* Round, as the times and the contact buttons are (the owner's choice of 2026-10-18): a pill for the field, the
+     chosen service a black pill in the list, and a thin line between the others - each on one line. */
+  .picker-button { display:flex; align-items:center; gap:10px; width:100%; min-height:46px; padding:9px 18px; border:1px solid var(--ink); border-radius:999px; background:#fff; color:var(--ink); font:inherit; font-size:15px; text-align:start; }
   .picker-button span { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .picker-button small, .picker-list small { color:var(--mut); font-size:14px; white-space:nowrap; }
+  .picker-button small, .picker-list small { color:var(--mut); font-size:13px; white-space:nowrap; }
   .picker-button::after { content:""; width:12px; height:8px; flex:none; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%231d4e5f' stroke-width='2'/%3E%3C/svg%3E") no-repeat center; }
-  .picker-button[aria-expanded="true"] { border-color:var(--ink); box-shadow:0 0 0 1px var(--ink); }
-  .picker-button:disabled { background:#f4f2ee; color:var(--mut); }
-  .picker-list { position:absolute; inset-inline:0; top:calc(100% + 6px); z-index:6; margin:0; padding:4px 0; list-style:none; background:#fff; border:1px solid var(--line); border-radius:10px; box-shadow:0 12px 30px rgba(0,0,0,.16); }
-  .picker-list li { display:flex; align-items:center; gap:10px; min-height:44px; padding:8px 14px; font-size:16px; cursor:pointer; }
-  .picker-list li + li { border-top:1px solid #eee; }
-  .picker-list li span { flex:1; }
-  .picker-list li[aria-selected="true"] { font-weight:700; background:#f6f4f0; }
+  .picker-button[aria-expanded="true"] { box-shadow:0 0 0 1px var(--ink); }
+  .picker-button:disabled { background:#f4f2ee; color:var(--mut); border-color:var(--line); }
+  .picker-list { position:absolute; inset-inline:0; top:calc(100% + 6px); z-index:6; margin:0; padding:8px; list-style:none; background:#fff; border-radius:24px; box-shadow:0 12px 30px rgba(0,0,0,.16); }
+  .picker-list li { display:flex; align-items:center; gap:10px; min-height:44px; padding:0 14px; font-size:14px; white-space:nowrap; cursor:pointer; }
+  .picker-list li + li { border-top:1px solid #ebe7df; }
+  .picker-list li span { flex:1; overflow:hidden; text-overflow:ellipsis; }
+  .picker-list li small { font-size:12.5px; }
+  .picker-list li[aria-selected="true"] { font-weight:700; background:var(--ink); color:#fff; border-radius:999px; border-top-color:transparent; }
+  .picker-list li[aria-selected="true"] + li { border-top-color:transparent; }
+  .picker-list li[aria-selected="true"] small { color:#ddd; }
   .picker-list li[aria-selected="true"]::before { content:"✓"; }
-  .picker-list li:focus-visible { outline:2px solid var(--ink); outline-offset:-2px; }
+  /* The narrowest phone keeps every service on its line: smaller letters, a long name cut, never its minutes or price. */
+  @media (max-width: 360px) {
+    .picker-button { padding:9px 14px; font-size:14px; }
+    .picker-button small { font-size:12px; }
+    .picker-list li { gap:6px; padding:0 10px; font-size:13px; }
+    .picker-list li small { font-size:11.5px; }
+  }
+  .picker-list li:focus-visible { outline:2px solid var(--gold); outline-offset:-2px; }
   .cal-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:4px 0 6px; }
   .cal-head h3 { margin:0; font-size:16px; color:var(--ink); }
   .cal-nav { width:44px; height:44px; padding:0; display:flex; align-items:center; justify-content:center; }
@@ -277,6 +289,11 @@
   .companion-head small { color:var(--mut); font-size:13px; }
   .companion-face { width:36px; height:36px; flex:none; border-radius:50%; background:var(--gold); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; }
   .companion-face::before { content:attr(data-initial); }
+  /* Offered once the first person's time is chosen: the second comes right after it. */
+  .add-person { display:block; width:100%; margin-top:10px; padding:12px; border:1.5px dashed var(--gold); border-radius:12px; background:#fbf8f2; color:var(--ink); font:inherit; font-size:15px; text-align:start; }
+  .add-person small { display:block; margin-top:2px; color:var(--mut); font-size:13px; }
+  .companion-when { margin:4px 0 8px; color:#2e6b3a; font-size:13px; }
+  .companion-when span { display:inline-block; margin-left:8px; padding:4px 12px; border-radius:999px; background:var(--ink); color:#fff; font-size:14px; direction:ltr; }
   .companion .picker, .companion input { margin-bottom:8px; }
   .late-note { flex:1 1 100%; font-size:14px; color:var(--mut); line-height:1.6; }
   .late-note a { display:inline-flex; align-items:center; min-height:44px; padding:0 16px; margin-top:6px; border-radius:999px; background:#f1efea; color:var(--ink); font-weight:600; text-decoration:none; }
@@ -667,16 +684,6 @@
             <button data-testid="stop-moving" type="button" class="ghost">השארת המועד הקיים</button>
           </div>
           <div class="field"><label id="service-label" for="service-button">שירות</label><select id="service" data-testid="service" hidden></select><div class="picker"><button type="button" class="picker-button" id="service-button" data-testid="service-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="service-list" aria-labelledby="service-label service-button"><span data-testid="service-name"></span><small data-testid="service-meta"></small></button><ul class="picker-list" id="service-list" data-testid="service-list" role="listbox" aria-label="רשימת השירותים" tabindex="-1" hidden></ul></div></div>
-          <div class="field" data-testid="companion-field" hidden>
-            <button type="button" class="ghost" data-testid="add-person">+ הוספת אדם נוסף (ילד או חבר)</button>
-            <div class="companion" data-testid="companion" hidden>
-              <div class="companion-head"><span class="companion-face" data-testid="companion-face" aria-hidden="true"></span><div><strong data-testid="companion-title"></strong><small>מיד אחרי התור שלך, אצל אותו ספר</small></div></div>
-              <label for="person-name">שם (לא חובה)</label>
-              <input id="person-name" aria-describedby="person-name-error" data-testid="person-name" maxlength="80" autocomplete="off"><p class="error field-error" data-testid="person-name-error" id="person-name-error" role="alert" hidden></p>
-              <label id="service-2-label" data-testid="service-2-label" for="service-2-button">השירות לאדם הנוסף</label><select id="service-2" data-testid="service-2" hidden></select><div class="picker"><button type="button" class="picker-button" id="service-2-button" data-testid="service-2-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="service-2-list" aria-labelledby="service-2-label service-2-button"><span data-testid="service-2-name"></span><small data-testid="service-2-meta"></small></button><ul class="picker-list" id="service-2-list" data-testid="service-2-list" role="listbox" aria-label="רשימת השירותים לאדם הנוסף" tabindex="-1" hidden></ul></div>
-              <button type="button" class="ghost" data-testid="remove-person">הסרת האדם הנוסף</button>
-            </div>
-          </div>
           <div class="field calendar" data-testid="calendar">
             <span class="label" id="date-label">תאריך</span>
             <input type="hidden" id="date" data-testid="date">
@@ -696,6 +703,17 @@
           <div class="field" data-testid="guest-field" hidden><label for="guest-name">שם הלקוח</label><input id="guest-name" data-testid="guest-name" maxlength="80" autocomplete="off"></div>
           <p class="muted" data-testid="no-slots" hidden>אין שעות פנויות ביום הזה.</p>
           <p class="muted" data-testid="barber-left" hidden>הספר הזה לא פעיל, ואי אפשר לקבוע אצלו. התורים שכבר נקבעו אצלו מופיעים ביומן.</p>
+          <div class="field" data-testid="companion-field" hidden>
+            <button type="button" class="add-person" data-testid="add-person">+ להוסיף עוד אדם מיד אחריי<small>ילד או חבר, אצל אותו ספר</small></button>
+            <div class="companion" data-testid="companion" hidden>
+              <div class="companion-head"><span class="companion-face" data-testid="companion-face" aria-hidden="true"></span><div><strong data-testid="companion-title" tabindex="-1"></strong><small>מיד אחרי התור שלך, אצל אותו ספר</small></div></div>
+              <label for="person-name">שם (לא חובה)</label>
+              <input id="person-name" aria-describedby="person-name-error" data-testid="person-name" maxlength="80" autocomplete="off"><p class="error field-error" data-testid="person-name-error" id="person-name-error" role="alert" hidden></p>
+              <label id="service-2-label" data-testid="service-2-label" for="service-2-button">השירות לאדם הנוסף</label><select id="service-2" data-testid="service-2" hidden></select><div class="picker"><button type="button" class="picker-button" id="service-2-button" data-testid="service-2-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="service-2-list" aria-labelledby="service-2-label service-2-button"><span data-testid="service-2-name"></span><small data-testid="service-2-meta"></small></button><ul class="picker-list" id="service-2-list" data-testid="service-2-list" role="listbox" aria-label="רשימת השירותים לאדם הנוסף" tabindex="-1" hidden></ul></div>
+              <p class="companion-when" data-testid="companion-when" hidden><span data-testid="companion-time"></span>✓ פנוי מיד אחריך</p>
+              <button type="button" class="ghost" data-testid="remove-person">הסרת האדם הנוסף</button>
+            </div>
+          </div>
           <div class="confirm" data-testid="confirm" hidden>
             <span data-testid="confirm-text"></span>
             <button data-testid="book" type="button">קביעת התור</button>
@@ -1631,7 +1649,7 @@ async function start() {
   $("account-name").textContent = me.display_name;
   $("account-phone").textContent = me.phone || "";
   $("guest-field").hidden = me.role !== "owner";
-  $("companion-field").hidden = !customer;
+  showCompanionField();
   $("left-title").textContent = customer ? "קביעת תור" : me.role === "owner" ? "התורים וקביעת תור בשם" : "היומן שלך";
   $("barber").parentElement.hidden = me.role === "barber";
   $("bookings-title").textContent = { customer: "התורים שלי", barber: "היומן שלי", owner: "תורים" }[me.role];
@@ -2487,6 +2505,8 @@ const barberOf = (id) => barbers.find((b) => b.id === id) || {};
 async function refreshSlots() {
   selected = null;
   $("confirm").hidden = true;
+  $("companion-when").hidden = true;
+  showCompanionField();
   // A barber who left has no times to offer: asked, the server refuses, and
   // the refusal would replace whatever the owner was just told.
   const left = Boolean($("barber").value) && barberOf($("barber").value).active === false;
@@ -2548,10 +2568,24 @@ function select(slot, button) {
   button.setAttribute("aria-checked", "true");
   button.tabIndex = 0;
   const service = serviceOf($("service").value);
-  const second = companion ? serviceOf($("service-2").value) : null;
-  const together = second ? ` + ${isolate(second.name)}` : "";
-  $("confirm-text").textContent = `${dayLabel(slot.start_local)} ${clock(slot.start_local)} · ${isolate(service.name)}${together} אצל ${isolate(barberName($("barber").value))}`;
+  const at = isolate(barberName($("barber").value));
+  if (companion) {
+    // The second starts when the first ends - the shop's own clock, never the browser's.
+    const next = laterClock(clock(slot.start_local), service.duration_minutes);
+    $("companion-time").textContent = `${next} – ${laterClock(next, serviceOf($("service-2").value).duration_minutes)}`;
+    $("confirm-text").textContent = `${dayLabel(slot.start_local)} · שני תורים: ${clock(slot.start_local)} ו־${next} אצל ${at}`;
+  } else {
+    $("confirm-text").textContent = `${dayLabel(slot.start_local)} ${clock(slot.start_local)} · ${isolate(service.name)} אצל ${at}`;
+  }
+  $("companion-when").hidden = !companion;
+  if (!moving) $("book").textContent = companion ? "קביעת שני התורים" : "קביעת התור";
   $("confirm").hidden = false;
+  showCompanionField();
+}
+// "10:30" and 45 minutes is "11:15".
+function laterClock(hhmm, minutes) {
+  const [h, m] = hhmm.split(":").map(Number), total = h * 60 + m + minutes;
+  return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
 // ---- The month's calendar ------------------------------------------------------
@@ -2890,7 +2924,6 @@ function startMoving(b) {
     $("left-title").textContent = "שינוי מועד";
     $("moving-text").textContent = `שינוי מועד לתור של ${dayLabel(b.start_local)} ${clock(b.start_local)} · ${isolate(b.service_name)} אצל ${isolate(b.barber_name)}. בוחרים מועד חדש:`;
     setCompanion(false);
-    $("companion-field").hidden = true;
     $("moving").hidden = false;
     $("book").textContent = "אישור המועד החדש";
     await refresh();
@@ -2908,6 +2941,7 @@ function setCompanion(on) {
   $("add-person").hidden = on;
   if (!on) $("person-name").value = "";
   drawCompanion();
+  showCompanionField();
 }
 // The second person's card is headed by their name as it is typed, and the badge says the booking is for two.
 function drawCompanion() {
@@ -2922,24 +2956,35 @@ function drawCompanion() {
   $("book").disabled = Boolean(problem);
 }
 $("person-name").addEventListener("input", drawCompanion);
+// A second person is added once the first person's time is chosen - offered only then, and only to a customer.
+function showCompanionField() {
+  $("companion-field").hidden = !me || me.role !== "customer" || Boolean(moving) || (!companion && !selected);
+}
+// Adding, removing or changing the second person keeps the time chosen when both still fit in it; when
+// they do not, the times offered are where both fit, and the customer is told why theirs went.
+async function keepingTime(change) {
+  const before = selected?.slot;
+  change();
+  await refresh();
+  await keepAFreeDay();
+  if (!before) return;
+  const again = [...$("slots").children].find((b) => b.dataset.start === before.start);
+  if (again) again.click();
+  else say(`אין מקום לשניכם ברצף ב־${clock(before.start_local)}. אלה השעות שבהן שניכם נכנסים.`, "error");
+}
 $("add-person").addEventListener("click", () => busyWhile(async () => {
-  setCompanion(true);
-  await refresh();
-  await keepAFreeDay();
+  await keepingTime(() => setCompanion(true));
+  // The eye goes down to the second person's card, and the screen to the button that books both - no more
+  // scrolling for it. Not to the name field: on a phone its keyboard would cover the button.
+  $("companion-title").focus({ preventScroll: true });
+  ($("confirm").hidden ? $("companion") : $("confirm")).scrollIntoView({ block: "end" });
 }));
-$("remove-person").addEventListener("click", () => busyWhile(async () => {
-  setCompanion(false);
-  await refresh();
-  await keepAFreeDay();
-}));
-$("service-2").addEventListener("change", () => busyWhile(async () => {
-  await refresh();
-  await keepAFreeDay();
-}));
+$("remove-person").addEventListener("click", () => busyWhile(() => keepingTime(() => setCompanion(false))));
+$("service-2").addEventListener("change", () => busyWhile(() => keepingTime(() => {})));
 
 function stopMoving() {
-  $("companion-field").hidden = !me || me.role !== "customer";
   moving = null;
+  showCompanionField();
   lockBarber(false);
   $("service").disabled = false;
   drawPicker("service");

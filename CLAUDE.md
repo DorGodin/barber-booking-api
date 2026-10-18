@@ -180,7 +180,9 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   choice of 2026-10-15): an iPhone opened its own list upward when the field was low and folded a long line in two. The
   `<select>` stays, hidden, as the value the page reads and sets - whoever sets its value, options or `disabled` calls
   `drawPicker`. The field and every row say the name, and beside it the minutes and the price; a long name is cut, never
-  them. The list is a `listbox` worked by the keyboard too (arrows, Home, End, Enter, Escape). **A tab pressed clears the
+  them. Both are round (2026-10-18): a pill for the field, the chosen service a black pill, a thin line between the
+  others, one line each - smaller letters on the narrowest phone. The list is a `listbox` worked by the keyboard too
+  (arrows, Home, End, Enter, Escape). **A tab pressed clears the
   message** of the last screen.
 - **A product is kept for a booking, never sold here** (`/products`, `app/routers/products.py`, `booking_products`):
   the owner keeps the shelf and marks what ran out - nothing is counted, nothing is paid. A customer's button
@@ -193,6 +195,10 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **Booking for two is told at a glance** (`drawCompanion`, the owner's choice of 2026-10-15): a "2 אנשים" badge beside
   the title, and the second person's card in the shop's gold, headed "תור נוסף" and then "התור של" their name as it is
   typed (isolated, set as text), over "מיד אחרי התור שלך, אצל אותו ספר"; its service field is "השירות של" that name.
+  **The second person is offered once the first person's time is chosen** (`showCompanionField`, the owner's choice of
+  2026-10-18), under the times. Adding, removing or changing them keeps that time when both still fit in it
+  (`keepingTime`); when they do not, the times are where both fit and the customer is told why theirs went. The card
+  shows the second time, from the first's end by the shop's clock (`laterClock`), and the button books both.
 - **A group booking is all or none, in one step under the write lock** (`/bookings/group`): the
   listing for two (`also=`) and the booking must agree, so a time offered for two always books. It counts
   as one toward the limit; afterwards each booking is its own.
