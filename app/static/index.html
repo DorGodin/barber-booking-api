@@ -2838,9 +2838,10 @@ function celebrate(ring) {
   }
 }
 
-function showDone(title, made, other = null) {
+function showDone(title, made, other = null, standing = false) {
   doneBookingId = made.id;
-  offerStanding(null);
+  // Before the card is measured for the screen below: the offer is part of what must fit.
+  offerStanding(standing ? made : null);
   $("booking-done-title").textContent = title;
   $("booking-done-when").textContent = `${dayLabel(made.start_local)} · ${clock(made.start_local)}`;
   $("booking-done-what").textContent = other
@@ -3000,8 +3001,7 @@ async function bookSelected() {
       showDone(waiting ? "הבקשה נשלחה" : "שני התורים נקבעו", first, other);
       setCompanion(false);
     } else {
-      showDone(r.data.approval === "pending" ? "הבקשה נשלחה" : "התור נקבע", r.data);
-      offerStanding(r.data);
+      showDone(r.data.approval === "pending" ? "הבקשה נשלחה" : "התור נקבע", r.data, null, true);
     }
   } else {
     refused(r, slot, "לא הצלחנו לקבוע את התור");
