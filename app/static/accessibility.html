@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>הצהרת נגישות · {{shop_brand}}</title>
 <style>
   /* --mut is darker than on the booking page: here it also sits on the beige
@@ -35,13 +35,15 @@
   footer .snips { width:16px; height:16px; fill:none; stroke:var(--ink); stroke-width:1.8; transform:scaleX(-1); }
   /* A way back to the shop - in the app there is no browser bar to go back with. Top left, where it does not cover
      the title; a signed-in customer returns to their personal area, from where they came. */
-  header { position:relative; }
-  .back { position:absolute; left:12px; top:16px; display:inline-flex; align-items:center; gap:4px; min-height:44px; padding:0 14px; border:1px solid var(--line); border-radius:999px; background:#fff; color:var(--ink); font-size:14px; text-decoration:none; }
-  .back svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; }
+  /* In the shop's app the page runs under the phone's clock: the title and the way back stay below it. */
+  :root { --safe-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px)); }
+  header { position:relative; padding-top:calc(24px + var(--safe-top)); }
+  .back { position:absolute; left:12px; top:calc(16px + var(--safe-top)); display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:50%; background:var(--ink); color:#fff; }
+  .back svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2.6; }
 </style>
 </head>
 <body>
-<header><a class="back" href="/#account" data-testid="back-top"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>חזרה</a><h1>הצהרת נגישות</h1></header>
+<header><a class="back" href="/#account" data-testid="back-top" aria-label="חזרה"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a><h1>הצהרת נגישות</h1></header>
 <div class="cut" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.5 8.5L20 18M8.5 15.5L20 6"/></svg><span></span></div>
 <main>
   <section data-testid="level">

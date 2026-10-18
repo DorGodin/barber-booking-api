@@ -214,12 +214,12 @@
   .standing-open { display:block; margin:12px auto 0; min-height:44px; padding:0 16px; border:1.5px solid var(--gold); border-radius:999px; background:#fbf8f2; color:var(--ink); font:inherit; font-size:14px; font-weight:600; }
   .standing-offer { margin:14px 0 4px; padding:14px; border:1.5px solid var(--gold); border-radius:16px; background:#fbf8f2; text-align:start; }
   .standing-offer strong { display:block; font-size:15px; }
-  .standing-offer p { margin:4px 0 10px; color:var(--mut); font-size:13px; }
-  .standing-every { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
-  .standing-every button { min-height:44px; padding:0 12px; border:1px solid var(--line); border-radius:999px; background:#fff; color:var(--ink); font:inherit; font-size:13px; }
-  .standing-every button[aria-checked="true"] { border-color:var(--ink); background:var(--ink); color:#fff; }
-  .standing-make { width:100%; min-height:44px; border:0; border-radius:999px; background:var(--ink); color:#fff; font:inherit; font-size:14px; }
-  .standing-offer [data-testid="standing-next"] { margin:8px 0 0; text-align:center; font-size:12.5px; }
+  /* The three in one row: a pill with the chosen one black, as the owner chose (2026-10-18). */
+  .standing-every { display:flex; gap:4px; margin:10px 0; padding:4px; border-radius:999px; background:#efe9dc; }
+  .standing-every button { flex:1; min-width:0; min-height:44px; padding:0 4px; border:0; border-radius:999px; background:transparent; color:var(--ink); font:inherit; font-size:13.5px; white-space:nowrap; }
+  .standing-every button[aria-checked="true"] { background:var(--ink); color:#fff; }
+  .standing-make { width:100%; min-height:48px; padding:4px 12px; border:0; border-radius:999px; background:var(--ink); color:#fff; font:inherit; font-size:14.5px; line-height:1.25; }
+  .standing-make small { display:block; font-size:11.5px; opacity:.75; }
   .standing-cancel { display:block; min-height:44px; margin:0 auto; padding:0 12px; border:0; background:none; color:var(--mut); font:inherit; font-size:13px; text-decoration:underline; }
   .standing-made { margin:14px 0 4px; padding:10px 14px; border:1.5px solid var(--gold); border-radius:999px; background:#fbf8f2; font-size:14px; font-weight:600; }
   .standing-mark { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; margin-inline-start:6px; border:1px solid var(--gold); border-radius:50%; background:#fbf8f2; font-size:12px; vertical-align:middle; }
@@ -759,15 +759,13 @@
           <p class="muted" data-testid="booking-done-what"></p>
           <button type="button" class="standing-open" data-testid="standing-open" aria-expanded="false" aria-controls="standing-offer" hidden>🔁 להפוך לתור קבוע</button>
           <div class="standing-offer" id="standing-offer" data-testid="standing-offer" hidden>
-            <strong>🔁 להפוך לתור קבוע?</strong>
-            <p>אותו ספר, אותו שירות, אותה שעה. התור הבא נקבע לבד אחרי כל ביקור.</p>
-            <div class="standing-every" role="radiogroup" aria-label="כל כמה זמן" data-testid="standing-every">
-              <button type="button" role="radio" aria-checked="false" data-weeks="2">כל שבועיים</button>
-              <button type="button" role="radio" aria-checked="true" data-weeks="3">כל 3 שבועות</button>
-              <button type="button" role="radio" aria-checked="false" data-weeks="4">כל 4 שבועות</button>
+            <strong id="standing-title">🔁 תור קבוע? כל כמה זמן</strong>
+            <div class="standing-every" role="radiogroup" aria-labelledby="standing-title" data-testid="standing-every">
+              <button type="button" role="radio" aria-checked="false" data-weeks="2">שבועיים</button>
+              <button type="button" role="radio" aria-checked="true" data-weeks="3">3 שבועות</button>
+              <button type="button" role="radio" aria-checked="false" data-weeks="4">4 שבועות</button>
             </div>
-            <button type="button" class="standing-make" data-testid="standing-make"></button>
-            <p class="muted" data-testid="standing-next"></p>
+            <button type="button" class="standing-make" data-testid="standing-make">כן, להפוך לקבוע<small data-testid="standing-next"></small></button>
             <button type="button" class="standing-cancel" data-testid="standing-cancel">לא תודה</button>
           </div>
           <p class="standing-made" data-testid="standing-made" tabindex="-1" hidden></p>
@@ -2905,9 +2903,8 @@ function drawStanding() {
     choice.setAttribute("aria-checked", String(on));
     choice.tabIndex = on ? 0 : -1;
   }
-  $("standing-make").textContent = `כן, תור קבוע ${everyWords(standingWeeks)}`;
   const next = addDays(standingFor.start_local.slice(0, 10), 7 * standingWeeks);
-  $("standing-next").textContent = `התור הבא: ${dayLabel(next)} · ${clock(standingFor.start_local)}`;
+  $("standing-next").textContent = `הבא: ${dayLabel(next)} · ${clock(standingFor.start_local)}`;
 }
 $("standing-every").addEventListener("click", (e) => {
   const choice = e.target.closest("[data-weeks]");
