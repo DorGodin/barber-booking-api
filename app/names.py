@@ -13,5 +13,7 @@ MARKS = frozenset(" -'.\"\u05f3\u05f4")
 
 def name_or_error(name: str) -> str:
     if not all(ch.isalpha() or ch in MARKS or unicodedata.category(ch).startswith("M") for ch in name):
-        raise DomainError(422, "name_not_letters", "a name: letters, with spaces, hyphens and apostrophes only")
+        raise DomainError(
+            422, "name_not_letters", "a name: letters, with spaces, hyphens and apostrophes only"
+        )
     return name
