@@ -1841,7 +1841,8 @@ function renderLimit() {
   // One place left is a place for one: a second person is not offered.
   $("app").classList.toggle("no-room-for-two", Boolean(me) && held + 2 > limit);
   $("limit-note").hidden = !full;
-  $("limit-note-text").textContent = full ? `יש לך כבר ${shop.bookings_ahead_limit} תורים קדימה` : "";
+  // What the customer has and what to do: their own count - above the limit when a shop lowered it.
+  $("limit-note-text").textContent = full ? `יש לך ${held} תורים. בטלו אחד כדי לקבוע חדש` : "";
   for (const part of [$("barbers").parentElement, $("book-panel")]) {
     part.inert = full;
     part.classList.toggle("at-limit", full);
