@@ -204,13 +204,15 @@
   .done h2 { margin:14px 0 6px; font-size:22px; color:var(--ink); }
   .done .when { margin:0; font-size:16px; font-weight:700; }
   /* A booking made becomes a standing one in a tap: how often, and the next time it would be. */
+  /* Folded to one button until asked, so the answer and its two ways on still fit a small phone. */
+  .standing-open { display:block; margin:12px auto 0; min-height:44px; padding:0 16px; border:1.5px solid var(--gold); border-radius:999px; background:#fbf8f2; color:var(--ink); font:inherit; font-size:14px; font-weight:600; }
   .standing-offer { margin:14px 0 4px; padding:14px; border:1.5px solid var(--gold); border-radius:16px; background:#fbf8f2; text-align:start; }
   .standing-offer strong { display:block; font-size:15px; }
   .standing-offer p { margin:4px 0 10px; color:var(--mut); font-size:13px; }
   .standing-every { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
-  .standing-every button { min-height:34px; padding:0 12px; border:1px solid var(--line); border-radius:999px; background:#fff; color:var(--ink); font:inherit; font-size:13px; }
+  .standing-every button { min-height:44px; padding:0 12px; border:1px solid var(--line); border-radius:999px; background:#fff; color:var(--ink); font:inherit; font-size:13px; }
   .standing-every button[aria-checked="true"] { border-color:var(--ink); background:var(--ink); color:#fff; }
-  .standing-make { width:100%; min-height:42px; border:0; border-radius:999px; background:var(--ink); color:#fff; font:inherit; font-size:14px; }
+  .standing-make { width:100%; min-height:44px; border:0; border-radius:999px; background:var(--ink); color:#fff; font:inherit; font-size:14px; }
   .standing-offer [data-testid="standing-next"] { margin:8px 0 0; text-align:center; font-size:12.5px; }
   .standing-made { margin:14px 0 4px; padding:10px 14px; border:1.5px solid var(--gold); border-radius:999px; background:#fbf8f2; font-size:14px; font-weight:600; }
   .standing-badge { display:inline-block; padding:2px 10px; border:1px solid var(--gold); border-radius:999px; background:#fbf8f2; color:#6b5222; font-size:12.5px; font-weight:600; }
@@ -736,7 +738,8 @@
           <h2 data-testid="booking-done-title" tabindex="-1"></h2>
           <p class="when" data-testid="booking-done-when"></p>
           <p class="muted" data-testid="booking-done-what"></p>
-          <div class="standing-offer" data-testid="standing-offer" hidden>
+          <button type="button" class="standing-open" data-testid="standing-open" aria-expanded="false" aria-controls="standing-offer" hidden>🔁 להפוך לתור קבוע</button>
+          <div class="standing-offer" id="standing-offer" data-testid="standing-offer" hidden>
             <strong>🔁 להפוך לתור קבוע?</strong>
             <p>אותו ספר, אותו שירות, אותה שעה. התור הבא נקבע לבד אחרי כל ביקור.</p>
             <div class="standing-every" role="radiogroup" aria-label="כל כמה זמן" data-testid="standing-every">
@@ -2820,11 +2823,24 @@ function offerStanding(made) {
   standingFor = made;
   standingWeeks = 3;
   $("standing-made").hidden = true;
-  $("standing-offer").hidden = !made;
+  $("standing-offer").hidden = true;
+  $("standing-open").hidden = !made;
+  $("standing-open").setAttribute("aria-expanded", "false");
   if (made) drawStanding();
 }
+$("standing-open").addEventListener("click", () => {
+  $("standing-open").hidden = true;
+  $("standing-open").setAttribute("aria-expanded", "true");
+  $("standing-offer").hidden = false;
+  $("standing-every").querySelector('[aria-checked="true"]').focus();
+});
 function drawStanding() {
-  for (const choice of $("standing-every").children) choice.setAttribute("aria-checked", String(Number(choice.dataset.weeks) === standingWeeks));
+  // One Tab stop for the three, the arrows between them - as the times are.
+  for (const choice of $("standing-every").children) {
+    const on = Number(choice.dataset.weeks) === standingWeeks;
+    choice.setAttribute("aria-checked", String(on));
+    choice.tabIndex = on ? 0 : -1;
+  }
   $("standing-make").textContent = `כן, תור קבוע ${everyWords(standingWeeks)}`;
   const next = addDays(standingFor.start_local.slice(0, 10), 7 * standingWeeks);
   $("standing-next").textContent = `התור הבא: ${dayLabel(next)} · ${clock(standingFor.start_local)}`;
@@ -2834,6 +2850,16 @@ $("standing-every").addEventListener("click", (e) => {
   if (!choice) return;
   standingWeeks = Number(choice.dataset.weeks);
   drawStanding();
+});
+$("standing-every").addEventListener("keydown", (e) => {
+  const choices = [...$("standing-every").children];
+  const at = choices.indexOf(document.activeElement);
+  if (at < 0 || !(e.key in STEP)) return;
+  e.preventDefault();
+  const to = choices[Math.min(choices.length - 1, Math.max(0, at + STEP[e.key]))];
+  standingWeeks = Number(to.dataset.weeks);
+  drawStanding();
+  to.focus();
 });
 $("standing-make").addEventListener("click", () => busyWhile(async () => {
   const r = await api("POST", `/bookings/${standingFor.id}/standing`, { every_weeks: standingWeeks });
