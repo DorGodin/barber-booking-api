@@ -33,10 +33,15 @@
   footer .legal { display:flex; justify-content:center; align-items:center; gap:12px; flex-wrap:wrap; }
   footer .legal a { display:inline-flex; align-items:center; min-height:44px; }
   footer .snips { width:16px; height:16px; fill:none; stroke:var(--ink); stroke-width:1.8; transform:scaleX(-1); }
+  /* A way back to the shop - in the app there is no browser bar to go back with. Top left, where it does not cover
+     the title; a signed-in customer returns to their personal area, from where they came. */
+  header { position:relative; }
+  .back { position:absolute; left:12px; top:16px; display:inline-flex; align-items:center; gap:4px; min-height:44px; padding:0 14px; border:1px solid var(--line); border-radius:999px; background:#fff; color:var(--ink); font-size:14px; text-decoration:none; }
+  .back svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; }
 </style>
 </head>
 <body>
-<header><h1>הצהרת נגישות</h1></header>
+<header><a class="back" href="/#account" data-testid="back-top"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>חזרה</a><h1>הצהרת נגישות</h1></header>
 <div class="cut" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.5 8.5L20 18M8.5 15.5L20 6"/></svg><span></span></div>
 <main>
   <section data-testid="level">
