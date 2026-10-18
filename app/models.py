@@ -214,6 +214,27 @@ class Booking(Base):
     no_show: Mapped[bool] = mapped_column(default=False, server_default=false())
     # When the customer was reminded of it; None until they are. A move clears it.
     reminded_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    # The standing booking it was made for - the customer's own regular time - if any.
+    standing_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+
+
+class StandingBooking(Base):
+    """A customer's regular time: the same barber, service and hour every few weeks. Only one booking of it
+    is ever ahead - the next is made once that one has begun - so it takes one place toward the limit."""
+
+    __tablename__ = "standing_bookings"
+    __table_args__ = (CheckConstraint("every_weeks IN (2, 3, 4)", name="ck_standing_every_weeks"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=lambda: new_id("std"))
+    customer_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    barber_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    service_id: Mapped[str] = mapped_column(ForeignKey("services.id"))
+    every_weeks: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=now_utc)
+    stopped_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    # A time that could not be kept - taken, or the barber off - and the customer told: the next is
+    # looked for from there, and they are not told again about the same one.
+    skipped_until: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
 
 class BookingMove(Base):

@@ -204,6 +204,12 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   page in `/shop` as `bookings_ahead_limit`. At the limit the booking
   panel says so in a small pill with a way to the list (`renderLimit`) and the choice is `inert` and grey until one is
   cancelled or moved; a move is never held back. The server refuses past it whatever the page shows.
+- **A standing booking is a customer's regular time** (`app/standing.py`, `standing_bookings`, the owner's choice of
+  2026-10-18): from a booking still to come, for one person, every two, three or four weeks (`POST
+  /bookings/{id}/standing`, stopped with `/standing/{id}/stop`; the booking itself stays). Only the next booking is
+  ever held: the loop every worker runs makes the one after it once that one has begun, at the same hour on the
+  shop's clock, through `place_booking` - the page's own checks, under the write lock, so it is made once. A time
+  that is refused is skipped (`skipped_until`) and the customer told once. Deleting the account stops them.
 - **A group booking is all or none, in one step under the write lock** (`/bookings/group`): the
   listing for two (`also=`) and the booking must agree, so a time offered for two always books. It takes a
   place for each person toward the limit; afterwards each booking is its own.

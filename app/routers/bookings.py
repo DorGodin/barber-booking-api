@@ -32,6 +32,7 @@ from app.models import (
     Product,
     Review,
     Service,
+    StandingBooking,
     User,
     new_id,
 )
@@ -47,6 +48,7 @@ router = APIRouter(tags=["bookings"])
 
 def _view(session: Session, booking: Booking, config: Settings) -> dict:
     customer = session.get(User, booking.customer_id) if booking.customer_id else None
+    standing = session.get(StandingBooking, booking.standing_id) if booking.standing_id else None
     return booking_view(
         booking,
         session.get(Service, booking.service_id).name,
@@ -61,6 +63,7 @@ def _view(session: Session, booking: Booking, config: Settings) -> dict:
             .where(BookingProduct.booking_id == booking.id)
             .order_by(BookingProduct.id)
         ).all(),
+        standing=standing,
     )
 
 
@@ -106,6 +109,60 @@ def _held_ahead(session: Session, customer_id: str, now: datetime) -> int:
     )
 
 
+def place_booking(
+    session: Session,
+    config: Settings,
+    customer_id: str,
+    barber_id: str,
+    service_id: str,
+    start: datetime,
+    now: datetime,
+    standing_id: str | None = None,
+) -> Booking:
+    """A customer's booking, checked and added - the page's, and the next of a standing booking alike.
+    Called under the write lock; a refusal is raised as the DomainError the page explains."""
+    bookable_barber_or_error(session, barber_id)
+    service = active_service_or_error(session, service_id)
+    wanted = check_bookable(session, config, barber_id, service, start, now)
+
+    # One customer may hold only so many times ahead, or one account - or
+    # a script - could take every free time in the shop. Counted under the
+    # lock, so two bookings sent at once cannot both pass it. Before the
+    # slot checks: a customer at the limit is told that, not that a time
+    # is taken.
+    if _held_ahead(session, customer_id, now) >= config.max_future_bookings:
+        raise DomainError(
+            409,
+            "too_many_bookings",
+            f"at most {config.max_future_bookings} bookings ahead; cancel one to book another",
+            extra={"limit": config.max_future_bookings},
+        )
+
+    _refuse_clashes(session, wanted, barber_id, customer_id)
+
+    booking = Booking(
+        customer_id=customer_id,
+        barber_id=barber_id,
+        service_id=service.id,
+        start_utc=wanted.start,
+        end_utc=wanted.end,
+        price_minor=service.price_minor,
+        currency=service.currency,
+        standing_id=standing_id,
+    )
+    # A customer who has cancelled or moved too often waits for the barber on
+    # every booking, whatever the hour, and silence is never a yes. They are
+    # not told why: it looks like any request.
+    if service.requires_approval or is_flagged(session, config, customer_id, now):
+        booking.approval = "pending"
+    elif needs_approval(session, config, wanted.start):
+        booking.approval = "pending"
+        booking.decide_by = decide_by(config, now, wanted.start)
+    session.add(booking)
+    session.flush()
+    return booking
+
+
 @router.post("/bookings", status_code=201)
 def create_booking(
     body: BookingIn,
@@ -139,44 +196,7 @@ def create_booking(
                 response.headers["Idempotent-Replayed"] = "true"
                 return _view(session, session.get(Booking, seen.booking_id), config)
 
-        bookable_barber_or_error(session, body.barber_id)
-        service = active_service_or_error(session, body.service_id)
-        wanted = check_bookable(session, config, body.barber_id, service, start, now)
-
-        # One customer may hold only so many times ahead, or one account - or
-        # a script - could take every free time in the shop. Counted under the
-        # lock, so two bookings sent at once cannot both pass it. Before the
-        # slot checks: a customer at the limit is told that, not that a time
-        # is taken.
-        if _held_ahead(session, user.id, now) >= config.max_future_bookings:
-            raise DomainError(
-                409,
-                "too_many_bookings",
-                f"at most {config.max_future_bookings} bookings ahead; cancel one to book another",
-                extra={"limit": config.max_future_bookings},
-            )
-
-        _refuse_clashes(session, wanted, body.barber_id, user.id)
-
-        booking = Booking(
-            customer_id=user.id,
-            barber_id=body.barber_id,
-            service_id=service.id,
-            start_utc=wanted.start,
-            end_utc=wanted.end,
-            price_minor=service.price_minor,
-            currency=service.currency,
-        )
-        # A customer who has cancelled or moved too often waits for the barber on
-        # every booking, whatever the hour, and silence is never a yes. They are
-        # not told why: it looks like any request.
-        if service.requires_approval or is_flagged(session, config, user.id, now):
-            booking.approval = "pending"
-        elif needs_approval(session, config, wanted.start):
-            booking.approval = "pending"
-            booking.decide_by = decide_by(config, now, wanted.start)
-        session.add(booking)
-        session.flush()
+        booking = place_booking(session, config, user.id, body.barber_id, body.service_id, start, now)
         if booking.approval == "pending":
             _tell_staff(
                 session, background, hub, booking, "בקשה חדשה ביומן", _who_and_when(session, booking, config)

@@ -11,13 +11,13 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Response
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.db import write_lock
 from app.deps import db, push_hub, require, settings
-from app.models import Booking, OtpCode, PushDevice, PushNotice, PushSubscription, User
+from app.models import Booking, OtpCode, PushDevice, PushNotice, PushSubscription, StandingBooking, User
 from app.push import PushHub
 from app.routers.bookings import _tell_staff, _who_and_when
 
@@ -49,6 +49,12 @@ def delete_my_account(
         session.execute(delete(PushNotice).where(PushNotice.subscription_id.in_(subscriptions)))
         session.execute(delete(PushSubscription).where(PushSubscription.user_id == user.id))
         session.execute(delete(PushDevice).where(PushDevice.user_id == user.id))
+        # Their regular times stop: no booking is made for an account that is gone.
+        session.execute(
+            update(StandingBooking)
+            .where(StandingBooking.customer_id == user.id, StandingBooking.stopped_at.is_(None))
+            .values(stopped_at=now)
+        )
         if user.phone:
             session.execute(delete(OtpCode).where(OtpCode.phone == user.phone))
         user.display_name, user.phone, user.staff_note = "", None, None

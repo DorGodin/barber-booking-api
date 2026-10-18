@@ -209,6 +209,20 @@
   .done .ring { position:relative; width:64px; height:64px; border-radius:50%; background:#e6f2e8; color:var(--ok); display:inline-flex; align-items:center; justify-content:center; font-size:32px; font-weight:700; }
   .done h2 { margin:14px 0 6px; font-size:22px; color:var(--ink); }
   .done .when { margin:0; font-size:16px; font-weight:700; }
+  /* A booking made becomes a standing one in a tap: how often, and the next time it would be. */
+  /* Folded to one button until asked, so the answer and its two ways on still fit a small phone. */
+  .standing-open { display:block; margin:12px auto 0; min-height:44px; padding:0 16px; border:1.5px solid var(--gold); border-radius:999px; background:#fbf8f2; color:var(--ink); font:inherit; font-size:14px; font-weight:600; }
+  .standing-offer { margin:14px 0 4px; padding:14px; border:1.5px solid var(--gold); border-radius:16px; background:#fbf8f2; text-align:start; }
+  .standing-offer strong { display:block; font-size:15px; }
+  .standing-offer p { margin:4px 0 10px; color:var(--mut); font-size:13px; }
+  .standing-every { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .standing-every button { min-height:44px; padding:0 12px; border:1px solid var(--line); border-radius:999px; background:#fff; color:var(--ink); font:inherit; font-size:13px; }
+  .standing-every button[aria-checked="true"] { border-color:var(--ink); background:var(--ink); color:#fff; }
+  .standing-make { width:100%; min-height:44px; border:0; border-radius:999px; background:var(--ink); color:#fff; font:inherit; font-size:14px; }
+  .standing-offer [data-testid="standing-next"] { margin:8px 0 0; text-align:center; font-size:12.5px; }
+  .standing-made { margin:14px 0 4px; padding:10px 14px; border:1.5px solid var(--gold); border-radius:999px; background:#fbf8f2; font-size:14px; font-weight:600; }
+  .standing-badge { display:inline-block; padding:2px 10px; border:1px solid var(--gold); border-radius:999px; background:#fbf8f2; color:#6b5222; font-size:12.5px; font-weight:600; }
+  .standing-line { flex-basis:100%; text-align:center; color:var(--mut); font-size:12.5px; }
   .done .muted { margin:4px 0 0; }
   .done[data-waiting] .ring { background:#fbf3df; color:#8a5a00; }
   [data-testid="booking-row"][data-approval="pending"] [data-testid="booking-detail"] { color:#8a5a00; }
@@ -741,6 +755,19 @@
           <h2 data-testid="booking-done-title" tabindex="-1"></h2>
           <p class="when" data-testid="booking-done-when"></p>
           <p class="muted" data-testid="booking-done-what"></p>
+          <button type="button" class="standing-open" data-testid="standing-open" aria-expanded="false" aria-controls="standing-offer" hidden>🔁 להפוך לתור קבוע</button>
+          <div class="standing-offer" id="standing-offer" data-testid="standing-offer" hidden>
+            <strong>🔁 להפוך לתור קבוע?</strong>
+            <p>אותו ספר, אותו שירות, אותה שעה. התור הבא נקבע לבד אחרי כל ביקור.</p>
+            <div class="standing-every" role="radiogroup" aria-label="כל כמה זמן" data-testid="standing-every">
+              <button type="button" role="radio" aria-checked="false" data-weeks="2">כל שבועיים</button>
+              <button type="button" role="radio" aria-checked="true" data-weeks="3">כל 3 שבועות</button>
+              <button type="button" role="radio" aria-checked="false" data-weeks="4">כל 4 שבועות</button>
+            </div>
+            <button type="button" class="standing-make" data-testid="standing-make"></button>
+            <p class="muted" data-testid="standing-next"></p>
+          </div>
+          <p class="standing-made" data-testid="standing-made" tabindex="-1" hidden></p>
           <div class="done-actions">
             <button type="button" data-testid="booking-done-mine">התורים שלי</button>
             <button type="button" class="soft" data-testid="booking-done-more">קביעת תור נוסף</button>
@@ -1331,6 +1358,9 @@ const FRIENDLY = {
   account_inactive: () => "החשבון הזה כבר לא פעיל. אפשר לפנות לבעל המספרה.",
   bad_phone: () => "מספר הטלפון צריך להיות של נייד: 05 ועוד 8 ספרות, למשל 0501234567.",
   name_not_letters: () => "השם יכול להכיל רק אותיות",
+  standing_not_ahead: () => "רק תור שעוד לא הגיע יכול להפוך לתור קבוע.",
+  standing_group: () => "תור לשניים לא יכול להפוך לתור קבוע.",
+  already_standing: () => "התור הזה כבר קבוע.",
   code_too_soon: (_, data) => `אפשר לבקש קוד חדש בעוד ${data.retry_after_seconds} שניות.`,
   too_many_codes: (_, data) => `נשלחו יותר מדי קודים. אפשר לנסות שוב בעוד ${Math.max(1, Math.ceil(data.retry_after_seconds / 60))} דקות.`,
   sms_failed: () => "לא הצלחנו לשלוח את ה־SMS. אפשר לנסות שוב.",
@@ -2810,6 +2840,7 @@ function celebrate(ring) {
 
 function showDone(title, made, other = null) {
   doneBookingId = made.id;
+  offerStanding(null);
   $("booking-done-title").textContent = title;
   $("booking-done-when").textContent = `${dayLabel(made.start_local)} · ${clock(made.start_local)}`;
   $("booking-done-what").textContent = other
@@ -2831,6 +2862,62 @@ function showDone(title, made, other = null) {
   if ($("booking-done").getBoundingClientRect().bottom > window.innerHeight) $("booking-done").scrollIntoView({ block: "start" });
   $("booking-done-title").focus();
 }
+
+// A customer's own booking, for one, just made - not a move, not a booking for two - may become their regular
+// time: every two, three or four weeks, the next made once this one has begun (app/standing.py).
+let standingFor = null, standingWeeks = 3;
+const everyWords = (weeks) => (weeks === 2 ? "כל שבועיים" : `כל ${weeks} שבועות`);
+function offerStanding(made) {
+  standingFor = made;
+  standingWeeks = 3;
+  $("standing-made").hidden = true;
+  $("standing-offer").hidden = true;
+  $("standing-open").hidden = !made;
+  $("standing-open").setAttribute("aria-expanded", "false");
+  if (made) drawStanding();
+}
+$("standing-open").addEventListener("click", () => {
+  $("standing-open").hidden = true;
+  $("standing-open").setAttribute("aria-expanded", "true");
+  $("standing-offer").hidden = false;
+  $("standing-every").querySelector('[aria-checked="true"]').focus();
+});
+function drawStanding() {
+  // One Tab stop for the three, the arrows between them - as the times are.
+  for (const choice of $("standing-every").children) {
+    const on = Number(choice.dataset.weeks) === standingWeeks;
+    choice.setAttribute("aria-checked", String(on));
+    choice.tabIndex = on ? 0 : -1;
+  }
+  $("standing-make").textContent = `כן, תור קבוע ${everyWords(standingWeeks)}`;
+  const next = addDays(standingFor.start_local.slice(0, 10), 7 * standingWeeks);
+  $("standing-next").textContent = `התור הבא: ${dayLabel(next)} · ${clock(standingFor.start_local)}`;
+}
+$("standing-every").addEventListener("click", (e) => {
+  const choice = e.target.closest("[data-weeks]");
+  if (!choice) return;
+  standingWeeks = Number(choice.dataset.weeks);
+  drawStanding();
+});
+$("standing-every").addEventListener("keydown", (e) => {
+  const choices = [...$("standing-every").children];
+  const at = choices.indexOf(document.activeElement);
+  if (at < 0 || !(e.key in STEP)) return;
+  e.preventDefault();
+  const to = choices[Math.min(choices.length - 1, Math.max(0, at + STEP[e.key]))];
+  standingWeeks = Number(to.dataset.weeks);
+  drawStanding();
+  to.focus();
+});
+$("standing-make").addEventListener("click", () => busyWhile(async () => {
+  const r = await api("POST", `/bookings/${standingFor.id}/standing`, { every_weeks: standingWeeks });
+  if (!r.ok) return say(explain(r), "error");
+  $("standing-offer").hidden = true;
+  $("standing-made").textContent = `🔁 תור קבוע ${everyWords(standingWeeks)}. התור הבא ייקבע לבד אחרי הביקור.`;
+  $("standing-made").hidden = false;
+  $("standing-made").focus();
+  await refreshBookings();
+}));
 
 function hideDone() {
   doneBookingId = null;
@@ -2914,6 +3001,7 @@ async function bookSelected() {
       setCompanion(false);
     } else {
       showDone(r.data.approval === "pending" ? "הבקשה נשלחה" : "התור נקבע", r.data);
+      offerStanding(r.data);
     }
   } else {
     refused(r, slot, "לא הצלחנו לקבוע את התור");
@@ -3499,6 +3587,21 @@ async function refreshBookings() {
       cancel.setAttribute("aria-label", `ביטול התור של ${when.textContent}`);
       cancel.addEventListener("click", () => cancelBooking(b));
       row.append(cancel);
+    }
+    // A standing booking: the badge for everyone who reads the row; for the customer, what happens next and
+    // the way to stop it - the booking itself stays.
+    if (b.standing && b.status === "confirmed") {
+      text.after(control("span", { className: "standing-badge", testid: "booking-standing", textContent: `🔁 תור קבוע · ${everyWords(b.standing.every_weeks)}` }));
+      if (me.role === "customer") {
+        row.append(control("span", { className: "standing-line", textContent: "התור הבא ייקבע לבד אחרי הביקור הזה" }));
+        const stop = control("button", { type: "button", className: "ghost", testid: "stop-standing", textContent: "הפסקת התור הקבוע" });
+        stop.addEventListener("click", () => busyWhile(async () => {
+          const r = await api("POST", `/standing/${b.standing.id}/stop`);
+          say(r.ok ? "התור הקבוע הופסק. התור הזה נשאר." : explain(r), r.ok ? "ok" : "error");
+          await refreshBookings();
+        }));
+        row.append(stop);
+      }
     }
     list.appendChild(row);
   }
