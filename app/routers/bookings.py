@@ -96,10 +96,10 @@ def _refuse_clashes(
 
 
 def _held_ahead(session: Session, customer_id: str, now: datetime) -> int:
-    """The bookings a customer holds ahead. Those made together for two people count as one:
-    bringing a child must not need a free place for each."""
+    """The bookings a customer holds ahead - each person's its own, those made together for two people
+    too: five ahead are five chairs (the owner's choice of 2026-10-18)."""
     return session.scalar(
-        select(func.count(func.distinct(func.coalesce(Booking.group_id, Booking.id))))
+        select(func.count())
         .select_from(Booking)
         .where(Booking.customer_id == customer_id, Booking.status == "confirmed", Booking.start_utc > now)
     )
@@ -214,11 +214,11 @@ def create_group_booking(
     with write_lock(session):
         bookable_barber_or_error(session, body.barber_id)
         services = [active_service_or_error(session, p.service_id) for p in body.people]
-        if _held_ahead(session, user.id, now) >= config.max_future_bookings:
+        if _held_ahead(session, user.id, now) + len(body.people) > config.max_future_bookings:
             raise DomainError(
                 409,
                 "too_many_bookings",
-                f"at most {config.max_future_bookings} bookings ahead; cancel one to book another",
+                f"at most {config.max_future_bookings} bookings ahead, one for each person; cancel one to book",
                 extra={"limit": config.max_future_bookings},
             )
         flagged = is_flagged(session, config, user.id, now)

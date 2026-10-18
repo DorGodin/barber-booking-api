@@ -190,13 +190,14 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **Booking for two is told at a glance** (`drawCompanion`, the owner's choice of 2026-10-15): a "2 אנשים" badge beside
   the title, and the second person's card in the shop's gold, headed "תור נוסף" and then "התור של" their name as it is
   typed (isolated, set as text), over "מיד אחרי התור שלך, אצל אותו ספר"; its service field is "השירות של" that name.
-- **A customer holds at most five bookings ahead** (`MAX_FUTURE_BOOKINGS`, the owner's choice of 2026-10-18; two made
-  together for two people count as one), told to the page in `/shop` as `bookings_ahead_limit`. At the limit the booking
+- **A customer holds at most five bookings ahead** (`MAX_FUTURE_BOOKINGS`, the owner's choice of 2026-10-18), each person's
+  its own - a booking for two takes two places, and with one place left a second person is not offered - told to the
+  page in `/shop` as `bookings_ahead_limit`. At the limit the booking
   panel says so in a small pill with a way to the list (`renderLimit`) and the choice is `inert` and grey until one is
   cancelled or moved; a move is never held back. The server refuses past it whatever the page shows.
 - **A group booking is all or none, in one step under the write lock** (`/bookings/group`): the
-  listing for two (`also=`) and the booking must agree, so a time offered for two always books. It counts
-  as one toward the limit; afterwards each booking is its own.
+  listing for two (`also=`) and the booking must agree, so a time offered for two always books. It takes a
+  place for each person toward the limit; afterwards each booking is its own.
 - **A reminder is claimed before it is sent** (`app/reminders.py`, `reminded_at`): several workers look at once, and
   the claim is one write step - so a booking is reminded once, and a push that fails is not repeated.
 - **One `refused()` shows every refusal** - booking, guest booking, move. A new way to book

@@ -284,6 +284,7 @@
   .limit-note button { flex:none; min-height:32px; padding:0 14px; border:0; border-radius:999px; background:var(--ink); color:#fff; font:inherit; font-size:13px; }
   @media (max-width: 360px) { .limit-note { border-radius:18px; } .limit-note span { font-size:13px; } }
   .at-limit { opacity:.35; filter:grayscale(1); }
+  .no-room-for-two [data-testid="add-person"] { display:none; }
   .pair-badge { padding:2px 10px; border-radius:999px; background:var(--gold); color:#fff; font-size:13px; font-weight:600; }
   .companion-head { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
   .companion-head strong { display:block; font-size:16px; }
@@ -1827,14 +1828,18 @@ function removeCourseImage(course) {
 // no button. The owner marks what ran out; nothing is counted.
 let products = [];
 let myBookings = [];
-// The bookings a customer holds ahead, as the server counts them toward the limit: confirmed, not begun, and the
-// two made together for two people as one. The server refuses past the limit whatever the page shows.
+// The bookings a customer holds ahead, as the server counts them toward the limit: confirmed, not begun, each
+// person's its own - two made together for two people are two. The server refuses past the limit whatever the
+// page shows.
 function heldAhead() {
   const now = Date.now();
-  return new Set(myBookings.filter((b) => b.status === "confirmed" && Date.parse(b.start) > now).map((b) => b.group_id || b.id)).size;
+  return myBookings.filter((b) => b.status === "confirmed" && Date.parse(b.start) > now).length;
 }
 function renderLimit() {
-  const full = Boolean(me) && me.role === "customer" && !moving && heldAhead() >= shop.bookings_ahead_limit;
+  const held = heldAhead(), limit = shop ? shop.bookings_ahead_limit : 0;
+  const full = Boolean(me) && me.role === "customer" && !moving && held >= limit;
+  // One place left is a place for one: a second person is not offered.
+  $("app").classList.toggle("no-room-for-two", Boolean(me) && held + 2 > limit);
   $("limit-note").hidden = !full;
   $("limit-note-text").textContent = full ? `יש לך כבר ${shop.bookings_ahead_limit} תורים קדימה` : "";
   for (const part of [$("barbers").parentElement, $("book-panel")]) {
