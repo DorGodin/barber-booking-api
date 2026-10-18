@@ -220,6 +220,7 @@
   .standing-every button[aria-checked="true"] { border-color:var(--ink); background:var(--ink); color:#fff; }
   .standing-make { width:100%; min-height:44px; border:0; border-radius:999px; background:var(--ink); color:#fff; font:inherit; font-size:14px; }
   .standing-offer [data-testid="standing-next"] { margin:8px 0 0; text-align:center; font-size:12.5px; }
+  .standing-cancel { display:block; min-height:44px; margin:0 auto; padding:0 12px; border:0; background:none; color:var(--mut); font:inherit; font-size:13px; text-decoration:underline; }
   .standing-made { margin:14px 0 4px; padding:10px 14px; border:1.5px solid var(--gold); border-radius:999px; background:#fbf8f2; font-size:14px; font-weight:600; }
   .standing-mark { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; margin-inline-start:6px; border:1px solid var(--gold); border-radius:50%; background:#fbf8f2; font-size:12px; vertical-align:middle; }
   .standing-line { flex-basis:100%; text-align:center; color:var(--mut); font-size:12.5px; }
@@ -767,6 +768,7 @@
             </div>
             <button type="button" class="standing-make" data-testid="standing-make"></button>
             <p class="muted" data-testid="standing-next"></p>
+            <button type="button" class="standing-cancel" data-testid="standing-cancel">לא תודה</button>
           </div>
           <p class="standing-made" data-testid="standing-made" tabindex="-1" hidden></p>
           <div class="done-actions">
@@ -1707,6 +1709,11 @@ async function start() {
   await refresh();
   // Today may be closed, or full: the screen opens on a day with a time.
   await keepAFreeDay();
+  // Back from the accessibility statement or the privacy policy: a customer returns to their personal area.
+  if (location.hash === "#account") {
+    history.replaceState(null, "", location.pathname);
+    if (customer) showTab("account");
+  }
 }
 
 // The day chosen may have no time to offer - today on a Saturday, or after a
@@ -2878,6 +2885,13 @@ function offerStanding(made) {
   $("standing-open").setAttribute("aria-expanded", "false");
   if (made) drawStanding();
 }
+// "No thanks" folds it back to the one button, nothing made.
+$("standing-cancel").addEventListener("click", () => {
+  $("standing-offer").hidden = true;
+  $("standing-open").hidden = false;
+  $("standing-open").setAttribute("aria-expanded", "false");
+  $("standing-open").focus();
+});
 $("standing-open").addEventListener("click", () => {
   $("standing-open").hidden = true;
   $("standing-open").setAttribute("aria-expanded", "true");
