@@ -15,7 +15,8 @@
   body { margin:0; font-family: "Rubik", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background:var(--bg); color:var(--ink); line-height:1.7; }
   header { text-align:center; padding:24px 16px 0; max-width:760px; margin:0 auto; }
   header h1 { margin:0; font-size:22px; }
-  main { max-width:760px; margin:24px auto; padding:0 16px; }
+  header p { margin:4px 0 0; color:var(--gold); font-weight:600; }
+  main { max-width:760px; margin:24px auto; padding:0 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
   section { background:#fff; border:1px solid var(--line); border-radius:10px; padding:18px; margin-bottom:16px; }
   h2 { margin:0 0 10px; font-size:17px; color:var(--brand); }
   ul { margin:0; padding-inline-start:20px; }
@@ -29,10 +30,6 @@
   .cut svg { width:18px; height:18px; fill:none; stroke:var(--ink); stroke-width:1.8; transform:scaleX(-1); animation:snip 1.6s ease-in-out infinite; }
   @keyframes snip { 50% { transform:scaleX(-1) rotate(-14deg); } }
   @media (prefers-reduced-motion: reduce) { .cut svg { animation:none; } }
-  footer { max-width:760px; margin:24px auto; text-align:center; font-size:14px; }
-  footer .legal { display:flex; justify-content:center; align-items:center; gap:12px; flex-wrap:wrap; }
-  footer .legal a { display:inline-flex; align-items:center; min-height:44px; }
-  footer .snips { width:16px; height:16px; fill:none; stroke:var(--ink); stroke-width:1.8; transform:scaleX(-1); }
   /* A way back to the shop - in the app there is no browser bar to go back with. Top left, where it does not cover
      the title; a signed-in customer returns to their personal area, from where they came. */
   header { position:relative; }
@@ -41,7 +38,7 @@
 </style>
 </head>
 <body>
-<header><a class="back" href="/#account" data-testid="back-top"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>חזרה</a><h1>הצהרת נגישות</h1></header>
+<header><a class="back" href="/#account" data-testid="back-top"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>חזרה</a><h1>הצהרת נגישות</h1><p><span lang="en" dir="ltr">{{shop_brand}}</span>{{shop_address_line}}</p></header>
 <div class="cut" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.5 8.5L20 18M8.5 15.5L20 6"/></svg><span></span></div>
 <main>
   <section data-testid="level">
@@ -74,15 +71,6 @@
     <p class="muted">נשמח לקבל כל פנייה, ונחזור אליכם תוך שלושה ימי עבודה.</p>
   </section>
   <p class="muted" data-testid="updated">עודכן לאחרונה: {{updated}}</p>
-  <p><a href="/" data-testid="back">חזרה לקביעת תור</a></p>
 </main>
-<footer>
-  <div class="cut" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.5 8.5L20 18M8.5 15.5L20 6"/></svg><span></span></div>
-  <nav class="legal" aria-label="מידע על האתר">
-    <a href="/accessibility" data-testid="accessibility-link">הצהרת נגישות</a>
-    <svg class="snips" data-testid="legal-scissors" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="M8.5 8.5L20 18M8.5 15.5L20 6"/></svg>
-    <a href="/privacy" data-testid="privacy-link">מדיניות פרטיות</a>
-  </nav>
-</footer>
 </body>
 </html>
