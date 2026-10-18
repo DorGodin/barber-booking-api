@@ -66,7 +66,9 @@ def test_somebody_elses_booking_is_not_found_and_only_two_three_or_four_weeks_st
     assert stand(client, me, made["id"], every=5).status_code == 422
 
 
-def test_once_it_has_begun_the_next_is_made_at_the_same_hour_and_only_once(client, new_customer, barber, services):
+def test_once_it_has_begun_the_next_is_made_at_the_same_hour_and_only_once(
+    client, new_customer, barber, services
+):
     me = new_customer()
     made = book(client, me, barber, services[HAIRCUT]["id"], at(local_day(3), "10:00")).json()
     standing_id = stand(client, me, made["id"]).json()["standing"]["id"]
@@ -113,7 +115,9 @@ def test_a_time_that_is_taken_is_skipped_and_told_once(client, new_customer, bar
         assert session.get(StandingBooking, standing_id).skipped_until == then
 
 
-def test_a_stopped_standing_booking_makes_nothing_and_the_booking_stays(client, new_customer, barber, services):
+def test_a_stopped_standing_booking_makes_nothing_and_the_booking_stays(
+    client, new_customer, barber, services
+):
     me = new_customer()
     made = book(client, me, barber, services[HAIRCUT]["id"], at(local_day(3), "10:00")).json()
     standing_id = stand(client, me, made["id"]).json()["standing"]["id"]

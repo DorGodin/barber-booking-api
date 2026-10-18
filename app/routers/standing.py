@@ -57,7 +57,9 @@ def make_standing(
 
 
 @router.post("/standing/{standing_id}/stop", status_code=204)
-def stop_standing(standing_id: str, user: User = Depends(require("customer")), session: Session = Depends(db)):
+def stop_standing(
+    standing_id: str, user: User = Depends(require("customer")), session: Session = Depends(db)
+):
     """No more bookings made for it. The one already made stays, a booking like any other."""
     with write_lock(session):
         standing = session.get(StandingBooking, standing_id)

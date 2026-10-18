@@ -32,11 +32,22 @@ from app.native_push import NativeSender, native_sender_from
 from app.push import PushHub, PushSender
 from app.push import sender_from as push_sender_from
 from app.reminders import reminders
-from app.standing import standing as standing_bookings
-from app.routers import accounts, auth, barbers, bookings, courses, customer_cards, products, push, services, standing
+from app.routers import (
+    accounts,
+    auth,
+    barbers,
+    bookings,
+    courses,
+    customer_cards,
+    products,
+    push,
+    services,
+    standing,
+)
 from app.routers import settings as shop_settings
 from app.seed import give_owner_phone, seed_if_empty
 from app.sms import SmsSender, sender_from
+from app.standing import standing as standing_bookings
 
 SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
@@ -158,7 +169,9 @@ def create_app(
         if app.state.push.available and config.reminder_minutes > 0:
             watching.append(asyncio.create_task(reminders(app.state.sessionmaker, app.state.push, config)))
         # Standing bookings are made whether or not anyone can be told.
-        watching.append(asyncio.create_task(standing_bookings(app.state.sessionmaker, app.state.push, config)))
+        watching.append(
+            asyncio.create_task(standing_bookings(app.state.sessionmaker, app.state.push, config))
+        )
         yield
         for task in watching:
             task.cancel()
