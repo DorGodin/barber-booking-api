@@ -33,7 +33,7 @@ class Settings:
     login_max_failures: int = 5
     login_max_failures_per_ip: int = 20
     login_lock_minutes: int = 15
-    max_future_bookings: int = 2
+    max_future_bookings: int = 5
     # A customer's booking that starts from approval_from up to (not including)
     # approval_until, shop time, waits for its barber to say yes. No answer in
     # approval_wait_minutes: it stands, as if said yes.
@@ -130,7 +130,7 @@ class Settings:
             login_max_failures=int(os.environ.get("LOGIN_MAX_FAILURES", "5")),
             login_max_failures_per_ip=int(os.environ.get("LOGIN_MAX_FAILURES_PER_IP", "20")),
             login_lock_minutes=int(os.environ.get("LOGIN_LOCK_MINUTES", "15")),
-            max_future_bookings=int(os.environ.get("MAX_FUTURE_BOOKINGS", "2")),
+            max_future_bookings=int(os.environ.get("MAX_FUTURE_BOOKINGS", "5")),
             approval_from=os.environ.get("APPROVAL_FROM", "14:00"),
             approval_until=os.environ.get("APPROVAL_UNTIL", "16:00"),
             approval_wait_minutes=int(os.environ.get("APPROVAL_WAIT_MINUTES", "120")),

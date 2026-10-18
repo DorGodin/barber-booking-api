@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+from app.config import Settings
 from app.models import Booking
 from tests.conftest import HAIRCUT, book, local_day
 from tests.test_api import at
@@ -101,3 +102,11 @@ def test_the_seed_holds_no_customer_above_the_limit(client, owner):
 
     assert rows, "the seed made no bookings"
     assert max(ahead.values()) <= 2, "the seed broke the product's own rule"
+
+
+def test_a_shop_lets_a_customer_hold_five_bookings_ahead_and_says_so(client, monkeypatch):
+    monkeypatch.delenv("MAX_FUTURE_BOOKINGS", raising=False)
+    monkeypatch.setenv("SECRET_KEY", "k" * 32)
+    monkeypatch.setenv("SMS_URL", "console")
+    assert Settings.max_future_bookings == 5 and Settings.from_env().max_future_bookings == 5
+    assert client.get("/shop").json()["bookings_ahead_limit"] == 2, "the tests' own limit, as the page reads it"

@@ -124,6 +124,12 @@
   .pills button.left { color:var(--mut); }
   .pills button.left .face { filter:grayscale(1); opacity:.55; box-shadow:0 0 0 2.5px #fff, 0 0 0 4px var(--line); outline:1.5px dashed var(--mut); outline-offset:4px; }
   .pills button:focus-visible { outline:2px solid var(--ink); outline-offset:3px; }
+  /* Four barbers keep one row on the narrowest phone: smaller faces, closer together. */
+  @media (max-width: 360px) {
+    .pills { gap:10px 4px; }
+    .pills button { min-width:52px; }
+    .pills .face { width:46px; height:46px; font-size:19px; }
+  }
   /* The service is chosen from a list of the page's own, opening downward over what is under it: an iPhone
      opens its own list upward when the field is low on the screen, and folds a long service in two. */
   .picker { position:relative; margin-top:4px; }
@@ -271,6 +277,13 @@
      headed by their name as it is typed. */
   .title-row { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
   .title-row h2 { margin:0; }
+  /* A customer who holds as many bookings ahead as a shop allows is told so before choosing anything, and the
+     choice waits, grey, until one is cancelled or moved. Small: one line, a pill - two lines on a narrow phone. */
+  .limit-note { display:flex; align-items:center; gap:8px; margin:-4px 0 12px; padding:6px; border:1.5px solid var(--gold); border-radius:999px; background:#fbf8f2; }
+  .limit-note span { flex:1; padding-inline-start:10px; font-size:13.5px; font-weight:700; line-height:1.3; }
+  .limit-note button { flex:none; min-height:32px; padding:0 14px; border:0; border-radius:999px; background:var(--ink); color:#fff; font:inherit; font-size:13px; }
+  @media (max-width: 360px) { .limit-note { border-radius:18px; } .limit-note span { font-size:13px; } }
+  .at-limit { opacity:.35; filter:grayscale(1); }
   .pair-badge { padding:2px 10px; border-radius:999px; background:var(--gold); color:#fff; font-size:13px; font-weight:600; }
   .companion-head { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
   .companion-head strong { display:block; font-size:16px; }
@@ -656,6 +669,7 @@
     <div class="grid">
       <div class="panel" data-testid="left-panel">
         <div class="title-row"><h2 data-testid="left-title">קביעת תור</h2><span class="pair-badge" data-testid="pair-badge" hidden>2 אנשים</span></div>
+        <div class="limit-note" data-testid="limit-note" role="status" hidden><span data-testid="limit-note-text"></span><button type="button" data-testid="limit-note-mine">לתורים שלי</button></div>
         <div class="field">
           <span class="label" id="barber-label">ספר</span>
           <input type="hidden" id="barber" data-testid="barber">
@@ -1573,6 +1587,7 @@ function signOut() {
   for (const id of ["bookings", "slots", "hours", "approval-hours", "days-off", "services", "barber", "service", "courses", "courses-admin", "service-2", "products", "products-admin", "timeline", "cancel-list", "install-card"]) $(id).replaceChildren();
   for (const id of ["service", "service-2"]) { closePicker(id, false); drawPicker(id); }
   myBookings = [];
+  renderLimit();
   closeCustomerCard();
   clearTimeout(staffPoll);
   for (const id of ["today-count", "today-waiting", "today-products", "today-next"]) for (const part of $(id).querySelectorAll("strong, small")) part.textContent = "";
@@ -1812,6 +1827,25 @@ function removeCourseImage(course) {
 // no button. The owner marks what ran out; nothing is counted.
 let products = [];
 let myBookings = [];
+// The bookings a customer holds ahead, as the server counts them toward the limit: confirmed, not begun, and the
+// two made together for two people as one. The server refuses past the limit whatever the page shows.
+function heldAhead() {
+  const now = Date.now();
+  return new Set(myBookings.filter((b) => b.status === "confirmed" && Date.parse(b.start) > now).map((b) => b.group_id || b.id)).size;
+}
+function renderLimit() {
+  const full = Boolean(me) && me.role === "customer" && !moving && heldAhead() >= shop.bookings_ahead_limit;
+  $("limit-note").hidden = !full;
+  $("limit-note-text").textContent = full ? `יש לך כבר ${shop.bookings_ahead_limit} תורים קדימה` : "";
+  for (const part of [$("barbers").parentElement, $("book-panel")]) {
+    part.inert = full;
+    part.classList.toggle("at-limit", full);
+  }
+}
+$("limit-note-mine").addEventListener("click", () => {
+  showTab("mine");
+  window.scrollTo(0, 0);
+});
 const MAX_KEPT = 9;
 const keptWords = (p) => `${isolate(p.name)}${p.quantity > 1 ? ` ×${p.quantity}` : ""}`;
 const bookingAhead = () =>
@@ -2877,6 +2911,7 @@ function startMoving(b) {
     setBarber(b.barber_id);
     $("service").value = b.service_id;
     lockBarber(true);
+    renderLimit();
     $("service").disabled = true;
     drawPicker("service");
     $("date").value = b.start_local.slice(0, 10);
@@ -2930,6 +2965,7 @@ $("service-2").addEventListener("change", () => busyWhile(async () => {
 function stopMoving() {
   $("companion-field").hidden = !me || me.role !== "customer";
   moving = null;
+  renderLimit();
   lockBarber(false);
   $("service").disabled = false;
   drawPicker("service");
@@ -3310,6 +3346,7 @@ async function refreshBookings() {
   const rows = (r.ok ? r.data.content : []).filter((b) => (me.role === "customer" ? shownToCustomer(b) : b.status !== "cancelled"));
   tellAboutAnswers(r.ok ? r.data.content : []);
   myBookings = r.ok ? r.data.content : [];
+  renderLimit();
   renderToday();
   if (me.role === "customer") renderProducts();
   if (me.role === "customer") {

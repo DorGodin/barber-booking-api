@@ -200,6 +200,7 @@ def create_app(
             "timezone": config.shop_tz.key,
             "today": datetime.now(UTC).astimezone(config.shop_tz).date().isoformat(),
             "booking_window_days": config.booking_window_days,
+            "bookings_ahead_limit": config.max_future_bookings,
             "cancel_cutoff_hours": config.cancel_cutoff_hours,
             "move_cutoff_hours": config.move_cutoff_hours,
         }
