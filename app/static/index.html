@@ -694,7 +694,7 @@
           <div class="field" data-testid="companion-field" hidden>
             <button type="button" class="add-person" data-testid="add-person">+ להוסיף עוד אדם מיד אחריי<small>ילד או חבר, אצל אותו ספר</small></button>
             <div class="companion" data-testid="companion" hidden>
-              <div class="companion-head"><span class="companion-face" data-testid="companion-face" aria-hidden="true"></span><div><strong data-testid="companion-title"></strong><small>מיד אחרי התור שלך, אצל אותו ספר</small></div></div>
+              <div class="companion-head"><span class="companion-face" data-testid="companion-face" aria-hidden="true"></span><div><strong data-testid="companion-title" tabindex="-1"></strong><small>מיד אחרי התור שלך, אצל אותו ספר</small></div></div>
               <label for="person-name">שם (לא חובה)</label>
               <input id="person-name" data-testid="person-name" maxlength="80" autocomplete="off">
               <label id="service-2-label" data-testid="service-2-label" for="service-2-button">השירות לאדם הנוסף</label><select id="service-2" data-testid="service-2" hidden></select><div class="picker"><button type="button" class="picker-button" id="service-2-button" data-testid="service-2-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="service-2-list" aria-labelledby="service-2-label service-2-button"><span data-testid="service-2-name"></span><small data-testid="service-2-meta"></small></button><ul class="picker-list" id="service-2-list" data-testid="service-2-list" role="listbox" aria-label="רשימת השירותים לאדם הנוסף" tabindex="-1" hidden></ul></div>
@@ -2950,7 +2950,13 @@ async function keepingTime(change) {
   if (again) again.click();
   else say(`אין מקום לשניכם ברצף ב־${clock(before.start_local)}. אלה השעות שבהן שניכם נכנסים.`, "error");
 }
-$("add-person").addEventListener("click", () => busyWhile(() => keepingTime(() => setCompanion(true))));
+$("add-person").addEventListener("click", () => busyWhile(async () => {
+  await keepingTime(() => setCompanion(true));
+  // The eye goes down to the second person's card, and the screen to the button that books both - no more
+  // scrolling for it. Not to the name field: on a phone its keyboard would cover the button.
+  $("companion-title").focus({ preventScroll: true });
+  ($("confirm").hidden ? $("companion") : $("confirm")).scrollIntoView({ block: "end" });
+}));
 $("remove-person").addEventListener("click", () => busyWhile(() => keepingTime(() => setCompanion(false))));
 $("service-2").addEventListener("change", () => busyWhile(() => keepingTime(() => {})));
 
