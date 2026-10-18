@@ -157,7 +157,10 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **A customer's screen has no bar on top**: the name, the phone and signing out are in the personal area, with
   a copy of the page's foot (the ways to reach the shop, the statement, the policy) that a signed-in phone does
   not show otherwise. The staff keep the bar.
-- **A sign-up takes a name of up to 25 characters and a mobile of ten digits starting 05.** Every phone field - the
+- **A sign-up takes a name of up to 25 letters and a mobile of ten digits starting 05.** The name is letters in any script,
+  with a space, hyphen, apostrophe, geresh, gershayim or dot between them - never a digit or a symbol (`nameProblem`,
+  `_name_or_error`): "השם יכול להכיל רק אותיות" under the field as it is typed, its button held, and the server's
+  `name_not_letters`. Every phone field - the
   sign-in, a barber's and a new barber's (`PHONE_FIELDS`) - keeps to ten digits (a pasted +972 becomes them), says
   "המספר חייב להתחיל ב־05" under the field as soon as the start is wrong and holds its button, and says
   "המספר חייב להכיל 10 ספרות" when a short one is sent. The server checks again.
@@ -196,6 +199,11 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   2026-10-18), under the times. Adding, removing or changing them keeps that time when both still fit in it
   (`keepingTime`); when they do not, the times are where both fit and the customer is told why theirs went. The card
   shows the second time, from the first's end by the shop's clock (`laterClock`), and the button books both.
+- **A customer holds at most five bookings ahead** (`MAX_FUTURE_BOOKINGS`, the owner's choice of 2026-10-18), each person's
+  its own - a booking for two takes two places, and with one place left a second person is not offered - told to the
+  page in `/shop` as `bookings_ahead_limit`. At the limit the booking
+  panel says so in a small pill with a way to the list (`renderLimit`) and the choice is `inert` and grey until one is
+  cancelled or moved; a move is never held back. The server refuses past it whatever the page shows.
 - **A standing booking is a customer's regular time** (`app/standing.py`, `standing_bookings`, the owner's choice of
   2026-10-18): from a booking still to come, for one person, every two, three or four weeks (`POST
   /bookings/{id}/standing`, stopped with `/standing/{id}/stop`; the booking itself stays). Only the next booking is
@@ -203,8 +211,8 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   shop's clock, through `place_booking` - the page's own checks, under the write lock, so it is made once. A time
   that is refused is skipped (`skipped_until`) and the customer told once. Deleting the account stops them.
 - **A group booking is all or none, in one step under the write lock** (`/bookings/group`): the
-  listing for two (`also=`) and the booking must agree, so a time offered for two always books. It counts
-  as one toward the limit; afterwards each booking is its own.
+  listing for two (`also=`) and the booking must agree, so a time offered for two always books. It takes a
+  place for each person toward the limit; afterwards each booking is its own.
 - **A reminder is claimed before it is sent** (`app/reminders.py`, `reminded_at`): several workers look at once, and
   the claim is one write step - so a booking is reminded once, and a push that fails is not repeated.
 - **One `refused()` shows every refusal** - booking, guest booking, move. A new way to book

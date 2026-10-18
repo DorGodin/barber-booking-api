@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime
 
 from tests.conftest import ALL_WEEK, HAIRCUT, TRIM, a_second_barber, at, book, local_day, slots
@@ -61,15 +62,28 @@ def test_if_the_second_time_is_taken_nothing_is_booked(client, customer, new_cus
     assert client.get("/bookings", headers=customer).json()["total"] == 0
 
 
-def test_a_group_counts_as_one_toward_the_limit_of_bookings_ahead(client, new_customer, barber, services):
+def test_each_person_of_a_group_takes_a_place_toward_the_limit_of_bookings_ahead(
+    client, new_customer, barber, services
+):
     me, haircut = new_customer(), services[HAIRCUT]["id"]
-    book(client, me, barber, haircut, at(local_day(3), "09:00"))
 
     made = group(client, me, barber, two(services), at(local_day(4), "10:00"))
 
-    assert made.status_code == 201
+    assert made.status_code == 201, "two places, and the tests' limit is two"
     refused = book(client, me, barber, haircut, at(local_day(5), "10:00"))
     assert refused.status_code == 409 and refused.json()["code"] == "too_many_bookings"
+
+
+def test_with_one_place_left_a_group_is_refused_and_one_booking_is_not(
+    client, new_customer, barber, services
+):
+    me, haircut = new_customer(), services[HAIRCUT]["id"]
+    book(client, me, barber, haircut, at(local_day(3), "09:00"))
+
+    refused = group(client, me, barber, two(services), at(local_day(4), "10:00"))
+
+    assert refused.status_code == 409 and refused.json()["code"] == "too_many_bookings"
+    assert book(client, me, barber, haircut, at(local_day(5), "10:00")).status_code == 201
 
 
 def test_a_customer_at_the_limit_cannot_book_a_group(client, new_customer, barber, services):
@@ -186,8 +200,12 @@ def test_the_barber_sees_who_each_booking_is_for(client, owner, customer, servic
 
 
 def test_the_group_cannot_overlap_the_customers_other_booking_elsewhere(
-    client, owner, customer, barber, services
+    client, owner, new_customer, barber, services, monkeypatch
 ):
+    # Three places - the booking elsewhere and the group's two - so what refuses is the overlap.
+    three = replace(client.app.state.settings, max_future_bookings=3)
+    monkeypatch.setattr(client.app.state, "settings", three)
+    customer = new_customer()
     other, _ = a_second_barber(client, owner)
     day = local_day(4)
     assert book(client, customer, other, services[TRIM]["id"], at(day, "10:30")).status_code == 201
@@ -195,3 +213,11 @@ def test_the_group_cannot_overlap_the_customers_other_booking_elsewhere(
     refused = group(client, customer, barber, two(services, HAIRCUT, HAIRCUT), at(day, "10:00"))
 
     assert refused.status_code == 409 and refused.json()["code"] == "customer_overlap"
+
+
+def test_the_second_persons_name_is_letters_only(client, customer, barber, services):
+    refused = group(client, customer, barber, two(services, name="יוני 2"), at(local_day(4), "10:00"))
+
+    assert refused.status_code == 422 and refused.json()["code"] == "name_not_letters", refused.text
+    allowed = group(client, customer, barber, two(services, name="ג'ורג'"), at(local_day(4), "10:00"))
+    assert allowed.status_code == 201

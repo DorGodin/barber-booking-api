@@ -57,6 +57,9 @@ def client(tmp_path: Path, monkeypatch) -> TestClient:
         # These tests make customers from one address, the test client's. The
         # limit itself is tested with its real value in test_signup_limits.py.
         signups_per_address=1000,
+        # The tests count up to the limit of bookings ahead; two keeps them short. The shop's own five is
+        # checked in test_booking_cap.py.
+        max_future_bookings=2,
     )
     with TestClient(create_app(config, sms=SentTexts())) as test_client:
         yield test_client
