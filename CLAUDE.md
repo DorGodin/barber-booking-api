@@ -192,6 +192,10 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **Booking for two is told at a glance** (`drawCompanion`, the owner's choice of 2026-10-15): a "2 אנשים" badge beside
   the title, and the second person's card in the shop's gold, headed "תור נוסף" and then "התור של" their name as it is
   typed (isolated, set as text), over "מיד אחרי התור שלך, אצל אותו ספר"; its service field is "השירות של" that name.
+  **The second person is offered once the first person's time is chosen** (`showCompanionField`, the owner's choice of
+  2026-10-18), under the times. Adding, removing or changing them keeps that time when both still fit in it
+  (`keepingTime`); when they do not, the times are where both fit and the customer is told why theirs went. The card
+  shows the second time, from the first's end by the shop's clock (`laterClock`), and the button books both.
 - **A group booking is all or none, in one step under the write lock** (`/bookings/group`): the
   listing for two (`also=`) and the booking must agree, so a time offered for two always books. It counts
   as one toward the limit; afterwards each booking is its own.
