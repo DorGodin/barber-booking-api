@@ -221,8 +221,9 @@
   .standing-make { width:100%; min-height:44px; border:0; border-radius:999px; background:var(--ink); color:#fff; font:inherit; font-size:14px; }
   .standing-offer [data-testid="standing-next"] { margin:8px 0 0; text-align:center; font-size:12.5px; }
   .standing-made { margin:14px 0 4px; padding:10px 14px; border:1.5px solid var(--gold); border-radius:999px; background:#fbf8f2; font-size:14px; font-weight:600; }
-  .standing-badge { display:inline-block; padding:2px 10px; border:1px solid var(--gold); border-radius:999px; background:#fbf8f2; color:#6b5222; font-size:12.5px; font-weight:600; }
+  .standing-mark { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; margin-inline-start:6px; border:1px solid var(--gold); border-radius:50%; background:#fbf8f2; font-size:12px; vertical-align:middle; }
   .standing-line { flex-basis:100%; text-align:center; color:var(--mut); font-size:12.5px; }
+  .standing-stop { flex-basis:100%; min-height:32px; border:0; background:none; color:var(--mut); font:inherit; font-size:13px; text-decoration:underline; }
   .done .muted { margin:4px 0 0; }
   .done[data-waiting] .ring { background:#fbf3df; color:#8a5a00; }
   [data-testid="booking-row"][data-approval="pending"] [data-testid="booking-detail"] { color:#8a5a00; }
@@ -3590,11 +3591,13 @@ async function refreshBookings() {
     }
     // A standing booking: the badge for everyone who reads the row; for the customer, what happens next and
     // the way to stop it - the booking itself stays.
+    // A small mark beside its time, one quiet line under it, and stopping as a link - the owner's choice of
+    // 2026-10-18: no badge and no third button.
     if (b.standing && b.status === "confirmed") {
-      text.after(control("span", { className: "standing-badge", testid: "booking-standing", textContent: `🔁 תור קבוע · ${everyWords(b.standing.every_weeks)}` }));
+      when.append(control("span", { className: "standing-mark", textContent: "🔁", "aria-hidden": "true" }));
+      text.after(control("span", { className: "standing-line", testid: "booking-standing", textContent: me.role === "customer" ? `קבוע ${everyWords(b.standing.every_weeks)} · הבא ייקבע אחרי הביקור` : `תור קבוע · ${everyWords(b.standing.every_weeks)}` }));
       if (me.role === "customer") {
-        row.append(control("span", { className: "standing-line", textContent: "התור הבא ייקבע לבד אחרי הביקור הזה" }));
-        const stop = control("button", { type: "button", className: "ghost", testid: "stop-standing", textContent: "הפסקת התור הקבוע" });
+        const stop = control("button", { type: "button", className: "standing-stop", testid: "stop-standing", textContent: "הפסקת התור הקבוע" });
         stop.addEventListener("click", () => busyWhile(async () => {
           const r = await api("POST", `/standing/${b.standing.id}/stop`);
           say(r.ok ? "התור הקבוע הופסק. התור הזה נשאר." : explain(r), r.ok ? "ok" : "error");

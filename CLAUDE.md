@@ -210,6 +210,8 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   ever held: the loop every worker runs makes the one after it once that one has begun, at the same hour on the
   shop's clock, through `place_booking` - the page's own checks, under the write lock, so it is made once. A time
   that is refused is skipped (`skipped_until`) and the customer told once. Deleting the account stops them.
+  In the list it is a small 🔁 beside the time, one quiet line under it and stopping as a link - no badge, no third
+  button (2026-10-18).
 - **A group booking is all or none, in one step under the write lock** (`/bookings/group`): the
   listing for two (`also=`) and the booking must agree, so a time offered for two always books. It takes a
   place for each person toward the limit; afterwards each booking is its own.
