@@ -196,6 +196,12 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   2026-10-18), under the times. Adding, removing or changing them keeps that time when both still fit in it
   (`keepingTime`); when they do not, the times are where both fit and the customer is told why theirs went. The card
   shows the second time, from the first's end by the shop's clock (`laterClock`), and the button books both.
+- **A standing booking is a customer's regular time** (`app/standing.py`, `standing_bookings`, the owner's choice of
+  2026-10-18): from a booking still to come, for one person, every two, three or four weeks (`POST
+  /bookings/{id}/standing`, stopped with `/standing/{id}/stop`; the booking itself stays). Only the next booking is
+  ever held: the loop every worker runs makes the one after it once that one has begun, at the same hour on the
+  shop's clock, through `place_booking` - the page's own checks, under the write lock, so it is made once. A time
+  that is refused is skipped (`skipped_until`) and the customer told once. Deleting the account stops them.
 - **A group booking is all or none, in one step under the write lock** (`/bookings/group`): the
   listing for two (`also=`) and the booking must agree, so a time offered for two always books. It counts
   as one toward the limit; afterwards each booking is its own.
