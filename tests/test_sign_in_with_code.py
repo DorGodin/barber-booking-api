@@ -200,3 +200,15 @@ def test_codes_older_than_a_day_are_cleared(client, texts):
 def test_a_name_is_at_most_twenty_five_characters(client):
     assert ask(client, name="א" * 25).status_code == 202
     assert ask(client, phone="0541112233", name="א" * 26).status_code == 422
+
+
+@pytest.mark.parametrize("name", ["דנה 2", "Dana1", "123", "דנה!", "<b>דנה</b>"])
+def test_a_name_holds_no_digit_or_symbol(client, texts, name):
+    resp = ask(client, name=name)
+    assert resp.status_code == 422 and resp.json()["code"] == "name_not_letters", resp.text
+    assert not texts.messages, "no SMS for a refused name"
+
+
+@pytest.mark.parametrize("name", ["דנה כהן", "ג'ורג'", "ז׳אן", "בן-דוד", "Mary Ann", "J. Smith", "שִׁירָה"])
+def test_a_name_may_hold_any_letters_and_what_names_hold_between_them(client, texts, name):
+    assert ask(client, name=name).status_code == 202
