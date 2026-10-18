@@ -157,7 +157,10 @@ of `detail` can change. Somebody else's booking is 404, not 403.
 - **A customer's screen has no bar on top**: the name, the phone and signing out are in the personal area, with
   a copy of the page's foot (the ways to reach the shop, the statement, the policy) that a signed-in phone does
   not show otherwise. The staff keep the bar.
-- **A sign-up takes a name of up to 25 characters and a mobile of ten digits starting 05.** Every phone field - the
+- **A sign-up takes a name of up to 25 letters and a mobile of ten digits starting 05.** The name is letters in any script,
+  with a space, hyphen, apostrophe, geresh, gershayim or dot between them - never a digit or a symbol (`nameProblem`,
+  `_name_or_error`): "השם יכול להכיל רק אותיות" under the field as it is typed, its button held, and the server's
+  `name_not_letters`. Every phone field - the
   sign-in, a barber's and a new barber's (`PHONE_FIELDS`) - keeps to ten digits (a pasted +972 becomes them), says
   "המספר חייב להתחיל ב־05" under the field as soon as the start is wrong and holds its button, and says
   "המספר חייב להכיל 10 ספרות" when a short one is sent. The server checks again.

@@ -618,7 +618,7 @@
     <p class="deleted-note" data-testid="account-deleted" role="status" hidden>החשבון נמחק.</p>
     <form class="panel otp" data-testid="code-request-form" novalidate>
       <h2>ברוכים הבאים</h2>
-      <div class="field"><label for="full-name">שם מלא</label><input id="full-name" data-testid="full-name" autocomplete="name" maxlength="25" required></div>
+      <div class="field"><label for="full-name">שם מלא</label><input id="full-name" aria-describedby="full-name-error" data-testid="full-name" autocomplete="name" maxlength="25" required><p class="error field-error" data-testid="full-name-error" id="full-name-error" role="alert" hidden></p></div>
       <div class="field"><label for="phone">מספר טלפון</label><input id="phone" aria-describedby="phone-error" data-testid="phone" type="tel" inputmode="numeric" autocomplete="tel-national" dir="ltr" placeholder="0501234567" required><p class="error field-error" data-testid="phone-error" id="phone-error" role="alert" hidden></p></div>
       <button data-testid="send-code" type="submit">שלחו לי קוד</button>
       <p class="muted hint">קוד קצר ב־SMS, ואת/ה כבר בדרך לכיסא.</p>
@@ -1295,6 +1295,7 @@ const FRIENDLY = {
   barber_inactive: () => "הספר הזה כבר לא עובד במספרה.",
   account_inactive: () => "החשבון הזה כבר לא פעיל. אפשר לפנות לבעל המספרה.",
   bad_phone: () => "מספר הטלפון צריך להיות של נייד: 05 ועוד 8 ספרות, למשל 0501234567.",
+  name_not_letters: () => "השם יכול להכיל רק אותיות",
   code_too_soon: (_, data) => `אפשר לבקש קוד חדש בעוד ${data.retry_after_seconds} שניות.`,
   too_many_codes: (_, data) => `נשלחו יותר מדי קודים. אפשר לנסות שוב בעוד ${Math.max(1, Math.ceil(data.retry_after_seconds / 60))} דקות.`,
   sms_failed: () => "לא הצלחנו לשלוח את ה־SMS. אפשר לנסות שוב.",
@@ -2121,7 +2122,7 @@ function renderBarberActivity(barberId) {
   // The barber signs in as a customer does: this mobile, and the code sent to it.
   const phone = barberOf(barberId).phone || "";
   $("barber-phone").value = phone;
-  showPhoneProblem("barber-phone", "");
+  showFieldProblem("barber-phone", "");
   $("save-barber-phone").disabled = false;
   $("barber-phone-note").textContent = phone ? "הספר נכנס עם הטלפון הזה ועם הקוד שנשלח אליו." : "עוד אין לספר טלפון, ולכן הוא לא יכול להיכנס.";
 }
@@ -2268,7 +2269,7 @@ function addBarber() {
     fillBarberChoice();
     setBarber(r.data.id);
     for (const id of ["new-barber-name", "new-barber-phone"]) $(id).value = "";
-    showPhoneProblem("new-barber-phone", "");
+    showFieldProblem("new-barber-phone", "");
     say(`הספר ${isolate(r.data.display_name)} נוסף, בשעות העבודה של המספרה.`, "ok");
     await refresh();
   });
@@ -3505,7 +3506,7 @@ function phoneProblem(value, sending) {
   if (sending && value.length !== 10) return PHONE_LENGTH;
   return "";
 }
-function showPhoneProblem(field, problem) {
+function showFieldProblem(field, problem) {
   $(`${field}-error`).textContent = problem;
   $(`${field}-error`).hidden = !problem;
   $(field).setAttribute("aria-invalid", problem ? "true" : "false");
@@ -3518,15 +3519,24 @@ for (const [field, [button]] of Object.entries(PHONE_FIELDS)) {
     if (digits.startsWith("972")) digits = `0${digits.slice(3)}`;
     if ($(field).value !== digits.slice(0, 10)) $(field).value = digits.slice(0, 10);
     const problem = phoneProblem($(field).value, false);
-    showPhoneProblem(field, problem);
-    $(button).disabled = Boolean(problem);
+    showFieldProblem(field, problem);
+    $(button).disabled = Boolean(problem) || (field === "phone" && Boolean(nameProblem($("full-name").value)));
   });
 }
+// A name is letters - any script, with a space, a hyphen, an apostrophe, a geresh or a dot between them - never a
+// digit. Said under the field as it is typed, and "send me a code" waits; the server checks again.
+const NAME_LETTERS = "השם יכול להכיל רק אותיות";
+const nameProblem = (value) => (/[^\p{L}\p{M}\s'"׳״.-]/u.test(value) ? NAME_LETTERS : "");
+$("full-name").addEventListener("input", () => {
+  const problem = nameProblem($("full-name").value);
+  showFieldProblem("full-name", problem);
+  $("send-code").disabled = Boolean(problem || phoneProblem($("phone").value, false));
+});
 // Called as the field is sent: true when it may go, else the problem is said and the field takes the focus.
 function phoneReady(field) {
   const value = $(field).value;
   const problem = PHONE_FIELDS[field][1] && !value ? "" : phoneProblem(value, true);
-  showPhoneProblem(field, problem);
+  showFieldProblem(field, problem);
   if (problem) $(field).focus();
   return !problem;
 }
@@ -3536,6 +3546,9 @@ $("code-request-form").addEventListener("submit", (e) => {
   e.preventDefault();
   otp.name = $("full-name").value.trim();
   otp.phone = $("phone").value;
+  const badName = nameProblem(otp.name);
+  showFieldProblem("full-name", badName);
+  if (badName) return $("full-name").focus();
   if (!phoneReady("phone")) return;
   askForCode($("code-request-error"));
 });
