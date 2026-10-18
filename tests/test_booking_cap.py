@@ -109,4 +109,5 @@ def test_a_shop_lets_a_customer_hold_five_bookings_ahead_and_says_so(client, mon
     monkeypatch.setenv("SECRET_KEY", "k" * 32)
     monkeypatch.setenv("SMS_URL", "console")
     assert Settings.max_future_bookings == 5 and Settings.from_env().max_future_bookings == 5
-    assert client.get("/shop").json()["bookings_ahead_limit"] == 2, "the tests' own limit, as the page reads it"
+    told = client.get("/shop").json()["bookings_ahead_limit"]
+    assert told == 2, "the tests' own limit, as the page reads it"
