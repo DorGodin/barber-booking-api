@@ -438,6 +438,8 @@
     body:has([data-testid="app"][data-role="customer"]:not([hidden])) { padding-bottom:calc(72px + var(--safe-bottom)); }
     html:has([data-testid="app"][data-role="customer"]:not([hidden])) { scroll-padding-bottom:80px; }
     body:has([data-testid="app"][data-role="customer"][data-tab="mine"]:not([hidden])) footer { display:none; }
+    /* The personal area carries its own copy of the foot: the page's would say it all a second time. */
+    body:has([data-testid="app"][data-role="customer"][data-tab="account"]:not([hidden])) footer { display:none; }
     body:has([data-testid="app"][data-role="customer"]:not([hidden])) footer .legal { display:none; }
     /* The body's padding already keeps the foot above the tabs and the home bar: the foot's own margin for
        them would leave a blank band between the contact buttons and the tabs. */
