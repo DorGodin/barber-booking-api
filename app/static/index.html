@@ -672,7 +672,7 @@
             <div class="companion" data-testid="companion" hidden>
               <div class="companion-head"><span class="companion-face" data-testid="companion-face" aria-hidden="true"></span><div><strong data-testid="companion-title"></strong><small>מיד אחרי התור שלך, אצל אותו ספר</small></div></div>
               <label for="person-name">שם (לא חובה)</label>
-              <input id="person-name" data-testid="person-name" maxlength="80" autocomplete="off">
+              <input id="person-name" aria-describedby="person-name-error" data-testid="person-name" maxlength="80" autocomplete="off"><p class="error field-error" data-testid="person-name-error" id="person-name-error" role="alert" hidden></p>
               <label id="service-2-label" data-testid="service-2-label" for="service-2-button">השירות לאדם הנוסף</label><select id="service-2" data-testid="service-2" hidden></select><div class="picker"><button type="button" class="picker-button" id="service-2-button" data-testid="service-2-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="service-2-list" aria-labelledby="service-2-label service-2-button"><span data-testid="service-2-name"></span><small data-testid="service-2-meta"></small></button><ul class="picker-list" id="service-2-list" data-testid="service-2-list" role="listbox" aria-label="רשימת השירותים לאדם הנוסף" tabindex="-1" hidden></ul></div>
               <button type="button" class="ghost" data-testid="remove-person">הסרת האדם הנוסף</button>
             </div>
@@ -1375,6 +1375,11 @@ function say(text, kind) {
 // never converted with the browser's clock: a customer abroad must see 10:30
 // for a 10:30 appointment, not the hour it is where they are sitting.
 const clock = (local) => local.slice(11, 16);
+// A name is letters - any script, with a space, a hyphen, an apostrophe, a geresh or a dot between them - never a
+// digit: a sign-up's full name and the second person's in a booking for two. Said under the field as it is typed,
+// and its button waits; the server checks again.
+const NAME_LETTERS = "השם יכול להכיל רק אותיות";
+const nameProblem = (value) => (/[^\p{L}\p{M}\s'"׳״.-]/u.test(value) ? NAME_LETTERS : "");
 function dayLabel(local) {
   const [y, m, d] = local.slice(0, 10).split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("he-IL", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
@@ -2802,7 +2807,7 @@ function refused(r, slot, failedTitle, context = {}) {
 }
 
 function book() {
-  if (!selected || booking) return;
+  if (!selected || booking || (companion && nameProblem($("person-name").value))) return;
   return busyWhile(bookSelected);
 }
 
@@ -2911,6 +2916,10 @@ function drawCompanion() {
   $("companion-face").dataset.initial = name ? [...name][0] : "+";
   $("companion-title").textContent = name ? `התור של ${isolate(name)}` : "תור נוסף";
   $("service-2-label").textContent = name ? `השירות של ${isolate(name)}` : "השירות לאדם הנוסף";
+  // Their name too is letters only: said as it is typed, and the button that books both waits.
+  const problem = companion ? nameProblem(name) : "";
+  showFieldProblem("person-name", problem);
+  $("book").disabled = Boolean(problem);
 }
 $("person-name").addEventListener("input", drawCompanion);
 $("add-person").addEventListener("click", () => busyWhile(async () => {
@@ -3523,10 +3532,6 @@ for (const [field, [button]] of Object.entries(PHONE_FIELDS)) {
     $(button).disabled = Boolean(problem) || (field === "phone" && Boolean(nameProblem($("full-name").value)));
   });
 }
-// A name is letters - any script, with a space, a hyphen, an apostrophe, a geresh or a dot between them - never a
-// digit. Said under the field as it is typed, and "send me a code" waits; the server checks again.
-const NAME_LETTERS = "השם יכול להכיל רק אותיות";
-const nameProblem = (value) => (/[^\p{L}\p{M}\s'"׳״.-]/u.test(value) ? NAME_LETTERS : "");
 $("full-name").addEventListener("input", () => {
   const problem = nameProblem($("full-name").value);
   showFieldProblem("full-name", problem);

@@ -4,7 +4,6 @@ import hashlib
 import hmac
 import math
 import secrets
-import unicodedata
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Header, Request
@@ -17,6 +16,7 @@ from app.deps import current_user, db, settings, sms
 from app.errors import DomainError
 from app.login_limits import forget_failures, record_failure, seconds_locked
 from app.models import OtpCode, RevokedToken, Signup, User
+from app.names import name_or_error
 from app.phones import normalize
 from app.schemas import AccountIn, CodeRequestIn, CodeVerifyIn, LoginIn
 from app.security import hash_password, issue_token, read_token, verify_password
@@ -126,17 +126,6 @@ def _phone_or_error(raw: str) -> str:
     return phone
 
 
-# A name is letters in any script, with what names hold between them: a space, a hyphen, an apostrophe or a
-# geresh (ג'ורג', ז׳אן), gershayim, a dot. Never a digit.
-NAME_MARKS = frozenset(" -'.\"\u05f3\u05f4")
-
-
-def _name_or_error(name: str) -> str:
-    if not all(ch.isalpha() or ch in NAME_MARKS or unicodedata.category(ch).startswith("M") for ch in name):
-        raise DomainError(422, "name_not_letters", "a name: letters, with spaces, hyphens and apostrophes only")
-    return name
-
-
 def _code_hash(secret: str, phone: str, code: str) -> str:
     # Keyed, so a copy of the database alone does not reveal a live code -
     # four digits would fall to a plain hash at once.
@@ -159,7 +148,7 @@ def request_code(
     reaches a real person's phone, so a phone gets a new code at most once a
     minute and a few an hour, and one address only so many codes an hour."""
     phone = _phone_or_error(body.phone)
-    _name_or_error(body.full_name)
+    name_or_error(body.full_name)
     ip = request.client.host if request.client else "unknown"
     now = datetime.now(UTC)
     hour = timedelta(hours=1)
