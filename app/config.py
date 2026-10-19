@@ -20,14 +20,15 @@ def _owner_phone(raw: str) -> str:
 
 
 def _review_sign_in(raw_phone: str, raw_code: str, owner_phone: str) -> tuple[str, str]:
-    """The App Store's and Google Play's reviewers cannot receive an SMS: one mobile, set here, signs in with a
-    fixed code and is sent nothing. Both or neither, a mobile and four digits, and never the owner's phone - or
-    the server does not start."""
+    """The App Store's and Google Play's reviewers cannot receive an SMS: one mobile, set here, signs in
+    with a fixed code and is sent nothing. Both or neither, a mobile and four digits, and never the
+    owner's phone - or the server does not start."""
     if not raw_phone.strip() and not raw_code.strip():
         return "", ""
     phone = normalize(raw_phone)
     if phone is None or not (len(raw_code) == 4 and raw_code.isdigit()):
-        raise RuntimeError("REVIEW_PHONE and REVIEW_CODE go together: a mobile and four digits. See .env.example.")
+        problem = "REVIEW_PHONE and REVIEW_CODE go together: a mobile and four digits. See .env.example."
+        raise RuntimeError(problem)
     if phone == owner_phone:
         raise RuntimeError("REVIEW_PHONE must not be the owner's phone: the reviewers sign in as a customer.")
     return phone, raw_code
