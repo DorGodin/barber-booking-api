@@ -152,7 +152,9 @@ def request_code(
     ip = request.client.host if request.client else "unknown"
     now = datetime.now(UTC)
     hour = timedelta(hours=1)
-    code = f"{secrets.randbelow(10_000):04d}"
+    # The stores' reviewers: their mobile's code is the one set for them, and no SMS goes to it.
+    reviewer = bool(config.review_phone) and phone == config.review_phone
+    code = config.review_code if reviewer else f"{secrets.randbelow(10_000):04d}"
     with write_lock(session):
         by_phone = session.scalars(
             select(OtpCode.created_at)
@@ -204,10 +206,11 @@ def request_code(
     # Sent after the lock is released: an SMS provider can take seconds, and the
     # whole shop waits while the write lock is held.
     try:
-        sender.send(
-            phone,
-            f"קוד הכניסה שלך ל־{config.shop_brand}: {code}. בתוקף ל־{config.otp_ttl_seconds // 60} דקות.",
-        )
+        if not reviewer:
+            sender.send(
+                phone,
+                f"קוד הכניסה שלך ל־{config.shop_brand}: {code}. בתוקף ל־{config.otp_ttl_seconds // 60} דקות.",
+            )
     except SmsFailed as exc:
         with write_lock(session):
             session.execute(delete(OtpCode).where(OtpCode.id == record.id))

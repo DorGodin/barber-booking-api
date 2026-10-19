@@ -37,7 +37,11 @@ the owner decides about each. An inactive user's token stops working at once, an
 decides what opens - the owner's is `OWNER_PHONE`, set on every start by `give_owner_phone` and
 refused when it is not a mobile or is somebody else's account; a barber's is given by the owner
 (`PATCH /barbers/{id}` with `phone`, `_staff_phone`), unique across every account, shown to the
-owner alone. **Never let a name decide a role** - anyone can type one. The password sign-in
+owner alone. **Never let a name decide a role** - anyone can type one.
+**The stores' reviewers sign in with `REVIEW_PHONE` and `REVIEW_CODE`** (`_review_sign_in`): that one mobile's code is
+the fixed one and no SMS is sent to it; both or neither, never the owner's phone, or the server does not start. It
+signs in as a customer, like anyone. **Deleting an account has a page of its own** (`/delete-account`, Google Play asks
+for a web address): what goes and what stays, and a button to `/#delete` - the personal area with its question open. The password sign-in
 (`/auth/token`) is the API's only, for scripts and tests; the page has no form for it.
 
 **A booking is a customer's or a guest's, never both, never neither** - the database's own

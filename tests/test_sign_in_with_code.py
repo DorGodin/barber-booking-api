@@ -3,6 +3,7 @@ password, and the first sign-in opens the account."""
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -212,3 +213,34 @@ def test_a_name_holds_no_digit_or_symbol(client, texts, name):
 @pytest.mark.parametrize("name", ["דנה כהן", "ג'ורג'", "ז׳אן", "בן-דוד", "Mary Ann", "J. Smith", "שִׁירָה"])
 def test_a_name_may_hold_any_letters_and_what_names_hold_between_them(client, texts, name):
     assert ask(client, name=name).status_code == 202
+
+
+def test_the_stores_reviewer_signs_in_with_the_fixed_code_and_is_sent_nothing(client, texts):
+    reviewer = {"review_phone": "0549999999", "review_code": "2468"}
+    client.app.state.settings = replace(client.app.state.settings, **reviewer)
+
+    assert ask(client, phone="0549999999").status_code == 202
+
+    assert not texts.messages, "no SMS to the reviewers' phone"
+    assert verify(client, "2468", phone="0549999999").status_code == 200
+    assert ask(client, phone="0541112233").status_code == 202
+    assert texts.messages, "everyone else is sent a code"
+
+
+def test_the_reviewer_setting_is_a_mobile_and_four_digits_together_and_not_the_owners(monkeypatch):
+    from app.config import Settings
+
+    monkeypatch.setenv("SECRET_KEY", "k" * 32)
+    monkeypatch.setenv("SMS_URL", "console")
+    monkeypatch.setenv("OWNER_PHONE", "0500000001")
+    no_code, no_phone = ("0549999999", ""), ("", "1234")
+    not_a_mobile, not_digits, the_owners = ("12345", "1234"), ("0549999999", "12ab"), ("0500000001", "1234")
+    wrong = [no_code, no_phone, not_a_mobile, not_digits, the_owners]
+    for phone, code in wrong:
+        monkeypatch.setenv("REVIEW_PHONE", phone)
+        monkeypatch.setenv("REVIEW_CODE", code)
+        with pytest.raises(RuntimeError, match="REVIEW_PHONE"):
+            Settings.from_env()
+    monkeypatch.setenv("REVIEW_PHONE", "054-999-9999")
+    monkeypatch.setenv("REVIEW_CODE", "2468")
+    assert (Settings.from_env().review_phone, Settings.from_env().review_code) == ("0549999999", "2468")

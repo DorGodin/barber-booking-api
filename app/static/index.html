@@ -1711,9 +1711,12 @@ async function start() {
   // Today may be closed, or full: the screen opens on a day with a time.
   await keepAFreeDay();
   // Back from the accessibility statement or the privacy policy: a customer returns to their personal area.
-  if (location.hash === "#account") {
+  // From the page that explains deleting an account: the personal area, with the dialog that asks open.
+  if (location.hash === "#account" || location.hash === "#delete") {
+    const deleting = location.hash === "#delete";
     history.replaceState(null, "", location.pathname);
     if (customer) showTab("account");
+    if (customer && deleting) $("delete-dialog").showModal();
   }
 }
 
