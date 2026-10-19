@@ -22,7 +22,7 @@ def test_nothing_else_is_served_from_the_fonts_folder(client, name):
     assert refused.status_code == 404
 
 
-@pytest.mark.parametrize("path", ["/", "/privacy", "/accessibility"])
+@pytest.mark.parametrize("path", ["/", "/privacy", "/accessibility", "/delete-account"])
 def test_every_page_uses_the_shops_letters_and_asks_no_other_site_for_them(client, path):
     page = client.get(path)
 

@@ -63,6 +63,7 @@ SERVICE_WORKER = Path(__file__).parent / "static" / "sw.js"
 FONTS = Path(__file__).parent / "static" / "fonts"
 FONT_FILES = frozenset({"rubik-hebrew.woff2", "rubik-latin.woff2"})
 STATEMENT = Path(__file__).parent / "static" / "accessibility.html"
+DELETE_ACCOUNT = Path(__file__).parent / "static" / "delete-account.html"
 PRIVACY = Path(__file__).parent / "static" / "privacy.html"
 
 
@@ -357,6 +358,22 @@ def create_app(
             "updated": config.privacy_updated,
         }
         html = PRIVACY.read_text(encoding="utf-8")
+        for name, value in values.items():
+            html = html.replace("{{" + name + "}}", html_text.escape(value))
+        return HTMLResponse(html, headers={"Content-Security-Policy": page_policy(html)})
+
+    @app.get("/delete-account", include_in_schema=False)
+    def delete_account_page():
+        """How to delete an account from outside the app - Google Play asks for a web address - and what goes
+        and what stays. The deleting itself is the personal area's, reached from here by /#delete."""
+        address = identity.address
+        values = {
+            "shop_brand": identity.brand,
+            "shop_address_line": f" · {address}" if address else "",
+            "contact_phone": config.privacy_contact_phone,
+            "contact_email": config.privacy_contact_email,
+        }
+        html = DELETE_ACCOUNT.read_text(encoding="utf-8")
         for name, value in values.items():
             html = html.replace("{{" + name + "}}", html_text.escape(value))
         return HTMLResponse(html, headers={"Content-Security-Policy": page_policy(html)})

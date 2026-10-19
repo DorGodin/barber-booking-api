@@ -19,6 +19,20 @@ def _owner_phone(raw: str) -> str:
     return phone
 
 
+def _review_sign_in(raw_phone: str, raw_code: str, owner_phone: str) -> tuple[str, str]:
+    """The App Store's and Google Play's reviewers cannot receive an SMS: one mobile, set here, signs in with a
+    fixed code and is sent nothing. Both or neither, a mobile and four digits, and never the owner's phone - or
+    the server does not start."""
+    if not raw_phone.strip() and not raw_code.strip():
+        return "", ""
+    phone = normalize(raw_phone)
+    if phone is None or not (len(raw_code) == 4 and raw_code.isdigit()):
+        raise RuntimeError("REVIEW_PHONE and REVIEW_CODE go together: a mobile and four digits. See .env.example.")
+    if phone == owner_phone:
+        raise RuntimeError("REVIEW_PHONE must not be the owner's phone: the reviewers sign in as a customer.")
+    return phone, raw_code
+
+
 @dataclass(frozen=True)
 class Settings:
     database_url: str
@@ -88,6 +102,9 @@ class Settings:
     # The owner's own mobile: signing in with it, by a code, opens the owner's screen.
     # Empty: the owner has no phone on record and cannot sign in on the page.
     owner_phone: str = ""
+    # The stores' reviewers: this mobile signs in with this code, and no SMS is sent to it (_review_sign_in).
+    review_phone: str = ""
+    review_code: str = ""
     accessibility_contact_name: str = "רכז/ת הנגישות של המספרה (לדוגמה)"
     accessibility_contact_phone: str = "03-0000000"
     accessibility_contact_email: str = "accessibility@example.com"
@@ -109,6 +126,10 @@ class Settings:
             raise RuntimeError(
                 "SMS_URL must be set: a provider's URL, or console for development. See .env.example."
             )
+        owner_phone = _owner_phone(os.environ.get("OWNER_PHONE", ""))
+        review_phone, review_code = _review_sign_in(
+            os.environ.get("REVIEW_PHONE", ""), os.environ.get("REVIEW_CODE", ""), owner_phone
+        )
         return cls(
             sms_url=sms_url,
             sms_token=os.environ.get("SMS_TOKEN", ""),
@@ -151,7 +172,9 @@ class Settings:
             signup_window_minutes=int(os.environ.get("SIGNUP_WINDOW_MINUTES", "60")),
             backup_dir=os.environ.get("BACKUP_DIR", ""),
             backups_kept=int(os.environ.get("BACKUPS_KEPT", "10")),
-            owner_phone=_owner_phone(os.environ.get("OWNER_PHONE", "")),
+            owner_phone=owner_phone,
+            review_phone=review_phone,
+            review_code=review_code,
             **{
                 field: os.environ[name]
                 for field, name in (

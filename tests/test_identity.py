@@ -234,3 +234,16 @@ def test_a_shop_without_a_picture_puts_no_icon_and_no_splash_on_the_home_screen(
 
     assert "apple-touch" not in page and "{{shop_head}}" not in page
     assert icon.status_code == splash.status_code == 404
+
+
+def test_deleting_an_account_has_a_page_of_its_own_that_leads_to_the_personal_area(tmp_path, monkeypatch):
+    """Google Play asks for a web address where an account can be deleted from outside the app."""
+    with shop(tmp_path, monkeypatch, {"SHOP_ADDRESS": "<b>שביט 8</b>"}, brand="TomGoldin") as client:
+        page = client.get("/delete-account")
+        policy = client.get("/privacy").text
+
+    assert page.status_code == 200
+    assert "מחיקת חשבון" in page.text and 'href="/#delete"' in page.text
+    assert "<b>שביט 8</b>" not in page.text and "{{" not in page.text
+    assert "script-src" in page.headers["content-security-policy"]
+    assert 'href="/delete-account"' in policy, "the policy says where"
