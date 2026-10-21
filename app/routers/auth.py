@@ -215,11 +215,14 @@ def request_code(
         with write_lock(session):
             session.execute(delete(OtpCode).where(OtpCode.id == record.id))
         raise DomainError(502, "sms_failed", "the code could not be sent; try again") from exc
-    return {
+    answer = {
         "phone_last4": phone[-4:],
         "expires_in_seconds": config.otp_ttl_seconds,
         "resend_after_seconds": config.otp_resend_seconds,
     }
+    if config.dev_skip_code:  # development only - see Settings.dev_skip_code
+        answer["dev_code"] = code
+    return answer
 
 
 @router.post("/auth/otp/verify")

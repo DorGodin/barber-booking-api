@@ -1568,6 +1568,12 @@ function askForCode(errorBox) {
     }
     errorBox.hidden = true;
     showCodeStep(r.data.phone_last4, r.data.resend_after_seconds);
+    // Development only (DEV_SKIP_CODE): the server handed the code back, so it is entered at once.
+    if (r.data.dev_code) {
+      $("code").value = r.data.dev_code;
+      syncVerifyButton();
+      await verifyCode();
+    }
   });
 }
 
