@@ -244,3 +244,24 @@ def test_the_reviewer_setting_is_a_mobile_and_four_digits_together_and_not_the_o
     monkeypatch.setenv("REVIEW_PHONE", "054-999-9999")
     monkeypatch.setenv("REVIEW_CODE", "2468")
     assert (Settings.from_env().review_phone, Settings.from_env().review_code) == ("0549999999", "2468")
+
+
+def test_skipping_the_code_is_refused_unless_the_codes_stay_on_this_machine(monkeypatch):
+    from app.config import Settings
+
+    monkeypatch.setenv("SECRET_KEY", "k" * 32)
+    monkeypatch.setenv("DEV_SKIP_CODE", "1")
+    for local in ("console", "http://127.0.0.1:8109/messages", "http://localhost:8109/messages"):
+        monkeypatch.setenv("SMS_URL", local)
+        assert Settings.from_env().dev_skip_code
+    monkeypatch.setenv("SMS_URL", "https://sms.example.com/send")
+    with pytest.raises(RuntimeError, match="DEV_SKIP_CODE"):
+        Settings.from_env()
+
+
+def test_with_the_code_skipped_it_comes_back_in_the_answer_and_signs_in(client, texts):
+    client.app.state.settings = replace(client.app.state.settings, dev_skip_code=True)
+
+    asked = ask(client).json()
+
+    assert verify(client, asked["dev_code"]).status_code == 200

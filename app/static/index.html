@@ -37,7 +37,9 @@
   /* In the shop's app the page runs under the phone's clock and home bar (viewport-fit=cover): the poles go
      to the very top, the content starts below the clock, and the foot stays clear of the home bar. */
   /* Behind the clock a white band stays put, so what scrolls up passes under it; the poles stand above it. */
-  body::before { content:""; position:fixed; top:0; left:0; right:0; height:var(--safe-top); background:var(--bg); z-index:9; }
+  /* The keyboard pans the page up (iOS), and a fixed element goes up with it: --panned brings the band and the
+     small header back down to the clock. */
+  body::before { content:""; position:fixed; top:0; left:0; right:0; height:var(--safe-top); background:var(--bg); z-index:9; transform:translateY(var(--panned, 0px)); }
   body { box-sizing:border-box; padding:var(--safe-top) calc(var(--pole) + 2px) 0; min-height:100vh; min-height:100dvh; display:flex; flex-direction:column; }
   .bar, main, footer, body > .cut { width:100%; }
   header { position:relative; text-align:center; padding:0 16px 4px; }
@@ -54,7 +56,7 @@
   .mini { position:fixed; top:0; left:0; right:0; z-index:9; box-sizing:border-box; height:calc(52px + var(--safe-top)); padding-top:var(--safe-top); display:flex; align-items:center; justify-content:center; background:var(--bg); font-size:20px; font-weight:700; letter-spacing:.5px;
     visibility:hidden; transform:translateY(-100%); transition:transform .2s, visibility .2s; }
   /* It slides, it never fades: half see-through, its name would fail contrast. */
-  .mini.on { visibility:visible; transform:none; }
+  .mini.on { visibility:visible; transform:translateY(var(--panned, 0px)); }
   @media (prefers-reduced-motion: reduce) { .mini { transition:none; } }
   /* Whatever the page scrolls to - a field the keyboard reaches, a section -
      lands below the bar, never under it (WCAG 2.4.11, focus not obscured). */
@@ -981,6 +983,13 @@ let moving = null;
 // is current. A screen reader waits for it; so does a test, instead of guessing
 // how long a refresh takes. A counter, because two refreshes can overlap.
 let inFlight = 0;
+
+// How far the keyboard has panned the page up under the clock - see body::before.
+if (window.visualViewport) {
+  const panned = () => document.documentElement.style.setProperty("--panned", `${Math.max(0, visualViewport.offsetTop)}px`);
+  visualViewport.addEventListener("scroll", panned);
+  visualViewport.addEventListener("resize", panned);
+}
 // ---- The staff's day ---------------------------------------------------------------
 // Above the diary, for the owner and a barber: today in four cards - how many, how many wait for a
 // yes, what to have ready, who is next - and today by its hours. Read from the list the diary already
@@ -1568,6 +1577,12 @@ function askForCode(errorBox) {
     }
     errorBox.hidden = true;
     showCodeStep(r.data.phone_last4, r.data.resend_after_seconds);
+    // Development only (DEV_SKIP_CODE): the server handed the code back, so it is entered at once.
+    if (r.data.dev_code) {
+      $("code").value = r.data.dev_code;
+      syncVerifyButton();
+      await verifyCode();
+    }
   });
 }
 
