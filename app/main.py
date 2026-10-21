@@ -178,7 +178,15 @@ def create_app(
             task.cancel()
         engine.dispose()
 
-    app = FastAPI(title="Barber Booking API", version="1.0.0", lifespan=lifespan)
+    docs = config.api_docs
+    app = FastAPI(
+        title="Barber Booking API",
+        version="1.0.0",
+        lifespan=lifespan,
+        docs_url="/docs" if docs else None,
+        redoc_url="/redoc" if docs else None,
+        openapi_url="/openapi.json" if docs else None,
+    )
     app.state.settings = config
     identity = config.identity or identity_from({}, config.shop_brand)
     media_dir = Path(config.media_dir) if config.media_dir else _media_next_to(config.database_url)

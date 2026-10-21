@@ -70,3 +70,16 @@ def test_the_accessibility_contact_is_written_as_text_never_as_markup(tmp_path, 
 
     assert "<script>alert(1)</script>" not in page
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in page
+
+
+def test_the_apis_own_map_is_served_only_when_asked_for(client, tmp_path, monkeypatch, passwords):
+    maps = ("/docs", "/redoc", "/openapi.json")
+    assert [client.get(path).status_code for path in maps] == [404, 404, 404]
+
+    for role, password in passwords.items():
+        monkeypatch.setenv(f"SEED_{role.upper()}_PASSWORD", password)
+    config = replace(
+        client.app.state.settings, database_url=f"sqlite:///{tmp_path / 'docs.db'}", api_docs=True
+    )
+    with TestClient(create_app(config)) as developer:
+        assert [developer.get(path).status_code for path in maps] == [200, 200, 200]

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import base64
 
-JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 40
+from tests.pictures import JPEG
 
 
 def put(client, headers, barber, raw=JPEG):

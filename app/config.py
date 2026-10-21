@@ -106,6 +106,9 @@ class Settings:
     # The stores' reviewers: this mobile signs in with this code, and no SMS is sent to it (_review_sign_in).
     review_phone: str = ""
     review_code: str = ""
+    # The API's own map (/docs, /redoc, /openapi.json). Off: it lists every address the shop answers, and no
+    # one but a developer needs it.
+    api_docs: bool = False
     accessibility_contact_name: str = "רכז/ת הנגישות של המספרה (לדוגמה)"
     accessibility_contact_phone: str = "03-0000000"
     accessibility_contact_email: str = "accessibility@example.com"
@@ -176,6 +179,7 @@ class Settings:
             owner_phone=owner_phone,
             review_phone=review_phone,
             review_code=review_code,
+            api_docs=os.environ.get("API_DOCS", "") == "1",
             **{
                 field: os.environ[name]
                 for field, name in (
