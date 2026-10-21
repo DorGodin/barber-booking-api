@@ -41,7 +41,10 @@ owner alone. **Never let a name decide a role** - anyone can type one.
 **The stores' reviewers sign in with `REVIEW_PHONE` and `REVIEW_CODE`** (`_review_sign_in`): that one mobile's code is
 the fixed one and no SMS is sent to it; both or neither, never the owner's phone, or the server does not start. It
 signs in as a customer, like anyone. **Deleting an account has a page of its own** (`/delete-account`, Google Play asks
-for a web address): what goes and what stays, and a button to `/#delete` - the personal area with its question open. The password sign-in
+for a web address): what goes and what stays, and a button to `/#delete` - the personal area with its question open.
+**`DEV_SKIP_CODE=1` is for development
+only** (`Settings.dev_skip_code`): the code comes back in `/auth/otp`'s answer and the page signs in at once. The
+server refuses to start with it unless `SMS_URL` is `console` or a server on this machine; it is never set for a shop. The password sign-in
 (`/auth/token`) is the API's only, for scripts and tests; the page has no form for it.
 
 **A booking is a customer's or a guest's, never both, never neither** - the database's own

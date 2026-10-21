@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 from app.identity import Identity, identity_from
@@ -32,6 +33,12 @@ def _review_sign_in(raw_phone: str, raw_code: str, owner_phone: str) -> tuple[st
     if phone == owner_phone:
         raise RuntimeError("REVIEW_PHONE must not be the owner's phone: the reviewers sign in as a customer.")
     return phone, raw_code
+
+
+def local_sms(url: str) -> bool:
+    """The codes stay on this machine: printed, or posted to a server here - the fake provider of the tests."""
+    host = urlsplit(url).hostname or ""
+    return url == "console" or host in ("127.0.0.1", "localhost", "::1")
 
 
 @dataclass(frozen=True)
@@ -86,6 +93,10 @@ class Settings:
     # sign anyone in, and must say so at startup, not at the first sign-in.
     sms_url: str = "console"
     sms_token: str = ""
+    # Development only, while the app is being tried out: the code comes back in the answer and the page signs
+    # in at once. Refused at start unless the codes go to the console or a server on this machine - never a
+    # provider that reaches real phones.
+    dev_skip_code: bool = False
     shop_brand: str = "TomGoldin"
     # The shop's tagline, address, links and pictures (app/identity.py). None:
     # the brand alone, as in the tests that do not need the rest.
@@ -131,9 +142,15 @@ class Settings:
         review_phone, review_code = _review_sign_in(
             os.environ.get("REVIEW_PHONE", ""), os.environ.get("REVIEW_CODE", ""), owner_phone
         )
+        dev_skip_code = os.environ.get("DEV_SKIP_CODE", "") == "1"
+        if dev_skip_code and not local_sms(sms_url):
+            raise RuntimeError(
+                "DEV_SKIP_CODE is for development only: SMS_URL must be console or a server on this machine."
+            )
         return cls(
             sms_url=sms_url,
             sms_token=os.environ.get("SMS_TOKEN", ""),
+            dev_skip_code=dev_skip_code,
             shop_brand=os.environ.get("SHOP_BRAND", "TomGoldin"),
             identity=identity_from(dict(os.environ), os.environ.get("SHOP_BRAND", "TomGoldin")),
             media_dir=os.environ.get("MEDIA_DIR", ""),
