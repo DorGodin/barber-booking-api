@@ -8,9 +8,8 @@ import base64
 import pytest
 
 from tests.conftest import HAIRCUT, a_second_barber, at, book, local_day
+from tests.pictures import JPEG
 from tests.test_reviews import past_booking
-
-JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 40
 
 
 def make(client, owner, **fields):

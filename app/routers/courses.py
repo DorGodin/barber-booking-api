@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import base64
 import binascii
+import io
 import secrets
 from pathlib import Path
 
 from fastapi import APIRouter, Depends
+from PIL import Image
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -34,6 +36,20 @@ def _extension(raw: bytes) -> str | None:
     return None
 
 
+PILLOW_FORMATS = {"jpg": "JPEG", "png": "PNG", "webp": "WEBP"}
+
+
+def _whole_picture(raw: bytes, extension: str) -> bool:
+    """The first bytes say what a file claims to be; only decoding it shows it is one - a PNG's head on a
+    page of script is not a picture. Anything Pillow cannot read, a decompression bomb included, is not."""
+    try:
+        with Image.open(io.BytesIO(raw)) as image:
+            image.verify()
+            return image.format == PILLOW_FORMATS[extension]
+    except Exception:
+        return False
+
+
 def picture(body: ImageIn) -> tuple[bytes, str]:
     """An uploaded picture's bytes and what they are. What is accepted is decided
     by the bytes: a JPEG, a PNG or a WebP of at most 3 MB."""
@@ -44,7 +60,7 @@ def picture(body: ImageIn) -> tuple[bytes, str]:
     if len(raw) > MAX_IMAGE_BYTES:
         raise DomainError(422, "image_too_large", "a picture may be at most 3 MB")
     extension = _extension(raw)
-    if extension is None or extension not in IMAGE_TYPES:
+    if extension is None or extension not in IMAGE_TYPES or not _whole_picture(raw, extension):
         raise DomainError(422, "invalid_image", "a picture must be a JPEG, PNG or WebP")
     return raw, extension
 

@@ -15,10 +15,7 @@ from app.config import Settings
 from app.identity import identity_from
 from app.main import create_app
 from tests.conftest import PASSWORDS, TZ, SentTexts, login
-
-JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 40
-PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 40
-WEBP = b"RIFF\x00\x00\x00\x00WEBP" + b"\x00" * 40
+from tests.pictures import JPEG, PNG, WEBP
 
 
 def encoded(raw: bytes) -> dict:
@@ -173,10 +170,11 @@ def test_a_picture_is_accepted_by_its_bytes_and_served(client, owner, customer, 
     [
         (encoded(b"GIF89a" + b"\x00" * 20), "invalid_image"),
         (encoded(b"<script>alert(1)</script>"), "invalid_image"),
+        (encoded(PNG[:16] + b"<script>alert(1)</script>"), "invalid_image"),
         ({"data": "not base64 !!"}, "invalid_image"),
         (encoded(JPEG + b"\x00" * 3_000_000), "image_too_large"),
     ],
-    ids=["a gif", "a script", "not base64", "too large"],
+    ids=["a gif", "a script", "a png head on a script", "not base64", "too large"],
 )
 def test_a_picture_that_is_not_one_is_refused(client, owner, body, code):
     course = make(client, owner).json()["id"]

@@ -126,7 +126,8 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   **When it asks is the owner's** (`/approval-rules`, `shop_settings`): a switch, and per day the
   hours. The settings `APPROVAL_*` only say what it is until the owner saves.
 - **A course is a card whose button opens WhatsApp** (`/courses`, `app/routers/courses.py`); the
-  owner keeps them and uploads their pictures. A picture is accepted by its bytes and gets a name
+  owner keeps them and uploads their pictures. A picture is accepted by its bytes - its first bytes say what it
+  claims to be, and Pillow must decode it as exactly that (`_whole_picture`) - and gets a name
   the server makes; `/media` serves only the identity pictures and the ones a course holds.
 - **A review is the customer's, once, after the booking is over** (`reviews`, `app/routers/bookings.py`):
   stars at a tap, words optional and changeable, never for a cancelled or declined booking.
