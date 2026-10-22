@@ -247,11 +247,16 @@ def create_app(
 
     @app.get("/sw.js", include_in_schema=False)
     def service_worker():
-        """At the root, so its scope is the whole page. Never cached: a browser checks it afresh."""
+        """At the root, so its scope is the whole page. Never cached: a browser checks it afresh. A worker
+        lives by the policy its own script is sent with, and it fetches from this server - the words of a
+        reminder and the page for no connection - so it is let reach this server and nothing else."""
         return FileResponse(
             SERVICE_WORKER,
             media_type="text/javascript",
-            headers={"Cache-Control": "no-cache"},
+            headers={
+                "Cache-Control": "no-cache",
+                "Content-Security-Policy": "default-src 'none'; connect-src 'self'; frame-ancestors 'none'",
+            },
         )
 
     @app.get("/fonts/{name}", include_in_schema=False)

@@ -99,3 +99,10 @@ def test_the_worker_keeps_the_page_for_no_connection_and_its_letters(client):
     for kept in ("/offline.html", "/fonts/rubik-hebrew.woff2", "/fonts/rubik-latin.woff2"):
         assert f'"{kept}"' in worker
         assert client.get(kept).status_code == 200
+
+
+def test_the_worker_may_fetch_from_this_server_and_nowhere_else(client):
+    policy = client.get("/sw.js").headers["content-security-policy"]
+
+    assert "connect-src 'self'" in policy
+    assert "default-src 'none'" in policy and "*" not in policy
