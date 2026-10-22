@@ -9,7 +9,8 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import FastAPI
+import segno
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from sqlalchemy import select
 
@@ -65,6 +66,8 @@ FONT_FILES = frozenset({"rubik-hebrew.woff2", "rubik-latin.woff2"})
 STATEMENT = Path(__file__).parent / "static" / "accessibility.html"
 DELETE_ACCOUNT = Path(__file__).parent / "static" / "delete-account.html"
 PRIVACY = Path(__file__).parent / "static" / "privacy.html"
+OFFLINE = Path(__file__).parent / "static" / "offline.html"
+POSTER = Path(__file__).parent / "static" / "poster.html"
 
 
 def page_policy(html: str) -> str:
@@ -246,11 +249,16 @@ def create_app(
 
     @app.get("/sw.js", include_in_schema=False)
     def service_worker():
-        """At the root, so its scope is the whole page. Never cached: a browser checks it afresh."""
+        """At the root, so its scope is the whole page. Never cached: a browser checks it afresh. A worker
+        lives by the policy its own script is sent with, and it fetches from this server - the words of a
+        reminder and the page for no connection - so it is let reach this server and nothing else."""
         return FileResponse(
             SERVICE_WORKER,
             media_type="text/javascript",
-            headers={"Cache-Control": "no-cache"},
+            headers={
+                "Cache-Control": "no-cache",
+                "Content-Security-Policy": "default-src 'none'; connect-src 'self'; frame-ancestors 'none'",
+            },
         )
 
     @app.get("/fonts/{name}", include_in_schema=False)
@@ -368,6 +376,32 @@ def create_app(
         html = PRIVACY.read_text(encoding="utf-8")
         for name, value in values.items():
             html = html.replace("{{" + name + "}}", html_text.escape(value))
+        return HTMLResponse(html, headers={"Content-Security-Policy": page_policy(html)})
+
+    @app.get("/offline.html", include_in_schema=False)
+    def offline_page():
+        """What the shop on a home screen shows with no connection: kept by the worker (/sw.js) when it is
+        installed, and given for a page it cannot fetch."""
+        html = OFFLINE.read_text(encoding="utf-8").replace("{{shop_brand}}", html_text.escape(identity.brand))
+        return HTMLResponse(html, headers={"Content-Security-Policy": page_policy(html)})
+
+    @app.get("/poster", include_in_schema=False)
+    def poster(request: Request):
+        """A page to print and hang in the shop or post on Instagram: the brand and a code that opens the shop.
+        The code holds SHOP_URL, or - until there is one - the address this page was asked at."""
+        url = config.shop_url or str(request.base_url)
+        values = {
+            "shop_brand": identity.brand,
+            "shop_tagline": identity.tagline,
+            "shop_address": identity.address or "",
+            "shop_url": url,
+        }
+        html = POSTER.read_text(encoding="utf-8")
+        for name, value in values.items():
+            html = html.replace("{{" + name + "}}", html_text.escape(value))
+        # Drawn from the address alone: path data, nothing of anyone's to escape.
+        code = segno.make(url, error="m").svg_inline(scale=8, border=2, dark="#111", omitsize=True)
+        html = html.replace("{{qr_svg}}", code)
         return HTMLResponse(html, headers={"Content-Security-Policy": page_policy(html)})
 
     @app.get("/delete-account", include_in_schema=False)

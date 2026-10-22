@@ -26,6 +26,33 @@ async function words() {
   return [title, body];
 }
 
+// With no connection, the shop on a home screen would open on the phone's own error. The worker keeps a page of the
+// shop's for that, with its letters, and gives it for any page it cannot fetch. Only that: the shop's pages and its
+// answers always come from the server, never from a copy.
+const OFFLINE_CACHE = "offline-1";
+const OFFLINE_FILES = ["/offline.html", "/fonts/rubik-hebrew.woff2", "/fonts/rubik-latin.woff2"];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(caches.open(OFFLINE_CACHE).then((cache) => cache.addAll(OFFLINE_FILES)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((names) => Promise.all(names.filter((name) => name !== OFFLINE_CACHE).map((name) => caches.delete(name))))
+      .then(() => self.clients.claim()),
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  if (event.request.mode === "navigate") {
+    event.respondWith(fetch(event.request).catch(() => caches.match("/offline.html")));
+  } else if (OFFLINE_FILES.includes(new URL(event.request.url).pathname)) {
+    event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
+  }
+});
+
 self.addEventListener("push", (event) => {
   event.waitUntil(
     words().then(([title, body]) => self.registration.showNotification(title, { body, lang: "he", dir: "rtl", tag: role || "customer" })),

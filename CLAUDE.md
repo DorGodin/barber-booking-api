@@ -175,6 +175,13 @@ of `detail` can change. Somebody else's booking is 404, not 403.
   sign-in, a barber's and a new barber's (`PHONE_FIELDS`) - keeps to ten digits (a pasted +972 becomes them), says
   "המספר חייב להתחיל ב־05" under the field as soon as the start is wrong and holds its button, and says
   "המספר חייב להכיל 10 ספרות" when a short one is sent. The server checks again.
+- **With no connection the shop shows a page of its own** (`/offline.html`, kept by `/sw.js` with its two font files):
+  the worker answers a page it cannot fetch with it, and copies nothing else - the shop's pages and answers always
+  come from the server. The worker is registered for every visitor on load (one already there is left alone;
+  turning notifications on registers it again with the person's role), and it lives by its script's own policy,
+  `connect-src 'self'` - without it the worker can fetch nothing, neither this page nor a reminder's words.
+- **The poster** (`/poster`) is a page to print: the brand, the address and a QR code (segno) for `SHOP_URL`, or for
+  the address it was opened at until there is one. `SHOP_URL` must be https or the server does not start.
 - **The shop is offered for the home screen by a band of its own under the bookings** (`renderInstall`, the owner's
   choice of 2026-10-14): the shop's black, its icon, and on an iPhone - whose Safari sends no notifications outside
   the home screen - Safari's two taps; where Chrome offers its own install (`beforeinstallprompt`), a button for it.

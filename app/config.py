@@ -35,6 +35,14 @@ def _review_sign_in(raw_phone: str, raw_code: str, owner_phone: str) -> tuple[st
     return phone, raw_code
 
 
+def _shop_url(raw: str) -> str:
+    """The poster's code sends people here, so it is the shop's own https address or nothing."""
+    url = raw.strip()
+    if url and not (url.startswith("https://") and urlsplit(url).hostname):
+        raise RuntimeError("SHOP_URL must be the shop's https:// address, or empty. See .env.example.")
+    return url
+
+
 def local_sms(url: str) -> bool:
     """The codes stay on this machine: printed, or posted to a server here - the fake provider of the tests."""
     host = urlsplit(url).hostname or ""
@@ -120,6 +128,9 @@ class Settings:
     # The API's own map (/docs, /redoc, /openapi.json). Off: it lists every address the shop answers, and no
     # one but a developer needs it.
     api_docs: bool = False
+    # The shop's own address on the web, https://..., for the code on the printed poster (/poster). Empty: the
+    # address the poster was opened at.
+    shop_url: str = ""
     accessibility_contact_name: str = "רכז/ת הנגישות של המספרה (לדוגמה)"
     accessibility_contact_phone: str = "03-0000000"
     accessibility_contact_email: str = "accessibility@example.com"
@@ -197,6 +208,7 @@ class Settings:
             review_phone=review_phone,
             review_code=review_code,
             api_docs=os.environ.get("API_DOCS", "") == "1",
+            shop_url=_shop_url(os.environ.get("SHOP_URL", "")),
             **{
                 field: os.environ[name]
                 for field, name in (
