@@ -83,3 +83,19 @@ def test_the_apis_own_map_is_served_only_when_asked_for(client, tmp_path, monkey
     )
     with TestClient(create_app(config)) as developer:
         assert [developer.get(path).status_code for path in maps] == [200, 200, 200]
+
+
+def test_the_page_for_no_connection_is_the_shops_and_runs_only_its_own_script(client):
+    page = client.get("/offline.html")
+
+    assert page.status_code == 200
+    assert "TomGoldin" in page.text and "אין חיבור" in page.text
+    assert "'unsafe-inline'" not in page.headers["content-security-policy"]
+
+
+def test_the_worker_keeps_the_page_for_no_connection_and_its_letters(client):
+    worker = client.get("/sw.js").text
+
+    for kept in ("/offline.html", "/fonts/rubik-hebrew.woff2", "/fonts/rubik-latin.woff2"):
+        assert f'"{kept}"' in worker
+        assert client.get(kept).status_code == 200

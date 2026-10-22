@@ -65,6 +65,7 @@ FONT_FILES = frozenset({"rubik-hebrew.woff2", "rubik-latin.woff2"})
 STATEMENT = Path(__file__).parent / "static" / "accessibility.html"
 DELETE_ACCOUNT = Path(__file__).parent / "static" / "delete-account.html"
 PRIVACY = Path(__file__).parent / "static" / "privacy.html"
+OFFLINE = Path(__file__).parent / "static" / "offline.html"
 
 
 def page_policy(html: str) -> str:
@@ -368,6 +369,13 @@ def create_app(
         html = PRIVACY.read_text(encoding="utf-8")
         for name, value in values.items():
             html = html.replace("{{" + name + "}}", html_text.escape(value))
+        return HTMLResponse(html, headers={"Content-Security-Policy": page_policy(html)})
+
+    @app.get("/offline.html", include_in_schema=False)
+    def offline_page():
+        """What the shop on a home screen shows with no connection: kept by the worker (/sw.js) when it is
+        installed, and given for a page it cannot fetch."""
+        html = OFFLINE.read_text(encoding="utf-8").replace("{{shop_brand}}", html_text.escape(identity.brand))
         return HTMLResponse(html, headers={"Content-Security-Policy": page_policy(html)})
 
     @app.get("/delete-account", include_in_schema=False)

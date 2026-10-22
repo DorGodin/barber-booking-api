@@ -3192,6 +3192,11 @@ const pushRole = () => (me.role === "customer" ? "customer" : "barber");
 // Inside the shop's app (Capacitor), notifications are the phone's own, through Firebase: the app's plugin asks
 // for the permission and gives the device's token, and the server is told it (`/push/devices`).
 const nativeApp = () => Boolean(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+// Every visitor gets the page's worker, not only those who allow notifications: it keeps the page for no connection
+// (sw.js). One already there is left as it is - turning notifications on registers it again, with the person's role.
+if (!nativeApp() && "serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistration().then((found) => found || navigator.serviceWorker.register("/sw.js")).catch(() => {});
+}
 const firebase = () => window.Capacitor.Plugins.FirebaseMessaging;
 const DEVICE_KEY = "push-device-token";
 const deviceToken = () => {
