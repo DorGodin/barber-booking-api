@@ -6,7 +6,7 @@ TEST_PORT ?= 8101
 TEST_DB   ?= barber-test.db
 TEST_FCM  ?= barber-test-fcm.json
 
-.PHONY: install run run-test test lock migration backup restore hooks docker-up docker-down reset-db reset-test-db
+.PHONY: install run run-test test lock migration backup pack restore hooks docker-up docker-down reset-db reset-test-db
 
 install:        ## create the venv and install the locked dependencies
 	python3.13 -m venv $(VENV)
@@ -58,6 +58,10 @@ reset-test-db:  ## delete the test copy's database only; the next `make run-test
 backup:         ## a copy of YOUR database, safe while the server runs - into backups/ next to it
 	@test -f .env || { echo "no .env - run: cp .env.example .env"; exit 1; }
 	@set -a; . ./.env; set +a; $(PY) -m app.backup create
+
+pack:           ## the shop in one file to keep off this computer: a fresh copy of the database, .env and the pictures - into OUT (default ~/Desktop/barber-backups)
+	@test -f .env || { echo "no .env - run: cp .env.example .env"; exit 1; }
+	@set -a; . ./.env; set +a; $(PY) -m app.backup pack "$(or $(OUT),$(HOME)/Desktop/barber-backups)"
 
 restore:        ## put a backup back: make restore from=<file>. Stop `make run` first. Without from=, lists them
 	$(call refuse_if_running,$(PORT))

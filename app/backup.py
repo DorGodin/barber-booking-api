@@ -9,6 +9,7 @@ is safe while the server runs. Every copy is checked before it counts.
     python -m app.backup create            # what `make backup` runs
     python -m app.backup list
     python -m app.backup restore <file>    # what `make restore` runs, server stopped
+    python -m app.backup pack <folder>     # what `make pack` runs: the shop in one file
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from __future__ import annotations
 import os
 import sqlite3
 import sys
+import tarfile
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -97,6 +99,23 @@ def restore(copy: Path, database: Path, directory: Path, kept: int) -> Path | No
     return replaced
 
 
+def pack(database: Path, directory: Path, kept: int, settings: Path, media: Path, out: Path) -> Path:
+    """The shop in one file, to keep somewhere other than this computer: a fresh copy of the database, the
+    settings (.env - its secrets too, so the file is readable by its owner only) and the pictures. Unpacked, the
+    three go back where they came from."""
+    copy = create(database, directory, kept, label="pack")
+    out.mkdir(parents=True, exist_ok=True)
+    target = out / f"tomgoldin-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}.tar.gz"
+    with tarfile.open(target, "w:gz") as archive:
+        archive.add(copy, arcname=database.name)
+        if settings.exists():
+            archive.add(settings, arcname=".env")
+        if media.is_dir():
+            archive.add(media, arcname="media")
+    target.chmod(0o600)
+    return target
+
+
 def main(argv: list[str]) -> int:
     database = database_path(os.environ.get("DATABASE_URL", "sqlite:///./barber.db"))
     directory = backup_dir(database, os.environ.get("BACKUP_DIR", ""))
@@ -113,6 +132,10 @@ def main(argv: list[str]) -> int:
             print(f"restored {database} from {copy}")
             if replaced:
                 print(f"what it replaced is in {replaced}")
+        case ["pack", folder]:
+            media = Path(os.environ.get("MEDIA_DIR") or database.parent / "media")
+            target = pack(database, directory, kept, Path(".env"), media, Path(folder).expanduser())
+            print(f"packed into {target} - now copy it off this computer")
         case _:
             print(__doc__.split("\n\n")[-1])
             return 2
