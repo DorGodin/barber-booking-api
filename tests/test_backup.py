@@ -188,3 +188,25 @@ def test_pruning_leaves_nothing_behind_from_older_backups(engine, tmp_path):
     newest = [backup.create(database(engine), directory, 2) for _ in range(2)]
 
     assert sorted(p.name for p in directory.iterdir()) == sorted(p.name for p in newest)
+
+
+def test_a_pack_holds_the_database_the_settings_and_the_pictures_and_only_its_owner_reads_it(
+    engine, tmp_path
+):
+    import tarfile
+
+    start(engine)
+    add_customer(engine, "in.the.pack")
+    settings, media = tmp_path / ".env", tmp_path / "media"
+    settings.write_text("SECRET_KEY=x\n")
+    media.mkdir()
+    (media / "barber-1.png").write_bytes(b"png")
+
+    packed = backup.pack(database(engine), tmp_path / "backups", KEPT, settings, media, tmp_path / "out")
+
+    assert packed.stat().st_mode & 0o777 == 0o600
+    with tarfile.open(packed) as archive:
+        names = archive.getnames()
+        archive.extractall(tmp_path / "unpacked", filter="data")
+    assert {database(engine).name, ".env", "media/barber-1.png"} <= set(names)
+    assert "in.the.pack" in usernames(tmp_path / "unpacked" / database(engine).name)
